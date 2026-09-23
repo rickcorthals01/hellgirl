@@ -32,9 +32,9 @@
 
 namespace
 {
-// Clip names produced by Tools/Animations (clips.json). Block is kept for the retired block pose.
+// Clip names produced by Tools/Animations (clips.json). Idle is the standing loop; Block is kept for the retired block pose.
 const TCHAR* const CombatClipNames[] = {
-    TEXT("RightPunch"), TEXT("LeftPunch"), TEXT("DoubleJab"), TEXT("RightKick"), TEXT("LeftKick"), TEXT("LegSweep"),
+    TEXT("Idle"), TEXT("RightPunch"), TEXT("LeftPunch"), TEXT("DoubleJab"), TEXT("RightKick"), TEXT("LeftKick"), TEXT("LegSweep"),
     TEXT("Headbutt"), TEXT("DodgeSlam"), TEXT("Charge"), TEXT("ChargedStrike"),
     TEXT("AirPunch"), TEXT("AirLeftPunch"), TEXT("AirKick"), TEXT("AirCrashKick"), TEXT("AirSlam"),
     TEXT("Dodge"), TEXT("Hit"), TEXT("Knockdown"), TEXT("Death"), TEXT("Block"),
@@ -1037,7 +1037,9 @@ void AArenaFighter::UpdatePose(float Dt)
         PlayerHitAnimationTime += Dt;
         const float Speed = GetVelocity().Size2D();
         const bool Moving = Speed > 10.f && GetCharacterMovement()->IsMovingOnGround() && DodgeClock <= 0.f && KnockdownClock <= 0.f && IsAlive();
-        UAnimSequence* Clip = NeutralIdleAnimation.Get();
+        // Standing uses the Mixamo idle when the outfit has one (it falls back to the neutral pose).
+        UAnimSequence* Clip = CombatAnimations.FindRef(TEXT("Idle")).Get();
+        if (!Clip) Clip = NeutralIdleAnimation.Get();
         float Position = 0.f;
         const bool Airborne = GetCharacterMovement()->IsFalling();
         if (Airborne)

@@ -5,7 +5,7 @@ Hellgirl's attack, dodge, hit and death clips come from Mixamo and are fitted on
 ## Adding or replacing a clip
 
 1. On Mixamo, use the same Meshy Hellgirl model as the existing packs (its 24-bone skeleton matches the outfits). Download **FBX Binary, Without Skin, 30 fps, In Place** when offered.
-2. Save it under `Desktop\Hellgirl Game\Animations Mixamo\` with the file name listed in `Tools/Animations/clips.json` (most go in `Hellgirl Combat\`), or point `clips.json` at the file you downloaded.
+2. Save it under `Desktop\Hellgirl Game\Animations Mixamo\` with the file name listed in `Tools/Animations/clips.json`, or point `clips.json` at the file you downloaded.
 3. Close Unreal Editor and run, from the project folder:
    ```
    powershell -ExecutionPolicy Bypass -File Tools\Animations\build.ps1
@@ -38,6 +38,6 @@ The game loads whatever clips exist for the equipped outfit; anything missing fa
 | SwordSlash, SwordBackslash, SwordThrust, SwordSpin | Sword light chain |
 | Dodge, Hit, Knockdown, Death | Reactions |
 
-Current sources: the sword slash, backslash and spin use the Great Sword pack. Everything else waits for downloads into `Hellgirl Combat\`.
+Current sources: the sword slash, backslash and spin use the Great Sword pack. Everything else waits for downloads into `Animations Mixamo\`.
 
 The sword is still a placeholder box, now held in the right hand (`SwordGripOffset` / `SwordGripRotation` on the fighter).

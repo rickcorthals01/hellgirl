@@ -33,13 +33,12 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
     static float ShotClock = 0.f;
     const int32 Total = UE_ARRAY_COUNT(Moves) * 3;
     if (GetWorld()->GetTimeSeconds() < 2.f) return;
-    if (Shot < 0)
-    {
-        Shot = 0;
-        SetActorRotation(FRotator::ZeroRotator);
-        DesiredCameraDistance = 340.f;
-        if (auto* PC = Cast<APlayerController>(GetController())) PC->SetControlRotation(FRotator(-8.f, 145.f, 0.f));
-    }
+    if (Shot < 0) Shot = 0;
+    // Pin a near-profile view every frame (a straight punch toward a front camera hides its
+    // extension, and the combat camera would otherwise drift between shots).
+    SetActorRotation(FRotator::ZeroRotator);
+    DesiredCameraDistance = 340.f;
+    if (auto* PC = Cast<APlayerController>(GetController())) PC->SetControlRotation(FRotator(-8.f, 100.f, 0.f));
     if (Shot >= Total)
     {
         UE_LOG(LogTemp, Display, TEXT("ATTACK PREVIEW PASSED: %d screenshots in Saved/Screenshots/Attacks"), Total);
@@ -59,8 +58,15 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
     MoveLabel = FString::Printf(TEXT("%s %s"), Move.Clip, Shot % 3 == 0 ? TEXT("wind-up") : Shot % 3 == 1 ? TEXT("CONTACT") : TEXT("follow-through"));
     MoveLabelClock = 1.f;
     ShotClock += Dt;
-    if (ShotClock >= .35f)
+    // Startup frames can be long; wait for several frames too, so the pose is applied before capture.
+    static int32 ShotFrames = 0;
+    if (++ShotFrames >= 6 && ShotClock >= .35f)
     {
+        ShotFrames = 0;
+        const UAnimSequence* Expected = FindAttackAnimation(CurrentAttack.Type);
+        UE_LOG(LogTemp, Display, TEXT("ATTACK PREVIEW %s_%d: expected %s at %.3fs, mesh plays %s at %.3fs"), Move.Clip, Shot % 3,
+            Expected ? *Expected->GetName() : TEXT("none"), AttackClipPosition(Progress, Expected),
+            ActiveAnimation ? *ActiveAnimation->GetName() : TEXT("none"), GetMesh()->GetPosition());
         FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/Attacks/%s_%d.png"), Move.Clip, Shot % 3), false, false);
         ShotClock = 0.f;
         ++Shot;
