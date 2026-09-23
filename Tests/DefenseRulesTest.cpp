@@ -1,4 +1,4 @@
-#include "../Source/Hellgirl/DefenseRules.h"
+#include "../Source/Hellgirl/Rules/DefenseRules.h"
 #define CHECK(C) if (!(C)) return __LINE__
 int main()
 {

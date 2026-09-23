@@ -1,4 +1,4 @@
-#include "../Source/Hellgirl/CoinDropRules.h"
+#include "../Source/Hellgirl/Rules/CoinDropRules.h"
 int main()
 {
     int Counts[7] = {};
