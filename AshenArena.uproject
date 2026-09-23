@@ -1,0 +1,14 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Games",
+  "Description": "An editable third-person hack-and-slash arena prototype.",
+  "Plugins": [{ "Name": "ProceduralMeshComponent", "Enabled": true }],
+  "Modules": [
+    {
+      "Name": "AshenArena",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ]
+}
