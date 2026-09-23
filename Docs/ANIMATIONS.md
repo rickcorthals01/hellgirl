@@ -37,6 +37,7 @@ The game loads whatever clips exist for the equipped outfit; anything missing fa
 | AirPunch, AirLeftPunch, AirKick, AirCrashKick, AirSlam | Aerial chain and air slam |
 | SwordSlash, SwordBackslash, SwordThrust, SwordSpin | Sword light chain |
 | Dodge, Hit, Knockdown, Death | Reactions |
+| Idle, Walk, Run | Standing, walking and running for every outfit except Frog (Mixamo Standing Idle and the Female Locomotion Pack; the Meshy walks kept tiptoe feet) |
 
 Current sources: the sword slash, backslash and spin use the Great Sword pack. Everything else waits for downloads into `Animations Mixamo\`.
 
@@ -44,6 +45,6 @@ The sword is still a placeholder box, now held in the right hand (`SwordGripOffs
 
 ## Tiptoe outfits
 
-Meshy generated some outfits standing on tiptoe (heel 6–9 cm above the floor at rest), so every animation looked like she was on her toes. `Tools/Animations/flatten_feet.ps1` fixes an outfit: Blender rotates the feet flat at the ankle, bakes that into the mesh as the new rest pose and lowers the body onto the floor (5–9 cm shorter); Unreal re-imports the mesh and updates its skeleton; then all its clips are rebuilt on the new rest pose. Its own neutral pose is re-fitted, but its Meshy walk/run are not: they keep the feet on tiptoe the whole cycle and look broken on flat feet, so these outfits walk and run with the Mixamo Female Locomotion Pack clips (`flat_locomotion` in clips.json). Applied to Goblin Queen, Rat and Ghost. The originals are kept in `Animation Testing\ExtraSkins\<Outfit>\tiptoe`. Rags (2 cm) was left as is.
+Meshy generated some outfits standing on tiptoe (heel 6–9 cm above the floor at rest), so every animation looked like she was on her toes. `Tools/Animations/flatten_feet.ps1` fixes an outfit: Blender rotates the feet flat at the ankle, bakes that into the mesh as the new rest pose and lowers the body onto the floor (5–9 cm shorter); Unreal re-imports the mesh and updates its skeleton; then all its clips are rebuilt on the new rest pose. Its own neutral pose is re-fitted from the original. Applied to Goblin Queen, Rat and Ghost. The originals are kept in `Animation Testing\ExtraSkins\<Outfit>\tiptoe`. Rags (2 cm) was left as is.
 
 To check feet in game: `... -game -HellgirlFeetPreview` films the equipped outfit side-on and logs its stored sole heights (`FEET MESH` line in the log).

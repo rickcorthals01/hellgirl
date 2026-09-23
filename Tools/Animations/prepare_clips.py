@@ -188,7 +188,7 @@ for outfit, rel in cfg["outfits"].items():
         report[outfit][name] = retarget(target, name, path, mirrored, trim, os.path.join(out_root, outfit, name + ".fbx"),
                                         clip.get("strike"), clip.get("contact"))
         print(f"CLIP {outfit}/{name}: {report[outfit][name]}")
-    # Re-posed outfits: re-fit their own original walk/run/neutral clips onto the new rest pose.
+    # Re-posed outfits: re-fit their own original neutral pose onto the new rest pose.
     folder = cfg.get("outfit_clip_folders", {}).get(outfit)
     for name, file in (cfg.get("outfit_clips", {}).items() if folder else []):
         if only and name not in only:
@@ -199,16 +199,5 @@ for outfit, rel in cfg["outfits"].items():
             continue
         report[outfit][name] = retarget(target, name, path, False, None, os.path.join(out_root, outfit, name + ".fbx"))
         print(f"CLIP {outfit}/{name}: {report[outfit][name]}")
-    # Their Meshy walk/run were built on tiptoe, so re-posed outfits walk and run with Mixamo locomotion.
-    for name, file in (cfg.get("flat_locomotion", {}).items() if folder else []):
-        if only and name not in only:
-            continue
-        path = os.path.join(mixamo, file)
-        if not os.path.exists(path):
-            report[outfit][name] = {"skipped": "no source file yet"}
-            continue
-        report[outfit][name] = retarget(target, name, path, False, None, os.path.join(out_root, outfit, name + ".fbx"))
-        print(f"CLIP {outfit}/{name}: {report[outfit][name]}")
-
 json.dump(report, open(os.path.join(out_root, "prepare_report.json"), "w"), indent=1)
 print("PREPARE CLIPS DONE")

@@ -8,9 +8,8 @@
     "ImpMother": "Animation Testing/ExtraSkins/ImpMother/ImpMother.fbx",
     "Rat": "Animation Testing/ExtraSkins/Rat/Rat.fbx"
   },
-  "_outfit_help": "Outfits whose model was re-posed (see flatten_feet.py) get their own neutral pose re-fitted from the original in outfit_clip_folders. Their Meshy walk/run were made on tiptoe and look broken on flat feet, so they use the Mixamo locomotion in flat_locomotion instead.",
+  "_outfit_help": "Outfits whose model was re-posed (see flatten_feet.py) get their own neutral pose re-fitted from the original in outfit_clip_folders.",
   "outfit_clips": { "NeutralIdle": "NeutralIdle.fbx" },
-  "flat_locomotion": { "Walk": "Female Locomotion Pack/walking.fbx", "Run": "Female Locomotion Pack/running.fbx" },
   "outfit_clip_folders": {
     "GoblinQueen": "Animation Testing/ExtraSkins/GoblinQueen/tiptoe",
     "Rat": "Animation Testing/ExtraSkins/Rat/tiptoe",
@@ -18,6 +17,8 @@
   },
   "clips": {
     "Idle":           { "file": "Standing Idle.fbx" },
+    "Walk":           { "file": "Female Locomotion Pack/walking.fbx" },
+    "Run":            { "file": "Female Locomotion Pack/running.fbx" },
     "RightPunch":     { "file": "RightPunch.fbx", "strike": "RightHand", "trim": [5, 30] },
     "LeftPunch":      { "file": "LeftPunch.fbx", "mirror_of": "RightPunch", "strike": "LeftHand" },
     "DoubleJab":      { "file": "DoubleJab.fbx", "strike": "LeftHand", "trim": [13, 38] },

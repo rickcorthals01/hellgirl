@@ -64,6 +64,9 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
         static float FeetClock = 0.f;
         const float Now = GetWorld()->GetTimeSeconds();
         if (Now < 2.f || FeetShot > 7) return;
+        // -PreviewOutfit=N shows outfit N instead of the saved one (not saved).
+        int32 PreviewOutfit = -1;
+        if (FeetShot == 0 && FeetClock == 0.f && FParse::Value(FCommandLine::Get(), TEXT("PreviewOutfit="), PreviewOutfit)) SetOutfit(PreviewOutfit);
         const bool Walking = FeetShot >= 2 && FeetShot <= 5;
         // Shots 6-7: no animation at all, so the mesh shows the imported reference pose.
         if (FeetShot >= 6 && GetMesh()->GetAnimationMode() != EAnimationMode::AnimationCustomMode)
