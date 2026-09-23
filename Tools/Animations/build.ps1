@@ -4,10 +4,12 @@
 # Close Unreal Editor first. Usage (from the project folder):
 #   powershell -ExecutionPolicy Bypass -File Tools\Animations\build.ps1
 #   powershell -ExecutionPolicy Bypass -File Tools\Animations\build.ps1 -Only RightPunch,LeftPunch
-param([string[]]$Only = @())
+#   powershell -ExecutionPolicy Bypass -File Tools\Animations\build.ps1 -Outfits GoblinQueen,Rat
+param([string[]]$Only = @(), [string[]]$Outfits = @())
 $ErrorActionPreference = 'Stop'
 # With -File, "-Only A,B" arrives as one string.
 $Only = @($Only | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
+$Outfits = @($Outfits | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
 $project = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $gameRoot = Split-Path $project -Parent
 $outDir = Join-Path $gameRoot 'Animation Testing\CombatClips'
@@ -17,7 +19,7 @@ $logDir = Join-Path $project 'Logs'
 New-Item -ItemType Directory -Force $outDir, $logDir | Out-Null
 
 Write-Host 'Fitting clips onto outfits in Blender...'
-& $blender -b --factory-startup -P (Join-Path $PSScriptRoot 'prepare_clips.py') -- (Join-Path $PSScriptRoot 'clips.json') $gameRoot $outDir ($Only -join ',') *> (Join-Path $logDir 'AnimationPrepare.log')
+& $blender -b --factory-startup -P (Join-Path $PSScriptRoot 'prepare_clips.py') -- (Join-Path $PSScriptRoot 'clips.json') $gameRoot $outDir $(if ($Only.Count) { $Only -join ',' } else { '-' }) $(if ($Outfits.Count) { $Outfits -join ',' } else { '-' }) *> (Join-Path $logDir 'AnimationPrepare.log')
 if (-not (Select-String (Join-Path $logDir 'AnimationPrepare.log') -Pattern 'PREPARE CLIPS DONE' -Quiet)) { throw 'Blender step failed; see Logs\AnimationPrepare.log' }
 
 $report = Get-Content (Join-Path $outDir 'prepare_report.json') -Raw | ConvertFrom-Json

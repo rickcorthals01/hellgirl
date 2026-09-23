@@ -8,6 +8,13 @@
     "ImpMother": "Animation Testing/ExtraSkins/ImpMother/ImpMother.fbx",
     "Rat": "Animation Testing/ExtraSkins/Rat/Rat.fbx"
   },
+  "_outfit_help": "Outfits whose model was re-posed (see flatten_feet.py) also get their own Meshy walk/run/neutral clips re-fitted from the original files in outfit_clip_folders.",
+  "outfit_clips": { "NeutralIdle": "NeutralIdle.fbx", "Walk": "Walk.fbx", "Run": "Run.fbx" },
+  "outfit_clip_folders": {
+    "GoblinQueen": "Animation Testing/ExtraSkins/GoblinQueen/tiptoe",
+    "Rat": "Animation Testing/ExtraSkins/Rat/tiptoe",
+    "Ghost": "Animation Testing/ExtraSkins/Ghost/tiptoe"
+  },
   "clips": {
     "Idle":           { "file": "Standing Idle.fbx" },
     "RightPunch":     { "file": "RightPunch.fbx", "strike": "RightHand", "trim": [5, 30] },

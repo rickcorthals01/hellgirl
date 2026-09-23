@@ -1,6 +1,6 @@
 # Blender: fits Mixamo clips onto every same-rig Hellgirl outfit and exports one FBX per outfit/clip.
 # Run through build.ps1, or:
-#   blender -b --factory-startup -P prepare_clips.py -- <clips.json> <game root> <output folder> [Clip,Clip]
+#   blender -b --factory-startup -P prepare_clips.py -- <clips.json> <game root> <output folder> [Clip,Clip|-] [Outfit,Outfit|-]
 #
 # Each bone keeps its own rest pose and receives the source bone's rotation *relative to the source
 # rest pose* (world space), so small rest-orientation differences between Meshy models do not skew
@@ -11,7 +11,8 @@ from mathutils import Matrix
 
 args = sys.argv[sys.argv.index("--") + 1:]
 config_path, game_root, out_root = args[0], args[1], args[2]
-only = [c for c in (args[3].split(",") if len(args) > 3 else []) if c]
+only = [c for c in (args[3].split(",") if len(args) > 3 else []) if c and c != "-"]
+only_outfits = [o for o in (args[4].split(",") if len(args) > 4 else []) if o and o != "-"]
 cfg = json.load(open(config_path))
 mixamo = os.path.join(game_root, "Animations Mixamo")
 MIRROR = Matrix.Diagonal((-1.0, 1.0, 1.0))  # The models face -Y, so world X is the character's side axis.
@@ -169,6 +170,8 @@ def retarget(target, name, source_path, mirrored, trim, out_path, strike=None, c
 
 
 for outfit, rel in cfg["outfits"].items():
+    if only_outfits and outfit not in only_outfits:
+        continue
     bpy.ops.wm.read_factory_settings(use_empty=True)
     target, _ = import_armature(os.path.join(game_root, rel))
     for pb in target.pose.bones:
@@ -184,6 +187,17 @@ for outfit, rel in cfg["outfits"].items():
         clip = cfg["clips"][name]
         report[outfit][name] = retarget(target, name, path, mirrored, trim, os.path.join(out_root, outfit, name + ".fbx"),
                                         clip.get("strike"), clip.get("contact"))
+        print(f"CLIP {outfit}/{name}: {report[outfit][name]}")
+    # Re-posed outfits: re-fit their own original walk/run/neutral clips onto the new rest pose.
+    folder = cfg.get("outfit_clip_folders", {}).get(outfit)
+    for name, file in (cfg.get("outfit_clips", {}).items() if folder else []):
+        if only and name not in only:
+            continue
+        path = os.path.join(game_root, folder, file)
+        if not os.path.exists(path):
+            report[outfit][name] = {"skipped": "no source file yet"}
+            continue
+        report[outfit][name] = retarget(target, name, path, False, None, os.path.join(out_root, outfit, name + ".fbx"))
         print(f"CLIP {outfit}/{name}: {report[outfit][name]}")
 
 json.dump(report, open(os.path.join(out_root, "prepare_report.json"), "w"), indent=1)

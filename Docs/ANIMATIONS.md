@@ -41,3 +41,9 @@ The game loads whatever clips exist for the equipped outfit; anything missing fa
 Current sources: the sword slash, backslash and spin use the Great Sword pack. Everything else waits for downloads into `Animations Mixamo\`.
 
 The sword is still a placeholder box, now held in the right hand (`SwordGripOffset` / `SwordGripRotation` on the fighter).
+
+## Tiptoe outfits
+
+Meshy generated some outfits standing on tiptoe (heel 6–9 cm above the floor at rest), so every animation looked like she was on her toes. `Tools/Animations/flatten_feet.ps1` fixes an outfit: Blender rotates the feet flat at the ankle, bakes that into the mesh as the new rest pose and lowers the body onto the floor (5–9 cm shorter); Unreal re-imports the mesh and updates its skeleton; then all its clips, including its own walk/run/neutral pose, are rebuilt on the new rest pose. Applied to Goblin Queen, Rat and Ghost. The originals are kept in `Animation Testing\ExtraSkins\<Outfit>\tiptoe`. Rags (2 cm) was left as is.
+
+To check feet in game: `... -game -HellgirlFeetPreview` films the equipped outfit side-on and logs its stored sole heights (`FEET MESH` line in the log).
