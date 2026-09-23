@@ -20,7 +20,7 @@ All levels are generated in C++ when Play starts. There are no level `.umap` fil
 |---|---|---|---|
 | I: Goblin Ruins | First Raid, Survival, The Queen | Goblin Queen | Playable |
 | II: Imp Torture Arena | Torture Arena | Imp Commander | Playable (stage 1 only) |
-| III: Succubus Court | — | Succubus Queen | Planned |
+| III: Succubus Court | Map preview (The Court) | Succubus Queen | Map only, no enemies yet: round gothic court, central pool, 8 pillars, 4 sealed arches |
 | IV–VII: Ghosts, Rats, Frogs, Apostles | — | Ghost King, Rat Queen, Frog King, Lucifer | Planned |
 | Final special stage | — | Lucifer (Devil Form) | Planned |
 

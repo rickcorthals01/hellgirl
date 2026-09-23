@@ -24,10 +24,11 @@
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
+#include "Levels/MapPieces.h"
 
-namespace
+namespace MapPieces
 {
-UMaterialInstanceDynamic* Surface(UObject* Owner, FLinearColor Color, bool VertexColor = false, bool Glow = false)
+UMaterialInstanceDynamic* Surface(UObject* Owner, FLinearColor Color, bool VertexColor, bool Glow)
 {
     auto* Base = LoadObject<UMaterialInterface>(nullptr, Glow
         ? TEXT("/Game/Environment/Materials/M_EnvironmentGlow.M_EnvironmentGlow")
@@ -46,7 +47,7 @@ UMaterialInstanceDynamic* Surface(UObject* Owner, FLinearColor Color, bool Verte
 
 // A broad, level cap over a tapered, irregular rock body. The top retains the
 // authored rectangular platform footprint; its sides now have real geometry.
-AActor* Rock(UWorld* World, FVector Center, FVector Size, FLinearColor Color, int32 Seed, bool Collision, bool LevelTop = true)
+AActor* Rock(UWorld* World, FVector Center, FVector Size, FLinearColor Color, int32 Seed, bool Collision, bool LevelTop)
 {
     auto* Actor = World->SpawnActor<AActor>();
     if (!Actor) return nullptr;
@@ -107,7 +108,7 @@ AActor* Rock(UWorld* World, FVector Center, FVector Size, FLinearColor Color, in
     return Actor;
 }
 
-UHierarchicalInstancedStaticMeshComponent* DecorationBatch(UWorld* World, const TCHAR* Asset, FLinearColor Color, bool Glow=false)
+UHierarchicalInstancedStaticMeshComponent* DecorationBatch(UWorld* World, const TCHAR* Asset, FLinearColor Color, bool Glow)
 {
     auto* Actor=World->SpawnActor<AActor>();
     auto* Mesh=NewObject<UHierarchicalInstancedStaticMeshComponent>(Actor);
@@ -120,6 +121,8 @@ UHierarchicalInstancedStaticMeshComponent* DecorationBatch(UWorld* World, const 
     return Mesh;
 }
 }
+
+using namespace MapPieces;
 
 void AArenaGameMode::RockPlatform(FVector Center,FVector Size,FLinearColor Color)
 {

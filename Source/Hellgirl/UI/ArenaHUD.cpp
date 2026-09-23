@@ -33,7 +33,8 @@ void AArenaHUD::DrawHUD()
     }
     const float MapX = FMath::Max(20.f, Canvas->ClipX - 210.f), MapY = 155.f, MapSize = 180.f;
     DrawRect(FLinearColor(.015f, .02f, .015f, .88f), MapX - 10.f, MapY - 25.f, MapSize + 20.f, MapSize + 55.f);
-    DrawText(FString::Printf(TEXT("N / STAGE %d / LEVEL %d"), GM->CampaignLevel<=3?1:2, GM->CampaignLevel<=3?GM->CampaignLevel:1), FLinearColor::White, MapX, MapY - 20.f);
+    DrawText(GM->bSuccubusCourt ? FString(TEXT("N / WORLD III / THE COURT"))
+        : FString::Printf(TEXT("N / STAGE %d / LEVEL %d"), GM->CampaignLevel<=3?1:2, GM->CampaignLevel<=3?GM->CampaignLevel:1), FLinearColor::White, MapX, MapY - 20.f);
     auto OnMap = [&](float X, float Y)
     {
         return FVector2D(MapX + (Y + StageOne::HalfExtent) / (2.f * StageOne::HalfExtent) * MapSize,
@@ -54,7 +55,7 @@ void AArenaHUD::DrawHUD()
     }
     const FVector2D PlayerDot = OnMap(static_cast<float>(Player->GetActorLocation().X), static_cast<float>(Player->GetActorLocation().Y));
     const FVector2D ExitDot = OnMap(GM->ExitPosition.X, GM->ExitPosition.Y);
-    DrawRect(FLinearColor(.7f,.1f,1.f), ExitDot.X-3.f, ExitDot.Y-3.f, 6.f, 6.f);
+    if (!GM->bSuccubusCourt) DrawRect(FLinearColor(.7f,.1f,1.f), ExitDot.X-3.f, ExitDot.Y-3.f, 6.f, 6.f);
     DrawRect(FLinearColor(.2f, 1.f, 1.f), PlayerDot.X - 3.f, PlayerDot.Y - 3.f, 6.f, 6.f);
     DrawText(TEXT("YOU: cyan   RIFTS: orange"), FLinearColor::White, MapX, MapY + MapSize + 8.f);
     if (const UHellgirlWallet* Wallet = Cast<UHellgirlWallet>(GetWorld()->GetGameInstance()))

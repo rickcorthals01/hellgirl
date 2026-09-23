@@ -45,15 +45,17 @@ public:
         Worlds=SNew(SHorizontalBox);
         GoblinStages=SNew(SVerticalBox);
         ImpStages=SNew(SVerticalBox);
+        CourtStages=SNew(SVerticalBox);
         AddWorld(1,TEXT("WORLD I  /  GOBLIN RUINS"),TEXT("Three stages · Goblin Queen"),true);
         AddWorld(2,TEXT("WORLD II  /  IMP TORTURE ARENA"),TEXT("Imp waves · Imp Commander"),Unlocked>=4);
         if (Unlocked>=4)
-            AddWorld(3,TEXT("WORLD III  /  SUCCUBUS COURT"),TEXT("Coming later"),false);
+            AddWorld(3,TEXT("WORLD III  /  SUCCUBUS COURT"),TEXT("Map preview · no enemies yet"),true);
         AddStage(GoblinStages,1,TEXT("STAGE I  /  FIRST RAID"),TEXT("Survive the first Goblin waves"),Unlocked>=1);
         if (Unlocked>=1) AddStage(GoblinStages,2,TEXT("STAGE II  /  SURVIVAL"),TEXT("Five growing waves"),Unlocked>=2);
         if (Unlocked>=2) AddStage(GoblinStages,3,TEXT("STAGE III  /  THE QUEEN"),TEXT("Cross the ruins and defeat the Goblin Queen"),Unlocked>=3);
         AddStage(ImpStages,4,TEXT("STAGE I  /  TORTURE ARENA"),TEXT("Five Imp waves · Imp Commander"),Unlocked>=4);
         AddStage(ImpStages,5,TEXT("STAGE II  /  COMING LATER"),TEXT("Next stage preview"),false);
+        AddStage(CourtStages,CourtPreview,TEXT("THE COURT  /  MAP PREVIEW"),TEXT("Walk the court · no enemies yet"),true);
 
         const FLinearColor Ivory(.94f,.88f,.77f);
         ChildSlot[SNew(SOverlay)
@@ -76,7 +78,8 @@ public:
                         [SNew(SOverlay)
                           + SOverlay::Slot().HAlign(HAlign_Center)[SNew(SBox).Visibility_Lambda([this]() { return bStageOpen?EVisibility::Collapsed:EVisibility::Visible; })[Worlds.ToSharedRef()]]
                           + SOverlay::Slot().HAlign(HAlign_Center)[SNew(SBox).WidthOverride(520).Visibility_Lambda([this]() { return bStageOpen && SelectedWorld==1?EVisibility::Visible:EVisibility::Collapsed; })[GoblinStages.ToSharedRef()]]
-                          + SOverlay::Slot().HAlign(HAlign_Center)[SNew(SBox).WidthOverride(520).Visibility_Lambda([this]() { return bStageOpen && SelectedWorld==2?EVisibility::Visible:EVisibility::Collapsed; })[ImpStages.ToSharedRef()]]]
+                          + SOverlay::Slot().HAlign(HAlign_Center)[SNew(SBox).WidthOverride(520).Visibility_Lambda([this]() { return bStageOpen && SelectedWorld==2?EVisibility::Visible:EVisibility::Collapsed; })[ImpStages.ToSharedRef()]]
+                          + SOverlay::Slot().HAlign(HAlign_Center)[SNew(SBox).WidthOverride(520).Visibility_Lambda([this]() { return bStageOpen && SelectedWorld==3?EVisibility::Visible:EVisibility::Collapsed; })[CourtStages.ToSharedRef()]]]
                       + SVerticalBox::Slot().AutoHeight().Padding(0,18,0,6)
                         [SAssignNew(BackButton,SButton).HAlign(HAlign_Center).ContentPadding(FMargin(22,10))
                             .ButtonColorAndOpacity(FLinearColor(.12f,.065f,.085f,.9f))
@@ -114,7 +117,7 @@ private:
         if (bStageOpen)
         {
             bStageOpen=false;
-            FocusLater(SelectedWorld==2?ImpWorldButton:FirstButton);
+            FocusLater(SelectedWorld==2?ImpWorldButton:SelectedWorld==3?CourtWorldButton:FirstButton);
         }
         else if (Owner.IsValid()) Owner->ResumeGame();
     }
@@ -138,10 +141,11 @@ private:
                 .OnClicked_Lambda([this,World]() {
                     if (World==2 && Unlocked<4) return FReply::Handled();
                     SelectedWorld=World; bStageOpen=true;
-                    FocusLater(World==1?GoblinFirstButton:ImpFirstButton);
+                    FocusLater(World==1?GoblinFirstButton:World==2?ImpFirstButton:CourtFirstButton);
                     return FReply::Handled(); })[Card]]];
             if (World==1) FirstButton=Button;
             if (World==2) ImpWorldButton=Button;
+            if (World==3) CourtWorldButton=Button;
         }
         else Worlds->AddSlot().AutoWidth().Padding(6,0)[SNew(SBox).WidthOverride(225).HeightOverride(196)
             [SNew(SBorder).Padding(FMargin(16,18))
@@ -162,7 +166,12 @@ private:
             Panel->AddSlot().AutoHeight().Padding(0,7)[SAssignNew(Button,SButton).ContentPadding(FMargin(18,14))
                 .ButtonColorAndOpacity(FLinearColor(.16f,.08f,.11f,.95f))
                 .OnClicked_Lambda([this,Level]() {
-                    if (Owner.IsValid() && Level<=Unlocked && Level<=4)
+                    if (Owner.IsValid() && Level==CourtPreview)
+                    {
+                        auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get()));
+                        Owner->ResumeGame(); if (GM) GM->TravelToSuccubusCourt();
+                    }
+                    else if (Owner.IsValid() && Level<=Unlocked && Level<=4)
                     {
                         auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get()));
                         Owner->ResumeGame(); if (GM) GM->TravelToCampaign(Level);
@@ -170,6 +179,7 @@ private:
                     return FReply::Handled(); })[Card]];
             if (Level==1) GoblinFirstButton=Button;
             if (Level==4) ImpFirstButton=Button;
+            if (Level==CourtPreview) CourtFirstButton=Button;
         }
         else Panel->AddSlot().AutoHeight().Padding(0,7)[SNew(SBorder).Padding(FMargin(18,14))
             .BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(.07f,.07f,.08f,.8f))[Card]];
@@ -179,8 +189,10 @@ private:
     int32 Unlocked=1,SelectedWorld=0;
     bool bStageOpen=false;
     TSharedPtr<SHorizontalBox> Worlds;
-    TSharedPtr<SVerticalBox> GoblinStages,ImpStages;
-    TSharedPtr<SButton> BackButton,GoblinFirstButton,ImpFirstButton,ImpWorldButton;
+    TSharedPtr<SVerticalBox> GoblinStages,ImpStages,CourtStages;
+    // World III is a map preview reached by its own option, not a campaign level number.
+    static constexpr int32 CourtPreview=100;
+    TSharedPtr<SButton> BackButton,GoblinFirstButton,ImpFirstButton,ImpWorldButton,CourtWorldButton,CourtFirstButton;
 };
 
 class SForestHubMenu : public SCompoundWidget

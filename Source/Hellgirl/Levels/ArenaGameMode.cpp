@@ -42,12 +42,14 @@ void AArenaGameMode::BeginPlay()
     MapNumber = FMath::Clamp(UGameplayStatics::GetIntOption(OptionsString, TEXT("StageMap"), 1), 1, 3);
     bLegacyMap = MapNumber > 1;
     CampaignLevel = FMath::Clamp(UGameplayStatics::GetIntOption(OptionsString,TEXT("CampaignLevel"),1),1,4);
-    bForestHub = UGameplayStatics::GetIntOption(OptionsString,TEXT("ForestHub"),0)==1
-        || (GetUnlockedLevel()>=2 && !UGameplayStatics::HasOption(OptionsString,TEXT("StageMap")) && !UGameplayStatics::HasOption(OptionsString,TEXT("CampaignLevel")));
-    bStoryEnabled=!bForestHub && !bLegacyMap && (CampaignLevel==1 || CampaignLevel==3)
+    bSuccubusCourt = UGameplayStatics::GetIntOption(OptionsString,TEXT("SuccubusCourt"),0)==1;
+    bForestHub = !bSuccubusCourt && (UGameplayStatics::GetIntOption(OptionsString,TEXT("ForestHub"),0)==1
+        || (GetUnlockedLevel()>=2 && !UGameplayStatics::HasOption(OptionsString,TEXT("StageMap")) && !UGameplayStatics::HasOption(OptionsString,TEXT("CampaignLevel"))));
+    bStoryEnabled=!bForestHub && !bLegacyMap && !bSuccubusCourt && (CampaignLevel==1 || CampaignLevel==3)
         && (!FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl")) || FParse::Param(FCommandLine::Get(),TEXT("HellgirlStoryCheck")));
     if (bForestHub) BuildForestHub(); else BuildArena();
-    LastSafePosition = bForestHub ? FVector(-550.f,0.f,110.f) : ((CampaignLevel==2 && !bLegacyMap) || IsImpArena() ? FVector(0.f,0.f,115.f) : FVector(-5000.f,0.f,115.f));
+    LastSafePosition = bForestHub ? FVector(-550.f,0.f,110.f) : bSuccubusCourt ? FVector(-2600.f,0.f,115.f)
+        : ((CampaignLevel==2 && !bLegacyMap) || IsImpArena() ? FVector(0.f,0.f,115.f) : FVector(-5000.f,0.f,115.f));
     if (APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0))
     {
         Player->SetActorLocation(LastSafePosition, false, nullptr, ETeleportType::TeleportPhysics);
@@ -55,7 +57,8 @@ void AArenaGameMode::BeginPlay()
             PC->SetControlRotation(FRotator(-20.f, 0.f, 0.f));
     }
     const bool ExplicitDestination=UGameplayStatics::HasOption(OptionsString,TEXT("StageMap"))
-        || UGameplayStatics::HasOption(OptionsString,TEXT("CampaignLevel")) || UGameplayStatics::HasOption(OptionsString,TEXT("ForestHub"));
+        || UGameplayStatics::HasOption(OptionsString,TEXT("CampaignLevel")) || UGameplayStatics::HasOption(OptionsString,TEXT("ForestHub"))
+        || bSuccubusCourt;
     bShowStartupMenu=!ExplicitDestination && (!FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl")) || FParse::Param(FCommandLine::Get(),TEXT("HellgirlMainMenuCheck")));
 }
 AStaticMeshActor* AArenaGameMode::Prop(FVector Position, FVector Scale, FLinearColor Color, bool Sphere)
@@ -121,6 +124,8 @@ AEnemySpawnPoint* AArenaGameMode::Site(FVector P, FString Name, int32 Count, int
 void AArenaGameMode::BuildArena()
 {
     const FLinearColor Stone(.24f, .23f, .20f), Ash(.20f, .12f, .10f), Space(.22f, .12f, .30f);
+    // The Court builds its own lighting and atmosphere.
+    if (bSuccubusCourt) { BuildSuccubusCourt(); return; }
     if (IsImpArena()) BuildImpArena();
     else if (MapNumber == 1)
     {
@@ -260,7 +265,7 @@ void AArenaGameMode::Travel(int32 Map)
             Options += FString::Printf(TEXT("?CombatEnergy=%.3f"), FMath::Clamp(Player->Energy, 0.f, Player->MaxEnergy));
     UGameplayStatics::OpenLevel(this, FName(*UGameplayStatics::GetCurrentLevelName(this)), true, Options);
 }
-void AArenaGameMode::RestartMap() { if (bForestHub) { TravelToHub(); return; } if (bLegacyMap) Travel(MapNumber); else TravelToCampaign(CampaignLevel); }
+void AArenaGameMode::RestartMap() { if (bForestHub) { TravelToHub(); return; } if (bSuccubusCourt) { TravelToSuccubusCourt(); return; } if (bLegacyMap) Travel(MapNumber); else TravelToCampaign(CampaignLevel); }
 int32 AArenaGameMode::GetUnlockedLevel() const
 {
     if (const auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance()); Wallet && Wallet->PendingLoad) return Wallet->PendingLoad->Unlocked;
@@ -320,6 +325,7 @@ void AArenaGameMode::Tick(float Dt)
     if (bStoryEnabled && TickStory(Dt)) return;
     RunForestHubCheck(Dt);
     if (bForestHub) { TickForestHub(Dt); return; }
+    if (bSuccubusCourt) { TickSuccubusCourt(Dt); return; }
     RunGoblinStageCheck();
     if (!bLegacyMap && CampaignLevel<=2) { TickGoblinPrelude(Dt); return; }
     RunCampaignCheck(Dt);

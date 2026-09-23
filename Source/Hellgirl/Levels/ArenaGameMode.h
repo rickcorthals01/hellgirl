@@ -18,6 +18,8 @@ public:
     int32 CampaignLevel = 1;
     bool bLegacyMap = false;
     bool bForestHub = false;
+    // World III map preview (URL option SuccubusCourt=1); separate from the campaign level numbers.
+    bool bSuccubusCourt = false;
     bool bStoryEnabled = false;
     bool IsImpArena() const { return !bLegacyMap && !bForestHub && CampaignLevel == 4; }
     void QueueStory(FName Moment);
@@ -39,6 +41,10 @@ public:
     void BuildImpArenaDetails();
     void TickImpArena(float Dt);
     void RunImpArenaCheck();
+    void BuildSuccubusCourt();
+    void TickSuccubusCourt(float Dt);
+    void RunSuccubusCourtCheck();
+    void TravelToSuccubusCourt();
     bool bWon = false;
     FString MapTitle, Objective, Prompt;
     TArray<FVector4> MapPlatforms;

@@ -29,6 +29,7 @@ $checks = @(
     @('Terrain',        $queen,  60), @('Map',           $queen,  60),
     @('Map',            '/Engine/Maps/Entry?StageMap=2', 0), @('Map', '/Engine/Maps/Entry?StageMap=3', 0),
     @('ImpArena',       '/Engine/Maps/Entry?StageMap=1?CampaignLevel=4', 60),
+    @('Court',          '/Engine/Maps/Entry?SuccubusCourt=1', 60),
     @('Hub',            '/Engine/Maps/Entry?ForestHub=1', 60), @('Dialogue', '/Engine/Maps/Entry?ForestHub=1', 0),
     @('MainMenu',       '/Engine/Maps/Entry', 0)
 )
