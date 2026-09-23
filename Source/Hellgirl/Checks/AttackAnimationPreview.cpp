@@ -78,8 +78,10 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
         // Walk away from the campfire (-X); standing faces the same way. Camera side-on at hip height.
         if (Walking) AddMovementInput(-FVector::ForwardVector, FeetShot >= 4 ? 1.f : .35f);
         else SetActorRotation(FRotator(0.f, 180.f, 0.f));
-        DesiredCameraDistance = 230.f;
-        CameraArm->SocketOffset = FVector(0.f, 0.f, -45.f);
+        // -FeetFullBody frames the whole character instead of the feet.
+        const bool FullBody = FParse::Param(FCommandLine::Get(), TEXT("FeetFullBody"));
+        DesiredCameraDistance = FullBody ? 420.f : 230.f;
+        CameraArm->SocketOffset = FVector(0.f, 0.f, FullBody ? 0.f : -45.f);
         CameraArm->bEnableCameraLag = false;
         if (auto* PC = Cast<APlayerController>(GetController())) PC->SetControlRotation(FRotator(-4.f, 90.f, 0.f));
         FeetClock += Dt;

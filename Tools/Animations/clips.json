@@ -8,8 +8,9 @@
     "ImpMother": "Animation Testing/ExtraSkins/ImpMother/ImpMother.fbx",
     "Rat": "Animation Testing/ExtraSkins/Rat/Rat.fbx"
   },
-  "_outfit_help": "Outfits whose model was re-posed (see flatten_feet.py) also get their own Meshy walk/run/neutral clips re-fitted from the original files in outfit_clip_folders.",
-  "outfit_clips": { "NeutralIdle": "NeutralIdle.fbx", "Walk": "Walk.fbx", "Run": "Run.fbx" },
+  "_outfit_help": "Outfits whose model was re-posed (see flatten_feet.py) get their own neutral pose re-fitted from the original in outfit_clip_folders. Their Meshy walk/run were made on tiptoe and look broken on flat feet, so they use the Mixamo locomotion in flat_locomotion instead.",
+  "outfit_clips": { "NeutralIdle": "NeutralIdle.fbx" },
+  "flat_locomotion": { "Walk": "Female Locomotion Pack/walking.fbx", "Run": "Female Locomotion Pack/running.fbx" },
   "outfit_clip_folders": {
     "GoblinQueen": "Animation Testing/ExtraSkins/GoblinQueen/tiptoe",
     "Rat": "Animation Testing/ExtraSkins/Rat/tiptoe",
