@@ -3,7 +3,7 @@
 #include "GameFramework/HUD.h"
 #include "ArenaHUD.generated.h"
 UCLASS()
-class ASHENARENA_API AArenaHUD : public AHUD
+class HELLGIRL_API AArenaHUD : public AHUD
 {
     GENERATED_BODY()
 public:

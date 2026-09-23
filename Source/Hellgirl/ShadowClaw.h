@@ -3,7 +3,7 @@
 #include "GameFramework/Actor.h"
 #include "ShadowClaw.generated.h"
 UCLASS()
-class ASHENARENA_API AShadowClaw : public AActor
+class HELLGIRL_API AShadowClaw : public AActor
 {
     GENERATED_BODY()
 public:

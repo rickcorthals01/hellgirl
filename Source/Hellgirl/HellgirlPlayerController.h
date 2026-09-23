@@ -5,7 +5,7 @@
 class SWidget;
 class UTexture2D;
 UCLASS()
-class ASHENARENA_API AHellgirlPlayerController : public APlayerController
+class HELLGIRL_API AHellgirlPlayerController : public APlayerController
 {
     GENERATED_BODY()
 public:

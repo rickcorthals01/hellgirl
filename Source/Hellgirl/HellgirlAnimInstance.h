@@ -4,7 +4,7 @@
 
 // Keeps combat-clock playback while adding restrained secondary motion after pose evaluation.
 UCLASS(Transient)
-class ASHENARENA_API UHellgirlAnimInstance : public UAnimSingleNodeInstance
+class HELLGIRL_API UHellgirlAnimInstance : public UAnimSingleNodeInstance
 {
     GENERATED_BODY()
 protected:

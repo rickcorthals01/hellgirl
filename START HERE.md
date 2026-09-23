@@ -2,7 +2,7 @@
 
 A third-person hack-and-slash for Unreal Engine 5.8. Hellgirl is pulled into a hellworld and fights through seven worlds of enemies and bosses, ending with Lucifer.
 
-Last updated September 23, 2026. The C++ module and project file are still named `AshenArena`, from the original template.
+Last updated September 23, 2026. The project and C++ module were renamed from `AshenArena` (the original template) to `Hellgirl` that day; older docs in `Docs/History` still use the old name.
 
 ## Build and play
 

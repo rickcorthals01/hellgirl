@@ -5,7 +5,7 @@
 #include "HellgirlWallet.generated.h"
 
 UCLASS()
-class ASHENARENA_API UHellgirlWalletSave : public USaveGame
+class HELLGIRL_API UHellgirlWalletSave : public USaveGame
 {
     GENERATED_BODY()
 public:
@@ -14,7 +14,7 @@ public:
 };
 
 UCLASS()
-class ASHENARENA_API UHellgirlGameSave : public UHellgirlWalletSave
+class HELLGIRL_API UHellgirlGameSave : public UHellgirlWalletSave
 {
     GENERATED_BODY()
 public:
@@ -39,7 +39,7 @@ public:
 };
 
 UCLASS()
-class ASHENARENA_API UHellgirlWallet : public UGameInstance
+class HELLGIRL_API UHellgirlWallet : public UGameInstance
 {
     GENERATED_BODY()
 public:

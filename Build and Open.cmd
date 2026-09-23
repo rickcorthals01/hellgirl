@@ -1,11 +1,11 @@
 @echo off
 setlocal
 set "HellgirlEngine=C:\Program Files\Epic Games\UE_5.8"
-set "HellgirlProject=%~dp0AshenArena.uproject"
+set "HellgirlProject=%~dp0Hellgirl.uproject"
 echo Close Unreal Editor before running this file.
 echo Building Hellgirl...
 if not exist "%~dp0Logs" mkdir "%~dp0Logs"
-call "%HellgirlEngine%\Engine\Build\BatchFiles\Build.bat" AshenArenaEditor Win64 Development "-Project=%HellgirlProject%" -WaitMutex "-Log=%~dp0Logs\BuildLog.txt"
+call "%HellgirlEngine%\Engine\Build\BatchFiles\Build.bat" HellgirlEditor Win64 Development "-Project=%HellgirlProject%" -WaitMutex "-Log=%~dp0Logs\BuildLog.txt"
 if errorlevel 1 (
     echo.
     echo Build failed. The details are saved in Logs\BuildLog.txt.

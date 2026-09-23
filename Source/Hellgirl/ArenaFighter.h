@@ -16,7 +16,7 @@ class AEnemySpawnPoint;
 struct FCombatImpactBudget;
 
 UCLASS(Blueprintable)
-class ASHENARENA_API AArenaFighter : public ACharacter
+class HELLGIRL_API AArenaFighter : public ACharacter
 {
     GENERATED_BODY()
 public:

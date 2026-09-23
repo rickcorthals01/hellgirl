@@ -6,7 +6,7 @@ class AEnemySpawnPoint;
 class AStaticMeshActor;
 
 UCLASS()
-class ASHENARENA_API AArenaGameMode : public AGameModeBase
+class HELLGIRL_API AArenaGameMode : public AGameModeBase
 {
     GENERATED_BODY()
 public:

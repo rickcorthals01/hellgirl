@@ -9,7 +9,7 @@ class UTextRenderComponent;
 class UPointLightComponent;
 
 UCLASS(Blueprintable)
-class ASHENARENA_API AEnemySpawnPoint : public AActor
+class HELLGIRL_API AEnemySpawnPoint : public AActor
 {
     GENERATED_BODY()
 public:

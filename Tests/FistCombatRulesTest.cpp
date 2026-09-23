@@ -1,5 +1,5 @@
-#include "../Source/AshenArena/FistCombatRules.h"
-#include "../Source/AshenArena/CombatEnergyRules.h"
+#include "../Source/Hellgirl/FistCombatRules.h"
+#include "../Source/Hellgirl/CombatEnergyRules.h"
 #define CHECK(C) if (!(C)) return __LINE__
 int main()
 {

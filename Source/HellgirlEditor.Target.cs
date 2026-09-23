@@ -1,12 +1,12 @@
 using UnrealBuildTool;
 using System.Collections.Generic;
-public class AshenArenaEditorTarget : TargetRules
+public class HellgirlEditorTarget : TargetRules
 {
-    public AshenArenaEditorTarget(TargetInfo Target) : base(Target)
+    public HellgirlEditorTarget(TargetInfo Target) : base(Target)
     {
         Type = TargetType.Editor;
         DefaultBuildSettings = BuildSettingsVersion.V7;
         IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_8;
-        ExtraModuleNames.Add("AshenArena");
+        ExtraModuleNames.Add("Hellgirl");
     }
 }

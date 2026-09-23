@@ -2,11 +2,11 @@
   "FileVersion": 3,
   "EngineAssociation": "5.8",
   "Category": "Games",
-  "Description": "An editable third-person hack-and-slash arena prototype.",
+  "Description": "Hellgirl: a third-person hack-and-slash.",
   "Plugins": [{ "Name": "ProceduralMeshComponent", "Enabled": true }],
   "Modules": [
     {
-      "Name": "AshenArena",
+      "Name": "Hellgirl",
       "Type": "Runtime",
       "LoadingPhase": "Default"
     }

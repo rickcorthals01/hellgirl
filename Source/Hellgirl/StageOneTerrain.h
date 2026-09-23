@@ -5,7 +5,7 @@
 class UProceduralMeshComponent;
 
 UCLASS()
-class ASHENARENA_API AStageOneTerrain : public AActor
+class HELLGIRL_API AStageOneTerrain : public AActor
 {
     GENERATED_BODY()
 public:

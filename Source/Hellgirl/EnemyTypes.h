@@ -30,7 +30,7 @@ struct FEnemyModelSlot
 };
 
 UCLASS(Config=Game, DefaultConfig, meta=(DisplayName="Hellgirl Enemy Models"))
-class ASHENARENA_API UHellgirlEnemyModels : public UDeveloperSettings
+class HELLGIRL_API UHellgirlEnemyModels : public UDeveloperSettings
 {
     GENERATED_BODY()
 public:

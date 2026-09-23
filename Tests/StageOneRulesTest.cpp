@@ -1,6 +1,6 @@
-#include "../Source/AshenArena/StageOneLayout.h"
-#include "../Source/AshenArena/CoinPickupRules.h"
-#include "../Source/AshenArena/FistCombatRules.h"
+#include "../Source/Hellgirl/StageOneLayout.h"
+#include "../Source/Hellgirl/CoinPickupRules.h"
+#include "../Source/Hellgirl/FistCombatRules.h"
 #define CHECK(C) if (!(C)) return __LINE__
 int main()
 {

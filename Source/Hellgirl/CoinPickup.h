@@ -7,7 +7,7 @@ class UStaticMeshComponent;
 class UTextRenderComponent;
 
 UCLASS()
-class ASHENARENA_API ACoinPickup : public AActor
+class HELLGIRL_API ACoinPickup : public AActor
 {
     GENERATED_BODY()
 public:
