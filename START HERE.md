@@ -1,60 +1,84 @@
-# Ashen Arena
+# Hellgirl
 
-**Current map:** see **STAGE ONE MAP.md**. The latest source replaces the room and waves with a larger landscape, winding road, hill, and three approach-activated enemy rifts. It also updates aerial damage and coin attraction/contact. Rebuild with Build and Open.cmd before testing.
+A third-person hack-and-slash for Unreal Engine 5.8. Hellgirl is pulled into a hellworld and fights through seven worlds of enemies and bosses, ending with Lucifer.
 
-**September 11 update:** the project is now titled Hellgirl and has a new unarmed-combat source pass. Use **FISTS PLAYTEST.md** for the current controls, implemented features, limitations, and rebuild instructions. The initial scaffold below is historical; the original sword/Space-dodge controls no longer describe the new source. The earlier baseline compiled successfully, but the new fist changes await their full Unreal rebuild.
+Last updated September 23, 2026. The C++ module and project file are still named `AshenArena`, from the original template.
 
-An editable, local Unreal Engine 5 project for a third-person hack-and-slash game.
+## Build and play
 
-## Current status
+1. Close Unreal Editor.
+2. Run **Build and Open.cmd**. It compiles the game and opens the editor. If it fails, the error is in `Logs\BuildLog.txt`.
+3. Press **Play**, then click in the viewport to capture the mouse.
 
-The C++ source and project configuration are created. **This project has not yet been compiled or playtested in Unreal Engine**, because Unreal and the C++ build tools were not installed when it was generated. Treat it as a starter prototype awaiting its first build, not a finished game or a ready-to-run executable.
+The game opens on the main menu. Once the first stage is beaten, startup goes to the forest camp instead.
 
-The implementation includes camera-relative movement, mouse look, three-hit sword combos, stamina-based dodging with temporary invulnerability, enemies that approach and telegraph attacks, health bars, five waves, healing between waves, victory/defeat messages, and restart. Characters and the arena use basic engine shapes. There are no imported character models, skeletal animations, music, or sound effects yet.
+All levels are generated in C++ when Play starts. There are no level `.umap` files, so the editor viewport is empty before Play.
 
-## Install the tools
+## What's playable
 
-1. Finish installing Unreal Engine 5 through the Epic Games Launcher. This source targets UE 5.4 or later; use the version you are installing for the initial build.
-2. Install Visual Studio with **Game development with C++**, the matching MSVC compiler, and the Windows SDK. Use Epic's version table to match Visual Studio to your Unreal release: [Epic's Visual Studio setup guide](https://dev.epicgames.com/documentation/en-us/unreal-engine/setting-up-visual-studio-development-environment-for-cplusplus-projects-in-unreal-engine). Visual Studio is a separate application from Visual Studio Code.
+| World | Stages | Boss | State |
+|---|---|---|---|
+| I: Goblin Ruins | First Raid, Survival, The Queen | Goblin Queen | Playable |
+| II: Imp Torture Arena | Torture Arena | Imp Commander | Playable (stage 1 only) |
+| III: Succubus Court | — | Succubus Queen | Planned |
+| IV–VII: Ghosts, Rats, Frogs, Apostles | — | Ghost King, Rat Queen, Frog King, Lucifer | Planned |
+| Final special stage | — | Lucifer (Devil Form) | Planned |
 
-## Open the project
+**Forest camp hub** (unlocked after World I, Stage I): campfire to heal and change outfit, and a road to the world/stage select. After the Goblin Queen is beaten, a goblin merchant appears; the shop itself is not implemented yet.
 
-1. Keep this entire folder together. You may move it to another folder on your PC.
-2. Right-click `AshenArena.uproject` in File Explorer. On Windows 11 you may need **Show more options**. Choose **Switch Unreal Engine version**, select your installed engine, then choose **Generate Visual Studio project files** if needed. No engine version has been hardcoded into this starter.
-3. Double-click `AshenArena.uproject`. If asked to build missing modules, choose **Yes**. The initial build can take several minutes.
-4. If automatic compilation fails, open the generated solution in Visual Studio. Choose **Development Editor** and **Win64**, build the AshenArena project, and review the first error in the build output. Save that error so we can fix it.
-5. In Unreal, press **Play**, then click inside the game viewport to capture the mouse.
+**Weapons:** fists and sword. The gun and car were removed from the design on September 23.
 
-The startup level is Unreal's empty Entry map. The game creates its arena when Play begins, so the environment does not appear in the editor before Play. This avoids pretending that an Unreal binary map was generated without the editor.
+**Outfit ultimates:** Rags, Goblin Queen and Succubus Armor work. Other outfits have no ultimate yet.
 
 ## Controls
 
-| Input | Action |
-| --- | --- |
-| W / A / S / D | Move relative to the camera |
-| Mouse | Look and aim your sword swing |
-| Left click | Attack; click again after a swing to chain up to three hits |
-| Space | Dodge in your movement direction, or forward when stationary |
-| R | Restart the arena |
-| Escape | Toggle mouse cursor capture |
-| Shift + F1 | Unreal editor shortcut to release the mouse during Play |
+| Action | Keyboard / mouse | Controller |
+|---|---|---|
+| Move / look | WASD / mouse | Left stick / right stick |
+| Light attack | Left click | X |
+| Heavy attack (hold to charge) | Right click | Y |
+| Dodge | Shift | B |
+| Jump | Space | A |
+| Sprint | F | Left stick click |
+| Walk | Left Ctrl | — |
+| Outfit ultimate | Q | Right stick click |
+| Fists / sword | 1 / 2 | D-pad up / right |
+| Interact | E | Y |
+| Camera zoom | Mouse wheel | Triggers |
+| Pause | Escape or P | Menu |
+| Restart map | R | — |
 
-Dodging costs 30 stamina and briefly avoids damage. The third combo hit deals extra damage. Clearing a wave restores 25 health. Beat all five waves to win.
+Keyboard bindings can be changed in **Pause > Options**. Controller bindings are fixed.
 
-## Work on your own game
+## Known gaps
 
-- `Source/AshenArena/ArenaFighter.h`: starting health, sword damage, attack range, and movement speed.
-- `Source/AshenArena/ArenaFighter.cpp`: movement, combat, dodge, primitive character shapes, and enemy behavior.
-- `Source/AshenArena/ArenaGameMode.cpp`: generated arena, lighting, enemy counts, and waves.
-- `Source/AshenArena/ArenaHUD.cpp`: on-screen information.
-- `Config/DefaultInput.ini`: controls.
+- Attacks use placeholder animations. Debug effects show where hits land.
+- The shop, the Succubus Hall hub and Worlds III–VII are not built yet.
+- Balance values are initial tuning and have not been hands-on playtested.
 
-For visual editing, first create and save your own level under `Content/Maps`. Set it as the editor startup map and game default map in Project Settings > Maps & Modes, and retain ArenaGameMode as the default game mode. The generated arena will still appear during Play until you replace or disable `BuildArena()`.
+## Where things are
 
-The fighter is Blueprintable and its combat settings are exposed. You can derive a Blueprint from ArenaFighter and replace the placeholder look. To use that Blueprint as the player, select it as Default Pawn Class in a GameMode Blueprint derived from ArenaGameMode. Enemy spawning currently uses the native fighter class in `StartWave()`; update that separately when adding your enemy Blueprint.
+| Path | Contents |
+|---|---|
+| `Source/AshenArena/` | All game code. `ArenaFighter` handles the player and enemies, and `ArenaGameMode` builds the levels and runs progression |
+| `Config/DefaultInput.ini` | Default key bindings |
+| `Content/` | Imported models, animations, textures and materials |
+| `Tests/` | Standalone C++ rule tests |
+| `Docs/` | Current design and system notes (see below) |
+| `Docs/History/` | Older playtest and build notes, kept for reference; they may describe removed features |
+| `Logs/` | Build and test logs (not tracked by git) |
 
-## First playtest checklist
+### Docs
 
-Once the initial build succeeds, verify movement and camera, combo hits and misses, enemy damage, dodge invulnerability and stamina regeneration, wave transitions, death, victory, and restarting. Also check whether the game's difficulty and camera feel good. Static source checks do not establish any of these gameplay results.
+- **HELLGIRL DESIGN.md**: overall concept, level progression and the apartment intro.
+- **HELLGIRL COMBAT.md** and **COMBAT UPDATE.md**: combat design and the current move list, energy and ultimates.
+- **CAMPAIGN.md**: boss mechanics. Its level numbering predates the World/Stage select.
+- **FOREST HUB.md**, **DIALOGUE.md**, **PAUSE MENU.md**: those systems.
+- **ARENA LOOP.md**, **STAGE ONE MAP.md**: castle arena layout and the older lava and astral maps, which are still in the code for development.
+- **NATIVE MODELS.md**: how the character models were set up.
 
-This is a single-player prototype. Enemy movement is direct pursuit in an open arena; navigation around complex obstacles, animation-driven weapon collision, audio, menus, saving, controller input, and packaged Windows builds are future work.
+The original design notes, reference art and source models live outside this folder in `Desktop\Hellgirl Game`, mainly `Developer idea folder lol\`.
+
+## Version control
+
+This folder is a git repository, backed up to a private GitHub repo. Large assets (`.uasset`, models, images, audio) are stored with Git LFS.
