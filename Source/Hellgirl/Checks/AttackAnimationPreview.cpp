@@ -1,6 +1,8 @@
 #include "Fighter/ArenaFighter.h"
 #include "Rules/FistCombatRules.h"
 #include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -11,6 +13,42 @@
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
 
+#if WITH_EDITORONLY_DATA
+#include "Rendering/SkeletalMeshModel.h"
+#include "Rendering/SkeletalMeshLODModel.h"
+#endif
+
+namespace
+{
+// Logs the stored (bind-pose) sole height of the right foot from toe to heel, the same
+// measurement Tools-side Blender checks make, so imports can be compared numerically.
+void LogFootSole(USkeletalMesh* Mesh)
+{
+#if WITH_EDITORONLY_DATA
+    if (!Mesh || !Mesh->GetImportedModel() || !Mesh->GetImportedModel()->LODModels.Num()) return;
+    const FReferenceSkeleton& Ref = Mesh->GetRefSkeleton();
+    const int32 FootIndex = Ref.FindBoneIndex(TEXT("RightFoot")), ToeIndex = Ref.FindBoneIndex(TEXT("RightToeBase"));
+    if (FootIndex == INDEX_NONE || ToeIndex == INDEX_NONE) return;
+    auto ComponentSpace = [&Ref](int32 Bone) { FTransform T = FTransform::Identity; for (int32 B = Bone; B != INDEX_NONE; B = Ref.GetParentIndex(B)) T = T * Ref.GetRefBonePose()[B]; return T; };
+    const FVector Ankle = ComponentSpace(FootIndex).GetLocation(), Ball = ComponentSpace(ToeIndex).GetLocation();
+    const FVector Along = FVector(Ball.X - Ankle.X, Ball.Y - Ankle.Y, 0.f).GetSafeNormal();
+    TArray<FVector> Foot;
+    for (const FSkelMeshSection& Section : Mesh->GetImportedModel()->LODModels[0].Sections)
+        for (const FSoftSkinVertex& V : Section.SoftVertices)
+        {
+            const FVector P(V.Position);
+            if (P.Z < 16.f && FVector::Dist2D(P, (Ankle + Ball) * .5f) < 14.f) Foot.Add(P);
+        }
+    float Lo = FLT_MAX, Hi = -FLT_MAX;
+    for (const FVector& P : Foot) { const float D = FVector::DotProduct(P, Along); Lo = FMath::Min(Lo, D); Hi = FMath::Max(Hi, D); }
+    // 0 = toe tip, 1 = back of the heel.
+    auto Sole = [&](float A, float B) { float Z = FLT_MAX; for (const FVector& P : Foot) { const float F = 1.f - (FVector::DotProduct(P, Along) - Lo) / FMath::Max(Hi - Lo, 1.f); if (F >= A && F <= B) Z = FMath::Min(Z, (float)P.Z); } return Z; };
+    UE_LOG(LogTemp, Display, TEXT("FEET MESH %s: %d foot verts, length %.1f cm | sole height: toes %.1f, ball %.1f, arch %.1f, heel %.1f | ankle joint z %.1f, ball joint z %.1f"),
+        *Mesh->GetName(), Foot.Num(), Hi - Lo, Sole(0.f, .15f), Sole(.2f, .35f), Sole(.45f, .6f), Sole(.8f, 1.f), Ankle.Z, Ball.Z);
+#endif
+}
+}
+
 // Visual check for combat clips (needs a GPU, so it is not part of Tests/run-checks.ps1):
 //   UnrealEditor.exe Hellgirl.uproject /Engine/Maps/Entry?ForestHub=1 -game -windowed -ResX=900 -ResY=900 -HellgirlAttackPreview
 // Holds every player attack at wind-up, contact and follow-through and saves screenshots to
@@ -18,7 +56,45 @@
 void AArenaFighter::RunAttackAnimationPreview(float Dt)
 {
 #if WITH_DEV_AUTOMATION_TESTS
-    if (bEnemy || UGameplayStatics::GetPlayerPawn(this, 0) != this || !FParse::Param(FCommandLine::Get(), TEXT("HellgirlAttackPreview"))) return;
+    if (bEnemy || UGameplayStatics::GetPlayerPawn(this, 0) != this) return;
+    // -HellgirlFeetPreview: side view of standing and walking, to inspect foot placement.
+    if (FParse::Param(FCommandLine::Get(), TEXT("HellgirlFeetPreview")))
+    {
+        static int32 FeetShot = 0;
+        static float FeetClock = 0.f;
+        const float Now = GetWorld()->GetTimeSeconds();
+        if (Now < 2.f || FeetShot > 7) return;
+        const bool Walking = FeetShot >= 2 && FeetShot <= 5;
+        // Shots 6-7: no animation at all, so the mesh shows the imported reference pose.
+        if (FeetShot >= 6 && GetMesh()->GetAnimationMode() != EAnimationMode::AnimationCustomMode)
+        {
+            GetMesh()->SetAnimationMode(EAnimationMode::AnimationCustomMode);
+            // -FeetMesh=/Game/... shows another import of the mesh for comparison.
+            FString MeshPath;
+            if (FParse::Value(FCommandLine::Get(), TEXT("FeetMesh="), MeshPath))
+                if (USkeletalMesh* Other = LoadObject<USkeletalMesh>(nullptr, *MeshPath)) GetMesh()->SetSkeletalMesh(Other);
+            LogFootSole(GetMesh()->GetSkeletalMeshAsset());
+        }
+        // Walk away from the campfire (-X); standing faces the same way. Camera side-on at hip height.
+        if (Walking) AddMovementInput(-FVector::ForwardVector, FeetShot >= 4 ? 1.f : .35f);
+        else SetActorRotation(FRotator(0.f, 180.f, 0.f));
+        DesiredCameraDistance = 230.f;
+        CameraArm->SocketOffset = FVector(0.f, 0.f, -45.f);
+        CameraArm->bEnableCameraLag = false;
+        if (auto* PC = Cast<APlayerController>(GetController())) PC->SetControlRotation(FRotator(-4.f, 90.f, 0.f));
+        FeetClock += Dt;
+        if (FeetClock >= (FeetShot % 2 ? .23f : .6f))
+        {
+            FeetClock = 0.f;
+            UE_LOG(LogTemp, Display, TEXT("FEET PREVIEW %d: speed %.0f, clip %s at %.3fs, capsule bottom z %.1f, mesh z %.1f"), FeetShot,
+                GetVelocity().Size2D(), ActiveAnimation ? *ActiveAnimation->GetName() : TEXT("none"), GetMesh()->GetPosition(),
+                GetActorLocation().Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight(), GetMesh()->GetComponentLocation().Z);
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/Feet/%d.png"), FeetShot), false, false);
+            if (++FeetShot > 7) { UE_LOG(LogTemp, Display, TEXT("FEET PREVIEW PASSED")); FPlatformMisc::RequestExitWithStatus(false, 0); }
+        }
+        return;
+    }
+    if (!FParse::Param(FCommandLine::Get(), TEXT("HellgirlAttackPreview"))) return;
     // Special: 1 = charged strike (full charge), 2 = holding heavy (charging loop).
     struct FPreviewMove { const TCHAR* Clip; bool Heavy; int32 Combo; bool Air; bool AfterDodge; bool Sword; int32 Special = 0; };
     static const FPreviewMove Moves[] = {
