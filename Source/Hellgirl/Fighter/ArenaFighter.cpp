@@ -34,7 +34,7 @@ namespace
 {
 // Clip names produced by Tools/Animations (clips.json). Idle is the standing loop; Block is kept for the retired block pose.
 const TCHAR* const CombatClipNames[] = {
-    TEXT("Idle"), TEXT("RightPunch"), TEXT("LeftPunch"), TEXT("DoubleJab"), TEXT("RightKick"), TEXT("LeftKick"), TEXT("LegSweep"),
+    TEXT("Idle"), TEXT("Jump"), TEXT("RightPunch"), TEXT("LeftPunch"), TEXT("DoubleJab"), TEXT("RightKick"), TEXT("LeftKick"), TEXT("LegSweep"),
     TEXT("Headbutt"), TEXT("DodgeSlam"), TEXT("Charge"), TEXT("ChargedStrike"),
     TEXT("AirPunch"), TEXT("AirLeftPunch"), TEXT("AirKick"), TEXT("AirCrashKick"), TEXT("AirSlam"),
     TEXT("Dodge"), TEXT("Hit"), TEXT("Knockdown"), TEXT("Death"), TEXT("Block"),
@@ -247,6 +247,7 @@ bool AArenaFighter::SetOutfit(int32 Outfit)
             ? LoadObject<UAnimSequence>(nullptr, *Path) : nullptr;
         CombatAnimations.Add(FName(Name), Clip && Clip->GetSkeleton() == OutfitMesh->GetSkeleton() ? Clip : NeutralIdleAnimation.Get());
     }
+    JumpAnimation = CombatAnimations.FindRef(TEXT("Jump"));
     SelectedOutfit = Outfit;
     GetMesh()->SetSkeletalMesh(OutfitMesh);
     // The placeholder blade follows the right hand so sword clips swing it.
@@ -1096,8 +1097,9 @@ void AArenaFighter::UpdatePose(float Dt)
         else if (JumpAnimation && IsAlive() && KnockdownClock <= 0.f && (Airborne || LandingAnimationTime < .25f))
         {
             Clip = JumpAnimation.Get();
-            // Hold the aerial section for any jump height; land only on actual floor contact.
-            Position = Airborne ? (GetVelocity().Z > 0.f ? FMath::Min(.30f, .10f + AirAnimationTime) : .65f) : .75f + LandingAnimationTime;
+            // Times in the Mixamo "Jump" clip: takeoff .27 s, apex .53 s, legs tucked on the way down .70 s,
+            // touchdown .93 s. Hold the aerial section for any jump height; land only on actual floor contact.
+            Position = Airborne ? (GetVelocity().Z > 0.f ? FMath::Min(.53f, .27f + AirAnimationTime) : .70f) : .93f + LandingAnimationTime;
         }
         else
         {

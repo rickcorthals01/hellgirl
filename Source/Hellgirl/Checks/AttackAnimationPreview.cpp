@@ -4,6 +4,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "HAL/PlatformMisc.h"
@@ -97,6 +98,38 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
             FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/Feet/%d.png"), FeetShot), false, false);
             if (++FeetShot > 7) { UE_LOG(LogTemp, Display, TEXT("FEET PREVIEW PASSED")); FPlatformMisc::RequestExitWithStatus(false, 0); }
         }
+        return;
+    }
+    // -HellgirlJumpPreview: a real jump, captured rising, near the top, falling and just after landing.
+    if (FParse::Param(FCommandLine::Get(), TEXT("HellgirlJumpPreview")))
+    {
+        static int32 JumpShot = -1;
+        static float JumpClock = 0.f;
+        static bool bWasAirborne = false;
+        static int32 LandedFrames = 0;
+        if (GetWorld()->GetTimeSeconds() < 2.f || JumpShot > 3) return;
+        SetActorRotation(FRotator(0.f, 180.f, 0.f));
+        DesiredCameraDistance = 420.f;
+        CameraArm->SocketOffset = FVector::ZeroVector;
+        CameraArm->bEnableCameraLag = false;
+        if (auto* PC = Cast<APlayerController>(GetController())) PC->SetControlRotation(FRotator(-4.f, 90.f, 0.f));
+        const bool Airborne = GetCharacterMovement()->IsFalling();
+        if (JumpShot < 0) { Jump(); JumpShot = 0; JumpClock = 0.f; bWasAirborne = false; return; }
+        JumpClock += Dt;
+        const float VerticalSpeed = GetVelocity().Z;
+        const bool Take = (JumpShot == 0 && Airborne && JumpClock > .12f) || (JumpShot == 1 && Airborne && VerticalSpeed < 80.f && VerticalSpeed > -80.f)
+            || (JumpShot == 2 && Airborne && VerticalSpeed < -350.f) || (JumpShot == 3 && LandedFrames >= 5);
+        // Wait a few frames after touchdown so the landing pose has been applied before capturing.
+        if (bWasAirborne && !Airborne) ++LandedFrames;
+        bWasAirborne |= Airborne;
+        if (Take)
+        {
+            UE_LOG(LogTemp, Display, TEXT("JUMP PREVIEW %d: airborne %d, vertical speed %.0f, clip %s at %.3fs"), JumpShot, Airborne ? 1 : 0, VerticalSpeed,
+                ActiveAnimation ? *ActiveAnimation->GetName() : TEXT("none"), GetMesh()->GetPosition());
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/Jump/%d.png"), JumpShot), false, false);
+            if (++JumpShot > 3) { UE_LOG(LogTemp, Display, TEXT("JUMP PREVIEW PASSED")); FPlatformMisc::RequestExitWithStatus(false, 0); }
+        }
+        if (JumpClock > 6.f) { UE_LOG(LogTemp, Error, TEXT("JUMP PREVIEW FAILED at shot %d"), JumpShot); FPlatformMisc::RequestExitWithStatus(false, 1); JumpShot = 4; }
         return;
     }
     if (!FParse::Param(FCommandLine::Get(), TEXT("HellgirlAttackPreview"))) return;
