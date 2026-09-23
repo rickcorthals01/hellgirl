@@ -1,4 +1,5 @@
 #include "Fighter/ArenaFighter.h"
+#include "Bosses/BossBehavior.h"
 #include "Progress/HellgirlWallet.h"
 #include "Fighter/CombatImpactBudget.h"
 #include "Levels/ArenaGameMode.h"
@@ -241,6 +242,13 @@ void AArenaFighter::SetupPlayerInputComponent(UInputComponent* Input)
 void AArenaFighter::SetEnemyType(EHellgirlEnemyType Type)
 {
     EnemyType = Type;
+    const TSubclassOf<UBossBehavior> BossClass = UBossBehavior::ClassFor(Type);
+    if (BossBehavior && BossBehavior->GetClass() != BossClass) { BossBehavior->DestroyComponent(); BossBehavior = nullptr; }
+    if (BossClass && !BossBehavior)
+    {
+        BossBehavior = NewObject<UBossBehavior>(this, BossClass);
+        BossBehavior->RegisterComponent();
+    }
     if (Type == EHellgirlEnemyType::Goblins) { WalkSpeed=390.f; AttackDamage=10.f; }
     if (Type == EHellgirlEnemyType::GoblinQueen) { WalkSpeed=430.f; AttackDamage=20.f; }
     const FString Name = StaticEnum<EHellgirlEnemyType>()->GetNameStringByValue(static_cast<int64>(Type));
@@ -538,7 +546,6 @@ bool AArenaFighter::CanCounter(const AArenaFighter* Enemy) const
     if (!Enemy || !Enemy->bEnemy || !Enemy->IsAlive() || Enemy->bHitResolved || Enemy->AttackClock <= 0.f) return false;
     // A timed dodge still evades bosses, but must not become an interrupting counter.
     if (Enemy->IsBossAttackArmored()) return false;
-    if (Enemy->EnemyMove == EEnemyMove::CommanderSummon) return false;
     const float UntilHit = Enemy->AttackClock - Enemy->CurrentAttack.Duration * (1.f - Enemy->CurrentAttack.ContactFraction);
     if (UntilHit <= 0.f || UntilHit > PerfectDodgeWindow) return false;
     const FVector Delta = GetActorLocation() - Enemy->GetActorLocation();
@@ -591,13 +598,7 @@ bool AArenaFighter::TryPerfectCounter()
 
 void AArenaFighter::ResolveAttack()
 {
-    if (bEnemy && EnemyMove == EEnemyMove::QueenClaw) { FireShadowClaw(); return; }
-    if (bEnemy && EnemyMove == EEnemyMove::CommanderJumpSlam && bBossEncounter) SpawnCommanderImps();
-    if (bEnemy && EnemyMove == EEnemyMove::CommanderSummon)
-    {
-        SpawnCommanderImps();
-        return;
-    }
+    if (bEnemy && BossBehavior && BossBehavior->ResolveMove(EnemyMove)) return;
     // One cone-shaped sweep per swing. Each opponent is damaged at most once.
     TArray<AActor*> Fighters;
     UGameplayStatics::GetAllActorsOfClass(this, StaticClass(), Fighters);
@@ -753,11 +754,7 @@ void AArenaFighter::Tick(float Dt)
         if (ParalysisClock <= 0.f) GetCharacterMovement()->SetMovementMode(bFlyingEnemy ? MOVE_Flying : MOVE_Falling);
         return;
     }
-    if (EnemyType == EHellgirlEnemyType::GoblinQueen && bEnemy && IsAlive())
-    {
-        UpdateQueenPhases(Dt);
-        if (bQueenHidden) return;
-    }
+    if (BossBehavior && bEnemy && IsAlive() && BossBehavior->TickPhases(Dt)) return;
     UpdateCombatPhysics(Dt);
     RunPhysicsCheck(Dt);
     RunEnergyCheck();
@@ -766,7 +763,7 @@ void AArenaFighter::Tick(float Dt)
     RunEnemyMovesetCheck(Dt);
     RunCombatBalanceCheck(Dt);
     const float UntilHit = AttackClock - CurrentAttack.Duration * (1.f - CurrentAttack.ContactFraction);
-    const bool FlashNow = bEnemy && EnemyMove != EEnemyMove::CommanderSummon && IsAlive() && !bHitResolved && AttackClock > 0.f && UntilHit > 0.f && UntilHit <= PerfectDodgeWindow;
+    const bool FlashNow = bEnemy && IsAlive() && !bHitResolved && AttackClock > 0.f && UntilHit > 0.f && UntilHit <= PerfectDodgeWindow;
     AttackFlash->SetVisibility(FlashNow);
     if (FlashNow)
     {
@@ -875,8 +872,8 @@ void AArenaFighter::Tick(float Dt)
         if (Player && Player->IsAlive() && KnockdownClock <= 0.f && HitClock <= 0.f && !bCombatLaunched
             && (!bGuardHome || FVector::DistSquared2D(Player->GetActorLocation(), HomePosition) < FMath::Square(1000.f)))
         {
-            if (EnemyType == EHellgirlEnemyType::Goblins || EnemyType == EHellgirlEnemyType::GoblinQueen) UpdateGoblinTactics(Dt,Player);
-            else if (EnemyType == EHellgirlEnemyType::ImpCommander) UpdateCommanderTactics(Dt,Player);
+            if (BossBehavior) BossBehavior->TickTactics(Dt,Player);
+            else if (EnemyType == EHellgirlEnemyType::Goblins) UpdateGoblinTactics(Dt,Player);
             else if (EnemyType == EHellgirlEnemyType::Imps || EnemyType == EHellgirlEnemyType::FlyingImps) UpdateImpTactics(Dt,Player);
             else
             {
@@ -1075,12 +1072,7 @@ void AArenaFighter::UpdatePose(float Dt)
         switch (CurrentAttack.Type)
         {
         case Move::EnemyClaw:
-            if (EnemyMove == EEnemyMove::CommanderSummon)
-            {
-                RH = FVector(0.f,60.f,90.f); LH = FVector(0.f,-60.f,90.f);
-                Lean.Pitch = 12.f * Pulse;
-            }
-            else if (EnemyMove == EEnemyMove::CommanderSlam)
+            if (EnemyMove == EEnemyMove::CommanderSlam)
             {
                 const float Height = bHitResolved ? -35.f : 100.f;
                 RH = FVector(45.f,30.f,Height); LH = FVector(45.f,-30.f,Height);

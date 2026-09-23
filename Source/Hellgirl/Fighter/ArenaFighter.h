@@ -13,6 +13,7 @@ class UAnimSequence;
 class UPointLightComponent;
 class UTextRenderComponent;
 class AEnemySpawnPoint;
+class UBossBehavior;
 struct FCombatImpactBudget;
 
 UCLASS(Blueprintable)
@@ -69,13 +70,12 @@ public:
     bool IsBossAttackArmored() const;
     bool bBossEncounter = false;
     bool bStorySurrendered = false;
-    int32 GetGoblinPhase() const { return GoblinPhase; }
-    bool IsQueenHidden() const { return bQueenHidden; }
+    // Boss rules (phases, summons, damage gates); set by SetEnemyType for boss types, otherwise null.
+    UBossBehavior* GetBossBehavior() const { return BossBehavior; }
+    template<class T> T* GetBoss() const { return Cast<T>(BossBehavior); }
+    bool IsBossHidden() const;
     float FilterEnemyDamage(float Damage);
     void UpdateGoblinTactics(float Dt, AArenaFighter* Player);
-    void UpdateQueenPhases(float Dt);
-    void SpawnGoblinPack(int32 Count, bool FirstPack=false);
-    void FireShadowClaw();
     void RunBossDesignCheck();
     FString MoveLabel = TEXT("FISTS READY");
     int32 GetComboStep() const { return ComboClock > 0.f ? Combo : 0; }
@@ -85,12 +85,6 @@ public:
     FVector HomePosition = FVector::ZeroVector;
     bool bGuardHome = false;
     TWeakObjectPtr<AEnemySpawnPoint> EncounterSite;
-    int32 GetCommanderPhase() const { return bCommanderPhaseTwo ? 2 : 1; }
-    int32 GetSummonedImpCount() const;
-    bool IsCommanderSummoning() const { return EnemyMove == EEnemyMove::CommanderSummon && AttackClock > 0.f && !bHitResolved; }
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Enemy|Commander", meta=(ClampMin="0.1", ClampMax="0.9")) float CommanderPhaseTwoThreshold = .5f;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Enemy|Commander", meta=(ClampMin="1", ClampMax="6")) int32 CommanderImpLimit = 3;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Enemy|Commander", meta=(ClampMin="5.0")) float CommanderSummonInterval = 18.f;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat") float Riposte = 0.f;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> Body;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> Sword;
@@ -104,13 +98,10 @@ public:
 private:
     int32 SelectedOutfit = 0;
     int32 SelectedWeapon = 0;
-    int32 GoblinPhase = 0;
-    bool bQueenHidden = false, bQueenFinalReturned = false;
-    bool bCommanderStarted = false;
-    float GoblinSpawnClock = 0.f;
-    int32 GoblinFinalKills = 0;
-    TArray<TWeakObjectPtr<AArenaFighter>> QueenGoblins, QueenFirstPack, QueenSecondPack;
-    float CommanderJumpClock = 0.f;
+    UPROPERTY() TObjectPtr<UBossBehavior> BossBehavior;
+    // Boss behaviours drive the enemy move state (clocks, moves, cooldowns) directly.
+    friend class UGoblinQueenBehavior;
+    friend class UImpCommanderBehavior;
     int32 ActiveUltimate = -1;
     float UltimateClock = 0.f;
     float UltimatePulseClock = 0.f;
@@ -130,8 +121,6 @@ private:
     bool CanBeginEnemyMove(const AArenaFighter* Player) const;
     bool IsEnemyGroundAheadSafe(const FVector& Direction, float Distance = 130.f) const;
     void CancelEnemyMove();
-    void UpdateCommanderTactics(float Dt, AArenaFighter* Player);
-    void SpawnCommanderImps();
     void DrawEnemyMoveTelegraph();
     void RunEnemyMovesetCheck(float Dt);
     void RunCombatBalanceCheck(float Dt);
@@ -148,10 +137,6 @@ private:
     float EnemyLastAttackTime = -100.f;
     bool bEnemyMoveMotionStopped = false;
     float EnemyMoveMotionProgress = 0.f;
-    bool bCommanderPhaseTwo = false;
-    float CommanderSummonClock = 0.f;
-    int32 CommanderAttackCycle = 0;
-    TArray<TWeakObjectPtr<AArenaFighter>> CommanderImps;
     void HandleDeath(const FVector& ImpulseVelocity);
     void StartDeathRagdoll(const FVector& ImpulseVelocity);
     void UpdateCombatPhysics(float Dt);

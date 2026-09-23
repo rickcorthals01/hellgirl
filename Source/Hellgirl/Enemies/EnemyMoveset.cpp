@@ -4,6 +4,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "DrawDebugHelpers.h"
 
 namespace
 {
@@ -128,9 +129,6 @@ void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
     case EEnemyMove::CommanderSlam:
         Spec = {FistCombat::Move::EnemyClaw, 2.8f, .6f, 20.f, 500.f, 350.f, 0.f, 0};
         Recovery = 1.8f; Label = TEXT("COMMANDER / GROUND SLAM"); break;
-    case EEnemyMove::CommanderSummon:
-        Spec = {FistCombat::Move::EnemyClaw, 3.f, .6f, 0.f, 0.f, 0.f, 0.f, 0};
-        Recovery = 1.3f; Label = TEXT("COMMANDER / CALLING IMPS"); break;
     default: break;
     }
 
@@ -177,8 +175,6 @@ void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
 void AArenaFighter::CancelEnemyMove()
 {
     if (EnemyMove == EEnemyMove::None) return;
-    if (EnemyMove == EEnemyMove::CommanderSummon && !bHitResolved)
-        CommanderSummonClock = FMath::Max(CommanderSummonClock, 3.f);
     EnemyMove = EEnemyMove::None;
     EnemyMoveMotionProgress = 0.f;
     bEnemyMoveMotionStopped = true;
@@ -245,6 +241,28 @@ void AArenaFighter::UpdateEnemyMoveMotion(float Dt)
     if (Block.bBlockingHit) bEnemyMoveMotionStopped = true;
     // Recovery deliberately holds the diver near the ground. Hover resumes
     // only after its attack clock ends, giving the player a punish window.
+}
+
+void AArenaFighter::DrawEnemyMoveTelegraph()
+{
+    if (EnemyMove == EEnemyMove::None || AttackClock <= 0.f || !IsAlive()) return;
+    const bool WindingUp = !bHitResolved;
+    const FColor Cue = WindingUp ? FColor(255,160,55) : FColor(150,170,180);
+    if (EnemyMove == EEnemyMove::CommanderJumpSlam)
+    {
+        const float UntilHit=AttackClock-CurrentAttack.Duration*(1.f-CurrentAttack.ContactFraction);
+        if (UntilHit>0.f && UntilHit<=(bBossEncounter ? .45f : 1.2f))
+            DrawDebugCircle(GetWorld(),EnemyMoveTarget-FVector(0,0,GetCapsuleComponent()->GetScaledCapsuleHalfHeight()-8),CurrentAttack.Range,48,FColor::Red,false,-1.f,0,6.f,FVector::ForwardVector,FVector::RightVector,false);
+    }
+    else if (EnemyMove == EEnemyMove::CommanderSlam)
+    {
+        const FVector Floor = GetActorLocation()-FVector(0,0,GetCapsuleComponent()->GetScaledCapsuleHalfHeight()-10.f);
+        DrawDebugCircle(GetWorld(),Floor,CurrentAttack.Range,48,Cue,false,-1.f,0,5.f,FVector::ForwardVector,FVector::RightVector,false);
+    }
+    else
+        DrawDebugDirectionalArrow(GetWorld(),GetActorLocation(),GetActorLocation()+GetActorForwardVector()*CurrentAttack.Range,35.f,Cue,false,-1.f,0,4.f);
+    DrawDebugString(GetWorld(),GetActorLocation()+FVector(0,0,GetCapsuleComponent()->GetScaledCapsuleHalfHeight()+90.f),
+        WindingUp ? MoveLabel : TEXT("RECOVERING"),nullptr,Cue,0.f,true,1.f);
 }
 
 bool AArenaFighter::UpdateImpTactics(float Dt, AArenaFighter* Player)

@@ -49,7 +49,7 @@ void AHellgirlPlayerController::RunStoryCheck()
             if (!Queen->bStorySurrendered)
             {
                 // Exercise real phase triggers while bypassing attack timing only.
-                if (!Queen->IsQueenHidden()) Queen->ApplyPhysicsDamage(100000.f,FVector::ZeroVector);
+                if (!Queen->IsBossHidden()) Queen->ApplyPhysicsDamage(100000.f,FVector::ZeroVector);
                 for (TActorIterator<AArenaFighter> It(PC->GetWorld());It;++It)
                     if (It->bEnemy && *It!=Queen) It->Health=0;
             }

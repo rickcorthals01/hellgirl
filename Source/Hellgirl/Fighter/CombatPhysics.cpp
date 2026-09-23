@@ -13,7 +13,7 @@
 
 void AArenaFighter::ApplyCombatLaunch(const FVector& InVelocity, int32 ChainDepth, AArenaFighter* IgnoreEnemy, TSharedPtr<FCombatImpactBudget> ImpactBudget)
 {
-    if (!bEnemy || !IsAlive() || IsBossAttackArmored() || ParalysisClock > 0.f || bQueenHidden || bStorySurrendered) return;
+    if (!bEnemy || !IsAlive() || IsBossAttackArmored() || ParalysisClock > 0.f || IsBossHidden() || bStorySurrendered) return;
     CancelEnemyMove();
     CombatLaunchImpactBudget = ImpactBudget;
     auto* Movement = GetCharacterMovement();

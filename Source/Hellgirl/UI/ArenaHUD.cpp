@@ -1,5 +1,6 @@
 #include "UI/ArenaHUD.h"
 #include "Fighter/ArenaFighter.h"
+#include "Bosses/BossBehavior.h"
 #include "Levels/ArenaGameMode.h"
 #include "Rules/CombatEnergyRules.h"
 #include "Progress/HellgirlWallet.h"
@@ -138,18 +139,15 @@ void AArenaHUD::DrawHUD()
     if (!GM->Prompt.IsEmpty()) DrawText(GM->Prompt, FLinearColor::White, 36.f, PanelBottom + 39.f);
     if (GM->MapNumber == 1)
         for (TActorIterator<AArenaFighter> It(GetWorld()); It; ++It)
-            if (It->bEnemy && (It->EnemyType == EHellgirlEnemyType::ImpCommander || It->EnemyType == EHellgirlEnemyType::GoblinQueen) && It->bBossEncounter && It->IsAlive())
+            if (const UBossBehavior* Boss = It->GetBossBehavior(); Boss && It->bEnemy && It->bBossEncounter && It->IsAlive())
             {
                 const float X = 20.f, Y = 300.f, Width = FMath::Min(510.f,Canvas->ClipX-40.f);
                 DrawRect(FLinearColor(.04f,.015f,.025f,.88f),X,Y,Width,78.f);
-                DrawText(FString::Printf(TEXT("%s%s"),It->EnemyType == EHellgirlEnemyType::GoblinQueen ? TEXT("GOBLIN QUEEN") : TEXT("IMP COMMANDER"),It->IsBossAttackArmored() ? TEXT(" / ARMORED") : TEXT("")),
+                DrawText(FString::Printf(TEXT("%s%s"),*Boss->GetDisplayName(),It->IsBossAttackArmored() ? TEXT(" / ARMORED") : TEXT("")),
                     FLinearColor(1.f,.65f,.3f),X+16.f,Y+8.f);
                 DrawRect(MeterBackground,X+16.f,Y+30.f,Width-32.f,10.f);
                 DrawRect(FLinearColor(.8f,.15f,.12f),X+16.f,Y+30.f,(Width-32.f)*FMath::Clamp(It->Health/FMath::Max(1.f,It->MaxHealth),0.f,1.f),10.f);
-                const FString Hint = It->EnemyType == EHellgirlEnemyType::GoblinQueen
-                    ? (It->IsQueenHidden() ? TEXT("DEFEAT THE GOBLINS TO BRING HER BACK") : FString::Printf(TEXT("SHADOW PHASE %d"),It->GetGoblinPhase()+1))
-                    : FString::Printf(TEXT("PROTECTIVE IMPS: %d / 3 / %s"),It->GetSummonedImpCount(),It->GetSummonedImpCount()>0 ? TEXT("90% DAMAGE REDUCTION") : TEXT("VULNERABLE"));
-                DrawText(Hint,FLinearColor(1.f,.85f,.65f),X+16.f,Y+50.f);
+                DrawText(Boss->GetHudStatus(),FLinearColor(1.f,.85f,.65f),X+16.f,Y+50.f);
                 break;
             }
     if (!Player->IsAlive()) Message = TEXT("YOU FELL  -  Press R to try again");

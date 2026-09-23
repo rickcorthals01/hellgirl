@@ -2,6 +2,7 @@
 #include "Levels/ArenaGameMode.h"
 #include "Enemies/EnemySpawnPoint.h"
 #include "Progress/CoinPickup.h"
+#include "Bosses/ImpCommanderBehavior.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -110,7 +111,7 @@ void AArenaFighter::RunEnemyMovesetCheck(float Dt)
     };
     auto QuietAdds = [&](AArenaFighter* Commander)
     {
-        for (const auto& Imp : Commander->CommanderImps)
+        for (const auto& Imp : Commander->GetBoss<UImpCommanderBehavior>()->Imps)
             if (Imp.IsValid()) Quiet(Imp.Get());
     };
     auto CountCoins = [&]()
@@ -121,60 +122,30 @@ void AArenaFighter::RunEnemyMovesetCheck(float Dt)
         return Count;
     };
 
-    Step = 1;
+    // Steps 1, 2 and 4 covered the phase-two summon replaced on September 19;
+    // BossDesignCheck covers the current protective-Imp shield and jump-slam refill.
+    Step = 3;
     auto* Commander = Subject(EHellgirlEnemyType::ImpCommander, BossPosition);
     if (!Check(Commander != nullptr, TEXT("Commander subject spawned"))) return;
+    Commander->bBossEncounter = true;
     auto* BossSite = MakeSite(Commander);
     if (!Check(BossSite != nullptr && BossSite->LivingEnemies() == 1, TEXT("Boss encounter owns its Commander"))) return;
-    Commander->Health = 226.f;
-    Commander->EnemyMoveCooldown = 5.f;
-    Commander->UpdateCommanderTactics(0.f, Target);
-    if (!Check(Commander->GetCommanderPhase() == 1 && !Commander->IsCommanderSummoning(), TEXT("226 of 450 health stays in phase one"))) return;
-    Commander->Health = 225.f;
-    Commander->EnemyMoveCooldown = 0.f;
-    Commander->UpdateCommanderTactics(0.f, Target);
-    if (!Check(Commander->GetCommanderPhase() == 2 && Commander->IsCommanderSummoning(), TEXT("Half health enters phase two and commits summon"))) return;
-    if (!Check(FMath::IsNearlyEqual(Commander->CommanderSummonClock, 18.f), TEXT("Accepted summon starts the eighteen-second cooldown"))) return;
-    if (!Check(!Target->CanCounter(Commander), TEXT("Summoning is not presented as a counterable weapon strike"))) return;
-    Advance(Commander, 1.79f);
-    if (!Check(Commander->GetSummonedImpCount() == 0 && BossSite->LivingEnemies() == 1, TEXT("No reinforcements before the summon contact time"))) return;
-    Advance(Commander, .03f);
+    auto* Commanding = Commander->GetBoss<UImpCommanderBehavior>();
+    if (!Check(Commanding != nullptr, TEXT("Commander has his boss behaviour"))) return;
+    Commanding->SpawnImps();
     QuietAdds(Commander);
-    if (!Check(Commander->GetSummonedImpCount() == 3 && BossSite->LivingEnemies() == 4, TEXT("Summon contact creates three tracked reinforcements"))) return;
-    for (const auto& Imp : Commander->CommanderImps)
+    if (!Check(Commanding->GetSummonedImpCount() == 3 && BossSite->LivingEnemies() == 4, TEXT("Protective Imps join the boss encounter"))) return;
+    for (const auto& Imp : Commanding->Imps)
     {
         if (!Check(Imp.IsValid() && Imp->IsAlive() && Imp->EnemyType == EHellgirlEnemyType::Imps
             && !Imp->bFlyingEnemy && Imp->MaxHealth < Commander->MaxHealth && Imp->EncounterSite.Get() == BossSite
             && Imp->GetMesh()->GetSkeletalMeshAsset() != nullptr,
             TEXT("Each reinforcement has ordinary Imp identity, model, health and encounter ownership"))) return;
     }
-    BossSite->RegisterReinforcement(Commander->CommanderImps[0].Get());
+    BossSite->RegisterReinforcement(Commanding->Imps[0].Get());
     if (!Check(BossSite->LivingEnemies() == 4, TEXT("Registering an existing reinforcement does not duplicate encounter counts"))) return;
-    Commander->SpawnCommanderImps();
-    if (!Check(Commander->GetSummonedImpCount() == 3 && BossSite->LivingEnemies() == 4, TEXT("Summoning cannot exceed the three-living-Imp cap"))) return;
-    if (!Check(Commander->AttackClock > 0.f && !Commander->CanBeginEnemyMove(Target), TEXT("Commander must complete summon recovery"))) return;
-
-    Step = 2;
-    Commander->CommanderImps[0]->ApplyPhysicsDamage(10000.f, FVector(80.f, 0.f, 20.f));
-    if (!Check(Commander->GetSummonedImpCount() == 2, TEXT("Dead reinforcement frees exactly one summon slot"))) return;
-    Commander->SpawnCommanderImps();
-    QuietAdds(Commander);
-    if (!Check(Commander->GetSummonedImpCount() == 3 && BossSite->LivingEnemies() == 4, TEXT("Refill replaces only the free slot"))) return;
-    Advance(Commander, 1.3f);
-    Commander->CommanderImps[0]->ApplyPhysicsDamage(10000.f, FVector(80.f, 0.f, 20.f));
-    Commander->CancelEnemyMove();
-    Commander->AttackClock = 0.f;
-    Commander->EnemyMoveCooldown = 0.f;
-    Commander->EnemyLastAttackTime = -100.f;
-    Commander->UpdateCommanderTactics(17.8f, Target);
-    if (!Check(!Commander->IsCommanderSummoning() && Commander->GetSummonedImpCount() == 2, TEXT("A free slot does not bypass the remaining summon cooldown"))) return;
-    Commander->UpdateCommanderTactics(.21f, Target);
-    if (!Check(Commander->IsCommanderSummoning(), TEXT("Commander may summon again once cooldown expires"))) return;
-    Advance(Commander, 1.82f);
-    QuietAdds(Commander);
-    if (!Check(Commander->GetSummonedImpCount() == 3, TEXT("Repeat summon fills the available slot"))) return;
-
-    Step = 3;
+    Commanding->SpawnImps();
+    if (!Check(Commanding->GetSummonedImpCount() == 3 && BossSite->LivingEnemies() == 4, TEXT("Summoning cannot exceed the three-living-Imp cap"))) return;
     const int32 KillsBefore = GameMode->Kills;
     const int32 CoinsBefore = CountCoins();
     Commander->ApplyPhysicsDamage(10000.f, FVector(100.f, 0.f, 30.f));
@@ -182,40 +153,12 @@ void AArenaFighter::RunEnemyMovesetCheck(float Dt)
     if (!Check(GameMode->Kills == KillsBefore + 1 && CountCoins() == CoinsBefore + 1, TEXT("Commander collision death awards one kill and one coin drop"))) return;
     BossSite->Tick(.01f);
     if (!Check(!BossSite->bCleared && BossSite->LivingEnemies() == 3, TEXT("Living summoned Imps keep the boss encounter uncleared"))) return;
-    for (const auto& Imp : Commander->CommanderImps)
+    for (const auto& Imp : Commanding->Imps)
         if (Imp.IsValid() && Imp->IsAlive()) Imp->ApplyPhysicsDamage(10000.f, FVector(70.f, 0.f, 20.f));
     BossSite->Tick(.01f);
     if (!Check(BossSite->bCleared && BossSite->LivingEnemies() == 0, TEXT("The final reinforcement death clears the boss encounter"))) return;
     Commander->Destroy();
     BossSite->Destroy();
-
-    Step = 4;
-    for (int32 Interruption = 0; Interruption < 5; ++Interruption)
-    {
-        auto* Interrupted = Subject(EHellgirlEnemyType::ImpCommander, BossPosition);
-        if (!Check(Interrupted != nullptr, TEXT("Interruption subject spawned"))) return;
-        auto* Site = MakeSite(Interrupted);
-        if (!Check(Site != nullptr, TEXT("Interruption encounter spawned"))) return;
-        Interrupted->Health = 225.f;
-        Interrupted->UpdateCommanderTactics(0.f, Target);
-        if (!Check(Interrupted->IsCommanderSummoning(), TEXT("Interruption test starts during a live summon commitment"))) return;
-        Advance(Interrupted, 1.7f);
-        if (Interruption == 0) Interrupted->ReceiveHit(1.f, FVector::ForwardVector, 100.f);
-        else if (Interruption == 1) Interrupted->ApplyPhysicsDamage(1.f, FVector(100.f, 0.f, 30.f));
-        else if (Interruption == 2) Interrupted->ApplyCombatLaunch(FVector(1000.f, 0.f, 300.f));
-        else if (Interruption == 3) Interrupted->ResetAfterRecovery();
-        else Interrupted->ApplyPhysicsDamage(10000.f, FVector(100.f, 0.f, 30.f));
-        Advance(Interrupted, 3.2f);
-        const int32 ExpectedAdds = Interruption < 3 ? 3 : 0;
-        if (!Check(!Interrupted->IsCommanderSummoning() && Interrupted->GetSummonedImpCount() == ExpectedAdds
-            && Interrupted->GetCommanderPhase() == 2 && Interrupted->CommanderSummonClock > 0.f,
-            *FString::Printf(TEXT("Boss event %d %s while retaining phase and summon cooldown"), Interruption,
-                Interruption < 3 ? TEXT("preserves summon through nonlethal damage or launch") : TEXT("cancels summon on reset or lethal damage")))) return;
-        for (const auto& Imp : Interrupted->CommanderImps)
-            if (Imp.IsValid()) Imp->Destroy();
-        Interrupted->Destroy();
-        Site->Destroy();
-    }
 
     Step = 5;
     for (const bool Flying : {false, true})
@@ -402,7 +345,7 @@ void AArenaFighter::RunEnemyMovesetCheck(float Dt)
     Target->Destroy();
     TestFloor->Destroy();
 
-    UE_LOG(LogTemp, Display, TEXT("ENEMY MOVESET CHECK PASSED: phase threshold, delayed summon, three-add cap/refill/cooldown, summon armor and death/reset cancellation, encounter ownership, exactly-once rewards, locked pounce/dive, miss/recovery, dodge counters, two-attack cap and spacing, five damaging moves, slam rear/range/wall checks, blocked rush"));
+    UE_LOG(LogTemp, Display, TEXT("ENEMY MOVESET CHECK PASSED: protective-Imp cap, encounter ownership, exactly-once rewards, locked pounce/dive, miss/recovery, dodge counters, two-attack cap and spacing, five damaging moves, slam rear/range/wall checks, blocked rush"));
     FPlatformMisc::RequestExitWithStatus(false, 0);
 #endif
 }

@@ -1,9 +1,9 @@
 #pragma once
 
 // Enemy commitments reuse the regular attack clock, hit validation and counter
-// window. This separate identity controls movement, telegraphs and boss summons.
+// window. This separate identity controls movement, telegraphs and boss hooks.
 enum class EEnemyMove : unsigned char
 {
     None, ImpClaw, ImpPounce, FlyingDive,
-    CommanderCleave, CommanderRush, CommanderSlam, CommanderSummon, CommanderJumpSlam, GoblinSlash, QueenMelee, QueenClaw
+    CommanderCleave, CommanderRush, CommanderSlam, CommanderJumpSlam, GoblinSlash, QueenMelee, QueenClaw
 };

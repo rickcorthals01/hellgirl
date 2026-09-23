@@ -7,6 +7,8 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Enemies/ShadowClaw.h"
+#include "Bosses/GoblinQueenBehavior.h"
+#include "Bosses/ImpCommanderBehavior.h"
 void AArenaFighter::RunBossDesignCheck()
 {
 #if WITH_DEV_AUTOMATION_TESTS
@@ -18,29 +20,33 @@ void AArenaFighter::RunBossDesignCheck()
     auto* Queen=GetWorld()->SpawnActor<AArenaFighter>(FVector(4100,0,160),FRotator::ZeroRotator);
     Queen->MakeEnemy(1,false); Queen->SetEnemyType(EHellgirlEnemyType::GoblinQueen); Queen->bBossEncounter=true; Queen->EncounterSite=Site; Queen->HomePosition=Site->GetActorLocation(); Queen->Health=Queen->MaxHealth=450.f;
     Check(Queen->GetMesh()->GetSkeletalMeshAsset()!=nullptr,TEXT("Queen native mesh"));
-    Queen->Health-=Queen->FilterEnemyDamage(9999); Queen->UpdateQueenPhases(.1f);
-    Check(Queen->bQueenHidden && Queen->GoblinPhase==1 && Queen->QueenFirstPack.Num()==3 && Queen->QueenGoblins.Num()==6,TEXT("70 percent: hidden and two packs"));
+    auto* QB=Queen->GetBoss<UGoblinQueenBehavior>();
+    if (!QB) { Check(false,TEXT("Queen has her boss behaviour")); FPlatformMisc::RequestExitWithStatus(false,1); return; }
+    Queen->Health-=Queen->FilterEnemyDamage(9999); QB->TickPhases(.1f);
+    Check(QB->bHidden && QB->Phase==1 && QB->FirstPack.Num()==3 && QB->Goblins.Num()==6,TEXT("70 percent: hidden and two packs"));
     Check(Queen->FilterEnemyDamage(100)==0,TEXT("Hidden queen invulnerable"));
-    for (auto G:Queen->QueenSecondPack) if (G.IsValid()) G->Health=0;
-    Queen->UpdateQueenPhases(3.f); Check(!Queen->bQueenHidden,TEXT("One pack defeated: returns"));
-    Queen->Health-=Queen->FilterEnemyDamage(9999); Queen->UpdateQueenPhases(.1f);
-    Check(Queen->GoblinPhase==2 && Queen->QueenGoblins.Num()==6,TEXT("30 percent: extra pack"));
-    Queen->Health-=Queen->FilterEnemyDamage(9999); Queen->UpdateQueenPhases(.1f);
-    Check(Queen->GoblinPhase==3 && Queen->bQueenHidden,TEXT("5 percent: final vanish"));
-    for (int I=0;I<5 && Queen->bQueenHidden;++I) { for (auto G:Queen->QueenGoblins) if (G.IsValid()) G->Health=0; Queen->UpdateQueenPhases(4.1f); }
-    Check(Queen->bQueenFinalReturned && Queen->Health==225.f,TEXT("Ten kills: return with half health"));
+    for (auto G:QB->SecondPack) if (G.IsValid()) G->Health=0;
+    QB->TickPhases(3.f); Check(!QB->bHidden,TEXT("One pack defeated: returns"));
+    Queen->Health-=Queen->FilterEnemyDamage(9999); QB->TickPhases(.1f);
+    Check(QB->Phase==2 && QB->Goblins.Num()==6,TEXT("30 percent: extra pack"));
+    Queen->Health-=Queen->FilterEnemyDamage(9999); QB->TickPhases(.1f);
+    Check(QB->Phase==3 && QB->bHidden,TEXT("5 percent: final vanish"));
+    for (int I=0;I<5 && QB->bHidden;++I) { for (auto G:QB->Goblins) if (G.IsValid()) G->Health=0; QB->TickPhases(4.1f); }
+    Check(QB->bFinalReturned && Queen->Health==225.f,TEXT("Ten kills: return with half health"));
     Check(Queen->FilterEnemyDamage(9999)>Queen->Health,TEXT("Final return can be killed"));
-    Queen->bBossEncounter=false; Queen->bQueenHidden=false; Check(Queen->FilterEnemyDamage(100)==100,TEXT("Future elite has no boss damage gate"));
+    Queen->bBossEncounter=false; QB->bHidden=false; Check(Queen->FilterEnemyDamage(100)==100,TEXT("Future elite has no boss damage gate"));
     for (TActorIterator<AArenaFighter> It(GetWorld());It;++It) if (It->EnemyType==EHellgirlEnemyType::Goblins && It->bEnemy) It->Destroy();
     Queen->Destroy();
     auto* Boss=GetWorld()->SpawnActor<AArenaFighter>(FVector(4100,0,350),FRotator::ZeroRotator);
     if (!Boss) { Check(false,TEXT("Test boss spawn blocked")); FPlatformMisc::RequestExitWithStatus(false,1); return; }
     Boss->MakeEnemy(2,false); Boss->SetEnemyType(EHellgirlEnemyType::ImpCommander); Boss->bBossEncounter=true; Boss->EncounterSite=Site; Boss->HomePosition=Boss->GetActorLocation();
-    Boss->SpawnCommanderImps(); Check(Boss->GetSummonedImpCount()==3,TEXT("Three protective imps"));
+    auto* CB=Boss->GetBoss<UImpCommanderBehavior>();
+    if (!CB) { Check(false,TEXT("Commander has his boss behaviour")); FPlatformMisc::RequestExitWithStatus(false,1); return; }
+    CB->SpawnImps(); Check(CB->GetSummonedImpCount()==3,TEXT("Three protective imps"));
     Check(Boss->FilterEnemyDamage(100)==10,TEXT("90 percent shield"));
-    for (auto Imp:Boss->CommanderImps) if (Imp.IsValid()) Imp->Health=0;
+    for (auto Imp:CB->Imps) if (Imp.IsValid()) Imp->Health=0;
     Check(Boss->FilterEnemyDamage(100)==100,TEXT("Shield removed when imps dead"));
-    Boss->SpawnCommanderImps(); Check(Boss->GetSummonedImpCount()==3,TEXT("Jump slam replenishes imps"));
+    CB->ResolveMove(EEnemyMove::CommanderJumpSlam); Check(CB->GetSummonedImpCount()==3,TEXT("Jump slam replenishes imps"));
     Boss->bBossEncounter=false; Check(Boss->FilterEnemyDamage(100)==100,TEXT("Future commander elite unshielded"));
     SetActorLocation(FVector(4100,0,5000)); Health=100.f; HitClock=DodgeClock=0.f;
     FActorSpawnParameters ProjectileParams; ProjectileParams.Owner=Boss;
