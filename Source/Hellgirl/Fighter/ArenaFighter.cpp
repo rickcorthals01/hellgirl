@@ -598,6 +598,7 @@ void AArenaFighter::Dodge()
     DodgeClock = 0.25f;
     DodgeCooldown = 0.65f;
     PostDodgeClock = .65f;
+    DodgeAnimationTime = 0.f;
     Combo = 0;
     ComboClock = 0.f;
     BufferClock = 0.f;
@@ -1035,6 +1036,7 @@ void AArenaFighter::UpdatePose(float Dt)
         UAnimSequence* Strike = FindAttackAnimation(CurrentAttack.Type);
         const bool IsStrike = AttackClock > 0.f && Strike;
         PlayerHitAnimationTime += Dt;
+        DodgeAnimationTime += Dt;
         const float Speed = GetVelocity().Size2D();
         const bool Moving = Speed > 10.f && GetCharacterMovement()->IsMovingOnGround() && DodgeClock <= 0.f && KnockdownClock <= 0.f && IsAlive();
         // Standing uses the Mixamo idle when the outfit has one (it falls back to the neutral pose).
@@ -1064,10 +1066,11 @@ void AArenaFighter::UpdatePose(float Dt)
             Clip = CombatAnimations.FindRef(TEXT("Knockdown"));
             if (Clip) Position = FMath::Clamp(1.f - KnockdownClock / PlayerKnockdownDuration, 0.f, 1.f) * Clip->GetPlayLength();
         }
-        else if (DodgeClock > 0.f && !bCounterDodge)
+        else if (!bCounterDodge && (DodgeClock > 0.f
+            || (DodgeAnimationTime < DodgeAnimationDuration && AttackClock <= 0.f && PlayerHitAnimationTime >= .3f)))
         {
             Clip = CombatAnimations.FindRef(TEXT("Dodge"));
-            if (Clip) Position = (1.f - DodgeClock / .25f) * Clip->GetPlayLength();
+            if (Clip) Position = FMath::Min(DodgeAnimationTime / DodgeAnimationDuration, 1.f) * Clip->GetPlayLength();
         }
         else if (IsStrike)
         {

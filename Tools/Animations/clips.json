@@ -34,7 +34,7 @@
     "AirKick":        { "file": "AirDownPunch.fbx", "strike": "RightHand" },
     "AirCrashKick":   { "file": "AirCrashKick.fbx", "strike": "RightFoot" },
     "AirSlam":        { "file": "AirSlam.fbx", "strike": "RightHand" },
-    "Dodge":          { "file": "Dodge.fbx" },
+    "Dodge":          { "file": "Stand To Roll.fbx", "trim": [3, 26] },
     "Hit":            { "file": "Hit.fbx" },
     "Knockdown":      { "file": "Knockdown.fbx" },
     "Death":          { "file": "Death.fbx" },

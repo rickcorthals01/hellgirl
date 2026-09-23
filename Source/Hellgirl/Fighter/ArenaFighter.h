@@ -179,6 +179,10 @@ private:
     // Maps attack progress to clip time so the clip's contact frame lands on the attack's damage moment.
     float AttackClipPosition(float Progress, const UAnimSequence* Clip) const;
     float PlayerHitAnimationTime = 100.f;
+    // The roll outlasts the 0.25 s dodge dash so it can play at a natural speed; a follow-up
+    // attack or a hit takes over immediately.
+    float DodgeAnimationTime = 100.f;
+    static constexpr float DodgeAnimationDuration = .55f;
     float PlayerDeathAnimationTime = 0.f;
     float PlayerKnockdownDuration = 1.f;
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyIdleAnimation;
