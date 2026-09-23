@@ -10,9 +10,9 @@
   },
   "clips": {
     "Idle":           { "file": "Standing Idle.fbx" },
-    "RightPunch":     { "file": "RightPunch.fbx", "strike": "RightHand" },
+    "RightPunch":     { "file": "RightPunch.fbx", "strike": "RightHand", "trim": [5, 30] },
     "LeftPunch":      { "file": "LeftPunch.fbx", "mirror_of": "RightPunch", "strike": "LeftHand" },
-    "DoubleJab":      { "file": "DoubleJab.fbx", "strike": "LeftHand" },
+    "DoubleJab":      { "file": "DoubleJab.fbx", "strike": "LeftHand", "trim": [13, 38] },
     "RightKick":      { "file": "RightKick.fbx", "strike": "RightFoot" },
     "LeftKick":       { "file": "LeftKick.fbx", "mirror_of": "RightKick", "strike": "LeftFoot" },
     "LegSweep":       { "file": "Leg Sweep.fbx", "strike": "RightFoot" },
