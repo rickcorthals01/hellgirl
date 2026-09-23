@@ -19,8 +19,10 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
 {
 #if WITH_DEV_AUTOMATION_TESTS
     if (bEnemy || UGameplayStatics::GetPlayerPawn(this, 0) != this || !FParse::Param(FCommandLine::Get(), TEXT("HellgirlAttackPreview"))) return;
-    struct FPreviewMove { const TCHAR* Clip; bool Heavy; int32 Combo; bool Air; bool AfterDodge; bool Sword; };
+    // Special: 1 = charged strike (full charge), 2 = holding heavy (charging loop).
+    struct FPreviewMove { const TCHAR* Clip; bool Heavy; int32 Combo; bool Air; bool AfterDodge; bool Sword; int32 Special = 0; };
     static const FPreviewMove Moves[] = {
+        {TEXT("Charge"), true, 0, false, false, false, 2}, {TEXT("ChargedStrike"), true, 0, false, false, false, 1},
         {TEXT("RightPunch"), false, 0, false, false, false}, {TEXT("LeftPunch"), false, 1, false, false, false},
         {TEXT("DoubleJab"), false, 3, false, false, false}, {TEXT("RightKick"), true, 0, false, false, false},
         {TEXT("LeftKick"), true, 1, false, false, false}, {TEXT("LegSweep"), true, 3, false, false, false},
@@ -50,10 +52,12 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
     const FPreviewMove& Move = Moves[Shot / 3];
     SelectedWeapon = Move.Sword ? 1 : 0;
     Sword->SetVisibility(Move.Sword);
-    CurrentAttack = FistCombat::Select(Move.Heavy, Move.Combo, Move.Air, Move.AfterDodge, Move.Sword);
+    CurrentAttack = Move.Special == 1 ? FistCombat::Charged(1.f) : FistCombat::Select(Move.Heavy, Move.Combo, Move.Air, Move.AfterDodge, Move.Sword);
     const float Progress = Shot % 3 == 0 ? .15f : Shot % 3 == 1 ? CurrentAttack.ContactFraction : .85f;
+    // Charging has no attack clock: the pose code plays the Charge loop while heavy is held.
+    bHeavyHeld = Move.Special == 2;
     // UpdateAttackTiming subtracts this frame's time after this runs; bHitResolved skips the damage sweep.
-    AttackClock = CurrentAttack.Duration * (1.f - Progress) + Dt;
+    AttackClock = Move.Special == 2 ? 0.f : CurrentAttack.Duration * (1.f - Progress) + Dt;
     bHitResolved = true;
     MoveLabel = FString::Printf(TEXT("%s %s"), Move.Clip, Shot % 3 == 0 ? TEXT("wind-up") : Shot % 3 == 1 ? TEXT("CONTACT") : TEXT("follow-through"));
     MoveLabelClock = 1.f;
@@ -63,9 +67,10 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
     if (++ShotFrames >= 6 && ShotClock >= .35f)
     {
         ShotFrames = 0;
-        const UAnimSequence* Expected = FindAttackAnimation(CurrentAttack.Type);
+        const UAnimSequence* Expected = Move.Special == 2 ? CombatAnimations.FindRef(TEXT("Charge")).Get() : FindAttackAnimation(CurrentAttack.Type);
         UE_LOG(LogTemp, Display, TEXT("ATTACK PREVIEW %s_%d: expected %s at %.3fs, mesh plays %s at %.3fs"), Move.Clip, Shot % 3,
-            Expected ? *Expected->GetName() : TEXT("none"), AttackClipPosition(Progress, Expected),
+            // The charging loop runs on world time, so only its clip is compared.
+            Expected ? *Expected->GetName() : TEXT("none"), Move.Special == 2 ? GetMesh()->GetPosition() : AttackClipPosition(Progress, Expected),
             ActiveAnimation ? *ActiveAnimation->GetName() : TEXT("none"), GetMesh()->GetPosition());
         FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/Attacks/%s_%d.png"), Move.Clip, Shot % 3), false, false);
         ShotClock = 0.f;
