@@ -53,7 +53,7 @@ public:
     }
     virtual FReply OnPreviewKeyDown(const FGeometry&,const FKeyEvent& Event) override
     {
-        if (Event.GetKey()==EKeys::Escape || Event.GetKey()==EKeys::Gamepad_FaceButton_Right)
+        if (!Event.IsRepeat() && (Event.GetKey()==EKeys::Escape || Event.GetKey()==EKeys::Gamepad_FaceButton_Right))
         { if (Owner.IsValid()) { if (Owner->IsAtMainMenu()) Owner->ShowMainMenu(); else { Owner->ResumeGame(); Owner->TogglePauseMenu(); } } return FReply::Handled(); }
         return FReply::Unhandled();
     }

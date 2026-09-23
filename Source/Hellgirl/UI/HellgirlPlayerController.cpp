@@ -1,5 +1,6 @@
 #include "UI/HellgirlPlayerController.h"
 #include "Progress/HellgirlWallet.h"
+#include "Misc/ScopeExit.h"
 #include "Fighter/ArenaFighter.h"
 #include "Levels/ArenaGameMode.h"
 #include "Kismet/GameplayStatics.h"
@@ -131,7 +132,8 @@ public:
     {
         if (bSelectingKey) return FReply::Unhandled();
         const FKey Key=Event.GetKey();
-        if (Key==EKeys::Escape || Key==EKeys::P || Key==EKeys::Gamepad_Special_Right || Key==EKeys::Gamepad_FaceButton_Right)
+        // Held-button repeats (e.g. B still held from a dodge) must not close the menu.
+        if (!Event.IsRepeat() && (Key==EKeys::Escape || Key==EKeys::P || Key==EKeys::Gamepad_Special_Right || Key==EKeys::Gamepad_FaceButton_Right))
         { if (Owner.IsValid() && Owner->IsAtMainMenu()) { Owner->ShowMainMenu(); return FReply::Handled(); } if (bOptionsOpen) { bOptionsOpen = false; return FReply::Handled(); } if (Owner.IsValid()) Owner->ResumeGame(); return FReply::Handled(); }
         return FReply::Unhandled();
     }
@@ -247,6 +249,12 @@ void AHellgirlPlayerController::BeginPlay()
             if (!Player) { Fail(TEXT("Outfit player missing")); return false; }
             const int32 OriginalOutfit = Player->GetOutfit();
             const float OriginalHealth = Player->Health, OriginalEnergy = Player->Energy;
+            // The Goblin Queen outfit must be bought; grant it in memory only (never saved) so the check
+            // does not depend on the player's own save.
+            auto* Wallet = Cast<UHellgirlWallet>(PC->GetGameInstance());
+            const bool bOwnedBefore = Wallet && Wallet->bGoblinQueenOwned;
+            if (Wallet) Wallet->bGoblinQueenOwned = true;
+            ON_SCOPE_EXIT { if (Wallet) Wallet->bGoblinQueenOwned = bOwnedBefore; };
             for (int32 Step = 0; Step <= HellgirlOutfits::Count; ++Step)
             {
                 const int32 Outfit = Step == HellgirlOutfits::Count ? OriginalOutfit : Step;

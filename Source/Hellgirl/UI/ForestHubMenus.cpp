@@ -94,7 +94,8 @@ public:
 
     virtual FReply OnPreviewKeyDown(const FGeometry&,const FKeyEvent& Event) override
     {
-        if (Event.GetKey()==EKeys::Escape || Event.GetKey()==EKeys::Gamepad_FaceButton_Right || Event.GetKey()==EKeys::Gamepad_Special_Right)
+        // Held-button repeats (e.g. B still held from a dodge) must not close the menu.
+        if (!Event.IsRepeat() && (Event.GetKey()==EKeys::Escape || Event.GetKey()==EKeys::Gamepad_FaceButton_Right || Event.GetKey()==EKeys::Gamepad_Special_Right))
         { GoBack(); return FReply::Handled(); }
         return FReply::Unhandled();
     }
@@ -249,7 +250,8 @@ public:
     }
     virtual FReply OnPreviewKeyDown(const FGeometry&,const FKeyEvent& Event) override
     {
-        if (Event.GetKey()==EKeys::Escape || Event.GetKey()==EKeys::Gamepad_FaceButton_Right || Event.GetKey()==EKeys::Gamepad_Special_Right)
+        // Held-button repeats (e.g. B still held from a dodge) must not close the menu.
+        if (!Event.IsRepeat() && (Event.GetKey()==EKeys::Escape || Event.GetKey()==EKeys::Gamepad_FaceButton_Right || Event.GetKey()==EKeys::Gamepad_Special_Right))
         { if (Owner.IsValid()) Owner->ResumeGame(); return FReply::Handled(); }
         return FReply::Unhandled();
     }
@@ -299,7 +301,10 @@ void AHellgirlPlayerController::OpenHubMenu(int32 Kind)
     TWeakPtr<SWidget> WeakMenu=PauseWidget;
     FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([Weak,WeakMenu,Focus](float)
     {
-        if (Weak.IsValid() && WeakMenu.Pin()==Weak->PauseWidget && Focus.IsValid())
+        // Only if this menu is still the open one: a menu closed within 0.1 s leaves both pointers empty,
+        // and re-applying UI-only input then would lock the player out of the game.
+        const TSharedPtr<SWidget> Menu=WeakMenu.Pin();
+        if (Weak.IsValid() && Weak->IsPauseMenuOpen() && Menu.IsValid() && Menu==Weak->PauseWidget && Focus.IsValid())
         {
             FInputModeUIOnly Input; Input.SetWidgetToFocus(Focus); Input.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
             Weak->SetInputMode(Input); Weak->bShowMouseCursor=true;

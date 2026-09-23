@@ -2,8 +2,8 @@
 # Usage (from the project folder, with the editor closed and the project built):
 #   powershell -ExecutionPolicy Bypass -File Tests\run-checks.ps1
 #   powershell -ExecutionPolicy Bypass -File Tests\run-checks.ps1 -Only Combat,Counter
-# Logs go to Logs\Checks. Your save files are backed up first and restored afterwards,
-# because some checks collect coins into the real wallet save.
+# Logs go to Logs\Checks. Your save files and game settings (unlocked levels, chosen outfit) are backed
+# up first and restored afterwards, because some checks collect coins or change those settings.
 param([string[]]$Only = @(), [int]$TimeoutSeconds = 150)
 
 $ErrorActionPreference = 'Stop'
@@ -31,6 +31,8 @@ $checks = @(
     @('ImpArena',       '/Engine/Maps/Entry?StageMap=1?CampaignLevel=4', 60),
     @('Court',          '/Engine/Maps/Entry?SuccubusCourt=1', 60),
     @('Hub',            '/Engine/Maps/Entry?ForestHub=1', 60), @('Dialogue', '/Engine/Maps/Entry?ForestHub=1', 0),
+    # Controller: roll into the level-select road holding B (and, Quick, press B the frame the menu opens).
+    @('HubRoll',        '/Engine/Maps/Entry?ForestHub=1', 60), @('HubRoll', '/Engine/Maps/Entry?ForestHub=1', 60, '-RollQuickBack'),
     @('MainMenu',       '/Engine/Maps/Entry', 0)
 )
 if ($Only.Count) {
@@ -43,6 +45,8 @@ if ($Only.Count) {
 $saves = Join-Path $root 'Saved\SaveGames'
 $backup = Join-Path $root 'Saved\SaveGames.before-checks'
 if (Test-Path $saves) { Remove-Item $backup -Recurse -Force -ErrorAction SilentlyContinue; Copy-Item $saves $backup -Recurse }
+$settings = Join-Path $root 'Saved\Config\WindowsEditor\GameUserSettings.ini'
+$settingsBackup = if (Test-Path $settings) { [IO.File]::ReadAllBytes($settings) } else { $null }
 
 function Wait-Run($process, $name) {
     if (-not $process.WaitForExit($TimeoutSeconds * 1000)) { Stop-Process -Id $process.Id -Force; return 'TIMEOUT' }
@@ -52,11 +56,12 @@ function Wait-Run($process, $name) {
 $results = @()
 try {
     foreach ($c in $checks) {
-        $name, $url, $fps = $c
-        $label = if ($url -match 'StageMap=([23])') { "$name$($matches[1])" } else { $name }
+        $name, $url, $fps, $extra = $c
+        $label = if ($url -match 'StageMap=([23])') { "$name$($matches[1])" } elseif ($extra) { "$name" + ($extra -replace '^-Roll','') } else { $name }
         $log = Join-Path $logDir "$label.log"
         $argList = @("`"$project`"", $url, '-game', '-nullrhi', '-unattended', '-nosound', '-NoSplash', "-Hellgirl$($name)Check", "-abslog=`"$log`"")
         if ($fps -gt 0) { $argList += @('-UseFixedTimeStep', "-FPS=$fps") }
+        if ($extra) { $argList += $extra }
         $started = Get-Date
         $exit = Wait-Run (Start-Process (Join-Path $engine 'UnrealEditor.exe') -ArgumentList $argList -WindowStyle Hidden -PassThru) $label
         $text = if (Test-Path $log) { Get-Content $log -Raw } else { '' }
@@ -82,6 +87,7 @@ try {
 }
 finally {
     if (Test-Path $backup) { Remove-Item $saves -Recurse -Force -ErrorAction SilentlyContinue; Move-Item $backup $saves }
+    if ($null -ne $settingsBackup) { [IO.File]::WriteAllBytes($settings, $settingsBackup) }
 }
 
 $results | Format-Table Check, Result, Exit, Errors, Seconds, Detail -AutoSize | Out-String -Width 220
