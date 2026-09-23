@@ -233,8 +233,6 @@ void AArenaFighter::SetupPlayerInputComponent(UInputComponent* Input)
     Input->BindAction("Special", IE_Pressed, this, &AArenaFighter::Special);
     Input->BindAction("WeaponFists", IE_Pressed, this, &AArenaFighter::EquipFists);
     Input->BindAction("WeaponSword", IE_Pressed, this, &AArenaFighter::EquipSword);
-    Input->BindAction("WeaponGun", IE_Pressed, this, &AArenaFighter::EquipGun);
-    Input->BindAction("WeaponCar", IE_Pressed, this, &AArenaFighter::EquipCar);
     Input->BindAction("Sprint", IE_Pressed, this, &AArenaFighter::SprintPressed);
     Input->BindAction("Sprint", IE_Released, this, &AArenaFighter::SprintReleased);
     Input->BindAction("Restart", IE_Pressed, this, &AArenaFighter::RestartArena);

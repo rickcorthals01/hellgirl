@@ -1,6 +1,6 @@
 # Hellgirl — working design brief
 
-Based on the two text descriptions and all 13 JPG references in `C:\Users\rickc\Desktop\Hellgirl Game`, reviewed September 10, 2026. The user confirmed eight combat stages plus an intro and outro. Original reference files remain in their Desktop folder.
+Based on the two text descriptions and all 13 JPG references in `C:\Users\rickc\Desktop\Hellgirl Game`, reviewed September 10, 2026. The current plan is seven levels plus a final special stage, an intro and an outro (see Progression). Original reference files remain in their Desktop folder.
 
 ## Game concept
 
@@ -13,15 +13,17 @@ Hellgirl is absorbed into a hellworld. Explore and fight within large, square, c
 | Experience | Planned progression |
 | --- | --- |
 | Intro | Apartment point-and-click scene; TV starts Stage 1 |
-| Stage 1 | Hand-to-hand combat |
-| Stage 2 | Find and use a sword |
-| Stage 3 | Unlock special sword abilities |
-| Stage 4 | Find a gun; freely switch between sword and gun |
-| Stage 5 | Unlock special gun abilities |
-| Stage 6 | Find and use the CAR; specific mechanics not yet described |
-| Stage 7 | Unlock the DEMON FORM ultimate ability |
-| Stage 8 | Defeat the final boss |
+| Level 1 | Goblins, boss Goblin Queen; hand-to-hand combat |
+| Level 2 | Imps, boss Imp Commander; find and use a sword |
+| Level 3 | Succubi, boss Succubus Queen; unlock special sword abilities |
+| Level 4 | Ghosts, boss Ghost King |
+| Level 5 | Rats, boss Rat Queen |
+| Level 6 | Frogs, boss Frog King |
+| Level 7 | Apostles, boss Lucifer; unlock the DEMON FORM ultimate ability |
+| Final special stage | Defeat Lucifer (Devil Form) |
 | Outro | Ending experience; details not yet described |
+
+Updated September 23, 2026 to match `Levels , Enemies, Bosses.txt`: seven levels ("worlds") plus a final special stage. The gun and car were removed from the design.
 
 ## Apartment intro — supplied requirements
 
@@ -86,9 +88,8 @@ No Hellgirl gameplay or reference images have been integrated into the executabl
 ## Details to resolve as their stages are built
 
 - Stage 1 environment, objective, boss, and enemy attack patterns.
-- Whether CAR means a drivable vehicle and how it works within confined stages.
 - Hellguy's story and gameplay role.
-- Sword/gun special abilities and demon-form duration, cost, and effects.
+- Sword special abilities and demon-form duration, cost, and effects.
 - Scoring, coins, XP, upgrade economy, and replay rules.
 - Transition into the hellworld, final boss, and outro.
 - Final character design and rendering style.

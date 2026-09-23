@@ -27,8 +27,6 @@ public:
     void SelectWeapon(int32 Weapon);
     void EquipFists() { SelectWeapon(0); }
     void EquipSword() { SelectWeapon(1); }
-    void EquipGun() { SelectWeapon(2); }
-    void EquipCar() { SelectWeapon(3); }
     int32 GetWeapon() const { return SelectedWeapon; }
     float GetWeaponMenuTime() const { return WeaponMenuClock; }
     float GetUltimateTime() const { return UltimateClock; }

@@ -12,9 +12,9 @@ Recorded September 10, 2026 from `Combat Design info.txt` and `Stage 01 Hands/Ha
 | Jump | A | Spacebar |
 | Special move | Right stick click | Not specified |
 | Sprint | Hold left shoulder or left stick click | Not specified |
-| Weapon selection | D-pad: up fists, right sword, down gun, left car | Not specified |
+| Weapon selection | D-pad: up fists, right sword | 1 fists, 2 sword |
 
-Expose keyboard/mouse bindings in a settings menu; controller bindings remain fixed. The weapon selector has four entries and opens when a D-pad direction is pressed. Selection confirmation and whether time slows while selecting are not specified. Sprint behavior for a stick click (hold versus toggle) also remains unspecified.
+Expose keyboard/mouse bindings in a settings menu; controller bindings remain fixed. The weapon selector has two entries and opens when a D-pad direction is pressed. The gun and car were removed from the design on September 23. Selection confirmation and whether time slows while selecting are not specified. Sprint behavior for a stick click (hold versus toggle) also remains unspecified.
 
 ## Combat rules
 
@@ -48,7 +48,7 @@ The follow-up window duration is unspecified. Enemy size restrictions and animat
 
 ## Later weapons
 
-Sword and gun combat are explicitly WIP in the source. Keep their moves open rather than applying the fist move list to them. Stage-based unlocks and permanent upgrades follow HELLGIRL DESIGN.md.
+Sword combat is explicitly WIP in the source. Keep their moves open rather than applying the fist move list to them. Stage-based unlocks and permanent upgrades follow HELLGIRL DESIGN.md.
 
 ## Implementation implications
 

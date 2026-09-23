@@ -90,10 +90,8 @@ void AArenaHUD::DrawHUD()
     if (Player->GetWeaponMenuTime() > 0.f)
     {
         const float WX = Canvas->ClipX * .5f - 160.f, WY = Canvas->ClipY * .3f;
-        DrawRect(FLinearColor(.03f,.015f,.045f,.9f),WX,WY,320.f,100.f);
+        DrawRect(FLinearColor(.03f,.015f,.045f,.9f),WX,WY,320.f,46.f);
         DrawText(TEXT("UP / 1: FISTS    RIGHT / 2: SWORD"),EnergyColor,WX+12.f,WY+15.f);
-        DrawText(TEXT("DOWN / 3: GUN - unavailable"),UnavailableColor,WX+12.f,WY+42.f);
-        DrawText(TEXT("LEFT / 4: CAR - unavailable"),UnavailableColor,WX+12.f,WY+68.f);
     }
     DrawText(Player->MoveLabel, FLinearColor(.4f, .95f, .85f), 36.f, 192.f);
     DrawText(TEXT("Light x4 / Heavy x4 / Hold Heavy to charge"), FLinearColor::White, 36.f, 216.f);

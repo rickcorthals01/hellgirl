@@ -48,7 +48,7 @@ public:
         TSharedRef<SVerticalBox> Controls = SNew(SVerticalBox);
         Controls->AddSlot().AutoHeight()[Text(TEXT("KEYBOARD / MOUSE"),18)];
         Controls->AddSlot().AutoHeight()[Text(TEXT("Controller bindings stay fixed"),10)];
-        const TArray<FName> Actions = {"Attack","HeavyAttack","Dodge","Jump","Special","Sprint","Walk","WeaponFists","WeaponSword","WeaponGun","WeaponCar","Restart"};
+        const TArray<FName> Actions = {"Attack","HeavyAttack","Dodge","Jump","Special","Sprint","Walk","WeaponFists","WeaponSword","Restart"};
         for (const FName Action : Actions)
         {
             Controls->AddSlot().AutoHeight().Padding(0,4)
