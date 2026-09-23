@@ -52,7 +52,7 @@ Keyboard bindings can be changed in **Pause > Options**. Controller bindings are
 
 ## Known gaps
 
-- Attacks use placeholder animations. Debug effects show where hits land.
+- Most attacks still use the neutral pose until their Mixamo clips are downloaded; the sword slash, backslash and spin are animated. See **Docs/ANIMATIONS.md**. The sword itself is a placeholder box.
 - The shop, the Succubus Hall hub and Worlds III–VII are not built yet.
 - Balance values are initial tuning and have not been hands-on playtested.
 
@@ -60,10 +60,15 @@ Keyboard bindings can be changed in **Pause > Options**. Controller bindings are
 
 | Path | Contents |
 |---|---|
-| `Source/AshenArena/` | All game code. `ArenaFighter` handles the player and enemies, and `ArenaGameMode` builds the levels and runs progression |
+| `Source/Hellgirl/Fighter/` | `ArenaFighter`: the player and all enemies (movement, combat, animation) |
+| `Source/Hellgirl/Bosses/` | One component per boss (Goblin Queen, Imp Commander): phases, summons, shields |
+| `Source/Hellgirl/Enemies/` | Enemy types, movesets, spawn points, projectiles |
+| `Source/Hellgirl/Levels/` | `ArenaGameMode`: builds every map in code and runs progression, hub and story |
+| `Source/Hellgirl/UI/`, `Progress/`, `Rules/`, `Checks/` | HUD and menus; wallet, saves and coins; pure combat rules; automated checks |
 | `Config/DefaultInput.ini` | Default key bindings |
 | `Content/` | Imported models, animations, textures and materials |
-| `Tests/` | Standalone C++ rule tests |
+| `Tests/` | `run-checks.ps1` runs every automated check (about 5 minutes, editor closed); plus standalone rule tests |
+| `Tools/Animations/` | Mixamo → outfit animation pipeline (see Docs/ANIMATIONS.md) |
 | `Docs/` | Current design and system notes (see below) |
 | `Docs/History/` | Older playtest and build notes, kept for reference; they may describe removed features |
 | `Logs/` | Build and test logs (not tracked by git) |
@@ -76,6 +81,7 @@ Keyboard bindings can be changed in **Pause > Options**. Controller bindings are
 - **FOREST HUB.md**, **DIALOGUE.md**, **PAUSE MENU.md**: those systems.
 - **ARENA LOOP.md**, **STAGE ONE MAP.md**: castle arena layout and the older lava and astral maps, which are still in the code for development.
 - **NATIVE MODELS.md**: how the character models were set up.
+- **ANIMATIONS.md**: adding Mixamo combat clips and previewing them.
 
 The original design notes, reference art and source models live outside this folder in `Desktop\Hellgirl Game`, mainly `Developer idea folder lol\`.
 

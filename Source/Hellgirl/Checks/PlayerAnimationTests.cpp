@@ -30,13 +30,13 @@ bool FPlayerAnimationPlaybackTest::RunTest(const FString& Parameters)
  Player->bGroundImpactPending=false;Player->AttackClock=.25f;Player->UpdatePose(0.f);
  TestTrue(TEXT("Landing releases slam recovery"),Player->GetMesh()->GetSingleNodeInstance()->GetCurrentTime()>Player->CurrentAttack.ContactFraction*Player->ActiveAnimation->GetPlayLength());
  Player->DodgeClock=.125f;Player->UpdatePose(0.f);
- TestTrue(TEXT("Dodge overrides an interrupted attack"),Player->ActiveAnimation==Player->ExtendedAnimations.FindRef(TEXT("Dodge")));
+ TestTrue(TEXT("Dodge overrides an interrupted attack"),Player->ActiveAnimation==Player->CombatAnimations.FindRef(TEXT("Dodge")));
  Player->AttackClock=Player->DodgeClock=0.f;Player->bHeavyHeld=true;Player->UpdatePose(.1f);
- TestTrue(TEXT("Holding heavy attack uses charge pose"),Player->ActiveAnimation==Player->ExtendedAnimations.FindRef(TEXT("Charge")));
+ TestTrue(TEXT("Holding heavy attack uses charge pose"),Player->ActiveAnimation==Player->CombatAnimations.FindRef(TEXT("Charge")));
  Player->bHeavyHeld=false;Player->ReceiveHit(1.f,FVector(1,0,0));Player->UpdatePose(.05f);
- TestTrue(TEXT("Damage triggers hit reaction"),Player->ActiveAnimation==Player->ExtendedAnimations.FindRef(TEXT("Hit")));
+ TestTrue(TEXT("Damage triggers hit reaction"),Player->ActiveAnimation==Player->CombatAnimations.FindRef(TEXT("Hit")));
  Player->Health=0.f;Player->UpdatePose(2.f);
- TestTrue(TEXT("Death overrides all other playback"),Player->ActiveAnimation==Player->ExtendedAnimations.FindRef(TEXT("Death")));
+ TestTrue(TEXT("Death overrides all other playback"),Player->ActiveAnimation==Player->CombatAnimations.FindRef(TEXT("Death")));
  TestTrue(TEXT("Death holds its final frame"),FMath::IsNearlyEqual(Player->GetMesh()->GetSingleNodeInstance()->GetCurrentTime(),Player->ActiveAnimation->GetPlayLength()));
  Player->Destroy();World->DestroyWorld(false);return true;
 }

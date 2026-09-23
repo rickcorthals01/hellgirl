@@ -1,0 +1,36 @@
+{
+  "_help": "Game clip name -> source FBX (relative to 'Animations Mixamo'). Clips whose file is missing are skipped and keep the neutral pose, unless 'mirror_of' names a clip that exists, in which case that clip is mirrored left/right. Optional 'trim': [firstFrame, lastFrame] in source frames. 'strike' names the hand/foot/head that lands the hit: the frame where it reaches farthest from the hips becomes the contact point, which the game aligns with the attack's damage moment. 'contact': a source frame number overrides that guess. Rebuild with Tools\\Animations\\build.ps1.",
+  "outfits": {
+    "Rags": "Animation Testing/FreshHellgirl/Rags/Rags.fbx",
+    "SuccubusArmor": "Animation Testing/FreshHellgirl/SuccubusArmor/SuccubusArmor.fbx",
+    "Ghost": "Animation Testing/ExtraSkins/Ghost/Ghost.fbx",
+    "GoblinQueen": "Animation Testing/ExtraSkins/GoblinQueen/GoblinQueen.fbx",
+    "ImpMother": "Animation Testing/ExtraSkins/ImpMother/ImpMother.fbx",
+    "Rat": "Animation Testing/ExtraSkins/Rat/Rat.fbx"
+  },
+  "clips": {
+    "RightPunch":     { "file": "Hellgirl Combat/RightPunch.fbx", "strike": "RightHand" },
+    "LeftPunch":      { "file": "Hellgirl Combat/LeftPunch.fbx", "mirror_of": "RightPunch", "strike": "LeftHand" },
+    "DoubleJab":      { "file": "Hellgirl Combat/DoubleJab.fbx", "strike": "LeftHand" },
+    "RightKick":      { "file": "Hellgirl Combat/RightKick.fbx", "strike": "RightFoot" },
+    "LeftKick":       { "file": "Hellgirl Combat/LeftKick.fbx", "mirror_of": "RightKick", "strike": "LeftFoot" },
+    "LegSweep":       { "file": "Hellgirl Combat/LegSweep.fbx", "strike": "RightFoot" },
+    "Headbutt":       { "file": "Hellgirl Combat/Headbutt.fbx", "strike": "Head" },
+    "DodgeSlam":      { "file": "Hellgirl Combat/GroundSlam.fbx", "strike": "RightHand" },
+    "Charge":         { "file": "Hellgirl Combat/Charge.fbx" },
+    "ChargedStrike":  { "file": "Hellgirl Combat/ChargedStrike.fbx", "strike": "RightHand" },
+    "AirPunch":       { "file": "Hellgirl Combat/AirPunch.fbx", "strike": "RightHand" },
+    "AirLeftPunch":   { "file": "Hellgirl Combat/AirLeftPunch.fbx", "mirror_of": "AirPunch", "strike": "LeftHand" },
+    "AirKick":        { "file": "Hellgirl Combat/AirDownPunch.fbx", "strike": "RightHand" },
+    "AirCrashKick":   { "file": "Hellgirl Combat/AirCrashKick.fbx", "strike": "RightFoot" },
+    "AirSlam":        { "file": "Hellgirl Combat/AirSlam.fbx", "strike": "RightHand" },
+    "Dodge":          { "file": "Hellgirl Combat/Dodge.fbx" },
+    "Hit":            { "file": "Hellgirl Combat/Hit.fbx" },
+    "Knockdown":      { "file": "Hellgirl Combat/Knockdown.fbx" },
+    "Death":          { "file": "Hellgirl Combat/Death.fbx" },
+    "SwordSlash":     { "file": "Great Sword Pack/great sword slash.fbx", "strike": "RightHand" },
+    "SwordBackslash": { "file": "Great Sword Pack/great sword slash (3).fbx", "strike": "RightHand" },
+    "SwordThrust":    { "file": "Hellgirl Combat/SwordThrust.fbx", "strike": "RightHand" },
+    "SwordSpin":      { "file": "Great Sword Pack/great sword high spin attack.fbx", "strike": "RightHand" }
+  }
+}

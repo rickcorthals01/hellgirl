@@ -7,6 +7,8 @@
 param([string[]]$Only = @(), [int]$TimeoutSeconds = 150)
 
 $ErrorActionPreference = 'Stop'
+# With -File, "-Only A,B" arrives as one string.
+$Only = @($Only | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
 $root = Split-Path $PSScriptRoot -Parent
 $project = Join-Path $root 'Hellgirl.uproject'
 $engine = 'C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64'

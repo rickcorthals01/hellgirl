@@ -28,6 +28,64 @@
 #include "Components/PointLightComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Camera/PlayerCameraManager.h"
+#include "Misc/PackageName.h"
+
+namespace
+{
+// Clip names produced by Tools/Animations (clips.json). Block is kept for the retired block pose.
+const TCHAR* const CombatClipNames[] = {
+    TEXT("RightPunch"), TEXT("LeftPunch"), TEXT("DoubleJab"), TEXT("RightKick"), TEXT("LeftKick"), TEXT("LegSweep"),
+    TEXT("Headbutt"), TEXT("DodgeSlam"), TEXT("Charge"), TEXT("ChargedStrike"),
+    TEXT("AirPunch"), TEXT("AirLeftPunch"), TEXT("AirKick"), TEXT("AirCrashKick"), TEXT("AirSlam"),
+    TEXT("Dodge"), TEXT("Hit"), TEXT("Knockdown"), TEXT("Death"), TEXT("Block"),
+    TEXT("SwordSlash"), TEXT("SwordBackslash"), TEXT("SwordThrust"), TEXT("SwordSpin")};
+
+const TCHAR* AttackClipName(FistCombat::Move Type)
+{
+    using FistCombat::Move;
+    switch (Type)
+    {
+    case Move::RightPunch: case Move::HeavyPunch: return TEXT("RightPunch");
+    case Move::LeftPunch: case Move::Elbow: return TEXT("LeftPunch");
+    case Move::DoubleJab: return TEXT("DoubleJab");
+    case Move::RightHeavyKick: case Move::TurningKick: return TEXT("RightKick");
+    case Move::LeftHeavyKick: case Move::FollowKick: return TEXT("LeftKick");
+    case Move::LegSweep: return TEXT("LegSweep");
+    case Move::Headbutt: case Move::DodgeUppercut: return TEXT("Headbutt");
+    case Move::DodgeSlam: return TEXT("DodgeSlam");
+    case Move::ChargedStrike: case Move::Tackle: case Move::ShoulderThrow: return TEXT("ChargedStrike");
+    case Move::AirPunch: return TEXT("AirPunch");
+    case Move::AirLeftPunch: return TEXT("AirLeftPunch");
+    case Move::AirKick: return TEXT("AirKick");
+    case Move::AirCrashKick: return TEXT("AirCrashKick");
+    case Move::AirSlam: return TEXT("AirSlam");
+    case Move::SwordSlash: return TEXT("SwordSlash");
+    case Move::SwordBackslash: return TEXT("SwordBackslash");
+    case Move::SwordThrust: return TEXT("SwordThrust");
+    case Move::SwordSpin: return TEXT("SwordSpin");
+    default: return nullptr;
+    }
+}
+
+// Fraction of each clip where its hit connects, written to DefaultGame.ini by Tools/Animations/build.ps1.
+float ClipContactFraction(const UAnimSequence* Clip)
+{
+    static TMap<FName, float> Fractions = []()
+    {
+        TMap<FName, float> Result;
+        TArray<FString> Lines;
+        GConfig->GetSection(TEXT("HellgirlAnimationContact"), Lines, GGameIni);
+        for (const FString& Line : Lines)
+        {
+            FString Key, Value;
+            if (Line.Split(TEXT("="), &Key, &Value)) Result.Add(FName(*Key), FCString::Atof(*Value));
+        }
+        return Result;
+    }();
+    const float* Fraction = Clip ? Fractions.Find(Clip->GetFName()) : nullptr;
+    return Fraction ? FMath::Clamp(*Fraction, .05f, .95f) : -1.f;
+}
+}
 
 AArenaFighter::AArenaFighter()
 {
@@ -47,10 +105,9 @@ AArenaFighter::AArenaFighter()
     NeutralIdleAnimation = IdleAsset.Object;
     WalkAnimation = WalkAsset.Object;
     RunAnimation = RunAsset.Object;
-    // Combat poses are placeholders until authored on the new native rig.
-    RightPunchAnimation = LeftPunchAnimation = RightKickAnimation = LeftKickAnimation = JumpAnimation = NeutralIdleAnimation;
-    for (const TCHAR* Name : {TEXT("HeavyPunch"), TEXT("Headbutt"), TEXT("Elbow"), TEXT("Tackle"), TEXT("ShoulderThrow"), TEXT("DodgeUppercut"), TEXT("LegSweep"), TEXT("AirPunch"), TEXT("AirLeftPunch"), TEXT("AirKick"), TEXT("AirCrashKick"), TEXT("AirSlam"), TEXT("ChargedStrike"), TEXT("Dodge"), TEXT("Block"), TEXT("Charge"), TEXT("Hit"), TEXT("Knockdown"), TEXT("Death")})
-        ExtendedAnimations.Add(FName(Name), NeutralIdleAnimation);
+    // Combat clips load per outfit in SetOutfit; until then every state uses the neutral pose.
+    JumpAnimation = NeutralIdleAnimation;
+    for (const TCHAR* Name : CombatClipNames) CombatAnimations.Add(FName(Name), NeutralIdleAnimation);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> HellgirlMesh(TEXT("/Game/Hellgirl/Outfits/Rags/Rags.Rags"));
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> ArmorAsset(TEXT("/Game/Hellgirl/Outfits/SuccubusArmor/SuccubusArmor.SuccubusArmor"));
     RagsMesh = HellgirlMesh.Object;
@@ -97,7 +154,7 @@ AArenaFighter::AArenaFighter()
     Sword->SetStaticMesh(Cube.Object);
     Sword->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Sword->SetRelativeLocation(FVector(65.f, 55.f, 0.f));
-    Sword->SetRelativeScale3D(FVector(1.5f, 0.09f, 0.18f));
+    Sword->SetRelativeScale3D(FVector(1.1f, 0.035f, 0.09f));
     Sword->SetVisibility(false);
     AttackFlash = CreateDefaultSubobject<UPointLightComponent>(TEXT("AttackFlash"));
     AttackFlash->SetupAttachment(RightHand);
@@ -180,10 +237,22 @@ bool AArenaFighter::SetOutfit(int32 Outfit)
     NeutralIdleAnimation = Clips[TEXT("NeutralIdle")];
     WalkAnimation = Clips[TEXT("Walk")];
     RunAnimation = Clips[TEXT("Run")];
-    RightPunchAnimation = LeftPunchAnimation = RightKickAnimation = LeftKickAnimation = JumpAnimation = NeutralIdleAnimation;
-    for (auto& Pair : ExtendedAnimations) Pair.Value = NeutralIdleAnimation;
+    JumpAnimation = NeutralIdleAnimation;
+    // Combat clips built by Tools/Animations/build.ps1. Outfits without a clip (e.g. Frog, or moves
+    // not downloaded yet) keep the neutral pose for that state.
+    for (const TCHAR* Name : CombatClipNames)
+    {
+        const FString Path = FString::Printf(TEXT("/Game/Hellgirl/Outfits/%s/Animations/%s.%s"), *Folder, Name, Name);
+        UAnimSequence* Clip = FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(Path))
+            ? LoadObject<UAnimSequence>(nullptr, *Path) : nullptr;
+        CombatAnimations.Add(FName(Name), Clip && Clip->GetSkeleton() == OutfitMesh->GetSkeleton() ? Clip : NeutralIdleAnimation.Get());
+    }
     SelectedOutfit = Outfit;
     GetMesh()->SetSkeletalMesh(OutfitMesh);
+    // The placeholder blade follows the right hand so sword clips swing it.
+    Sword->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("RightHand"));
+    Sword->SetRelativeLocation(SwordGripOffset);
+    Sword->SetRelativeRotation(SwordGripRotation);
     GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
     ActiveAnimation = nullptr;
     UpdatePose(0.f);
@@ -762,6 +831,7 @@ void AArenaFighter::Tick(float Dt)
     RunPerfectCounterCheck();
     RunEnemyMovesetCheck(Dt);
     RunCombatBalanceCheck(Dt);
+    RunAttackAnimationPreview(Dt);
     const float UntilHit = AttackClock - CurrentAttack.Duration * (1.f - CurrentAttack.ContactFraction);
     const bool FlashNow = bEnemy && IsAlive() && !bHitResolved && AttackClock > 0.f && UntilHit > 0.f && UntilHit <= PerfectDodgeWindow;
     AttackFlash->SetVisibility(FlashNow);
@@ -941,34 +1011,20 @@ void AArenaFighter::UpdateEnemyAnimation(float Dt)
 
 UAnimSequence* AArenaFighter::FindAttackAnimation(FistCombat::Move Type) const
 {
-    using FistCombat::Move;
-    switch (Type)
-    {
-    case Move::RightPunch: return RightPunchAnimation;
-    case Move::LeftPunch: return LeftPunchAnimation;
-    case Move::TurningKick: return RightKickAnimation;
-    case Move::FollowKick: return LeftKickAnimation;
-    default: break;
-    }
-    const TCHAR* Name = nullptr;
-    switch (Type)
-    {
-    case Move::HeavyPunch: Name=TEXT("HeavyPunch"); break;
-    case Move::Headbutt: Name=TEXT("Headbutt"); break;
-    case Move::Elbow: Name=TEXT("Elbow"); break;
-    case Move::Tackle: Name=TEXT("Tackle"); break;
-    case Move::ShoulderThrow: Name=TEXT("ShoulderThrow"); break;
-    case Move::DodgeUppercut: Name=TEXT("DodgeUppercut"); break;
-    case Move::LegSweep: Name=TEXT("LegSweep"); break;
-    case Move::AirPunch: Name=TEXT("AirPunch"); break;
-    case Move::AirLeftPunch: Name=TEXT("AirLeftPunch"); break;
-    case Move::AirKick: Name=TEXT("AirKick"); break;
-    case Move::AirCrashKick: Name=TEXT("AirCrashKick"); break;
-    case Move::AirSlam: Name=TEXT("AirSlam"); break;
-    case Move::ChargedStrike: Name=TEXT("ChargedStrike"); break;
-    default: break;
-    }
-    return Name ? ExtendedAnimations.FindRef(FName(Name)).Get() : nullptr;
+    const TCHAR* Name = AttackClipName(Type);
+    return Name ? CombatAnimations.FindRef(FName(Name)).Get() : nullptr;
+}
+
+float AArenaFighter::AttackClipPosition(float Progress, const UAnimSequence* Clip) const
+{
+    if (!Clip) return 0.f;
+    const float Hit = FMath::Clamp(CurrentAttack.ContactFraction, .05f, .95f);
+    const float ClipHit = ClipContactFraction(Clip);
+    const float P = FMath::Clamp(Progress, 0.f, 1.f);
+    // Without a recorded contact point the clip simply spans the attack.
+    const float Fraction = ClipHit < 0.f ? P
+        : P < Hit ? P / Hit * ClipHit : ClipHit + (P - Hit) / (1.f - Hit) * (1.f - ClipHit);
+    return Fraction * Clip->GetPlayLength();
 }
 
 void AArenaFighter::UpdatePose(float Dt)
@@ -997,37 +1053,39 @@ void AArenaFighter::UpdatePose(float Dt)
         bAnimationWasAirborne = Airborne;
         if (!IsAlive())
         {
-            Clip = ExtendedAnimations.FindRef(TEXT("Death"));
+            Clip = CombatAnimations.FindRef(TEXT("Death"));
             PlayerDeathAnimationTime += Dt;
             if (Clip) Position = FMath::Min(PlayerDeathAnimationTime, Clip->GetPlayLength());
         }
         else if (KnockdownClock > 0.f)
         {
-            Clip = ExtendedAnimations.FindRef(TEXT("Knockdown"));
+            Clip = CombatAnimations.FindRef(TEXT("Knockdown"));
             if (Clip) Position = FMath::Clamp(1.f - KnockdownClock / PlayerKnockdownDuration, 0.f, 1.f) * Clip->GetPlayLength();
         }
         else if (DodgeClock > 0.f && !bCounterDodge)
         {
-            Clip = ExtendedAnimations.FindRef(TEXT("Dodge"));
+            Clip = CombatAnimations.FindRef(TEXT("Dodge"));
             if (Clip) Position = (1.f - DodgeClock / .25f) * Clip->GetPlayLength();
         }
         else if (IsStrike)
         {
             Clip = Strike;
-            if (Clip) Position = (1.f - AttackClock / CurrentAttack.Duration) * Clip->GetPlayLength();
-            if (Clip && bCounterDodge && CurrentAttack.Type == FistCombat::Move::DodgeUppercut)
-                Position = (CurrentAttack.ContactFraction + (1.f-CurrentAttack.ContactFraction)*(1.f-AttackClock/CurrentAttack.Duration))*Clip->GetPlayLength();
+            const float Progress = 1.f - AttackClock / CurrentAttack.Duration;
+            Position = AttackClipPosition(Progress, Clip);
+            // A perfect counter's damage is immediate, so its clip starts at the contact pose.
+            if (bCounterDodge && (CurrentAttack.Type == FistCombat::Move::DodgeUppercut || CurrentAttack.Type == FistCombat::Move::Headbutt))
+                Position = AttackClipPosition(CurrentAttack.ContactFraction + (1.f-CurrentAttack.ContactFraction)*Progress, Clip);
             // Hold the descending pose until the real landing resolves damage.
-            if (Clip && bGroundImpactPending) Position = FMath::Min(Position, (CurrentAttack.ContactFraction-.02f)*Clip->GetPlayLength());
+            if (bGroundImpactPending) Position = FMath::Min(Position, AttackClipPosition(CurrentAttack.ContactFraction-.02f, Clip));
         }
         else if (PlayerHitAnimationTime < .3f)
         {
-            Clip = ExtendedAnimations.FindRef(TEXT("Hit"));
+            Clip = CombatAnimations.FindRef(TEXT("Hit"));
             Position = PlayerHitAnimationTime;
         }
         else if (bHeavyHeld || IsBlocking())
         {
-            Clip = ExtendedAnimations.FindRef(bHeavyHeld ? TEXT("Charge") : TEXT("Block"));
+            Clip = CombatAnimations.FindRef(bHeavyHeld ? TEXT("Charge") : TEXT("Block"));
             if (Clip) Position = FMath::Fmod(GetWorld()->GetTimeSeconds(), Clip->GetPlayLength());
         }
         else if (JumpAnimation && IsAlive() && KnockdownClock <= 0.f && (Airborne || LandingAnimationTime < .25f))

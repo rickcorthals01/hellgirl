@@ -88,6 +88,9 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat") float Riposte = 0.f;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> Body;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> Sword;
+    // Placeholder blade placement relative to the RightHand bone (the cube's long axis is X).
+    UPROPERTY(EditAnywhere, Category="Combat|Sword") FVector SwordGripOffset = FVector(0.f, 50.f, 0.f);
+    UPROPERTY(EditAnywhere, Category="Combat|Sword") FRotator SwordGripRotation = FRotator(0.f, 90.f, 0.f);
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> Head;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> RightHand;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> LeftHand;
@@ -123,6 +126,7 @@ private:
     void CancelEnemyMove();
     void DrawEnemyMoveTelegraph();
     void RunEnemyMovesetCheck(float Dt);
+    void RunAttackAnimationPreview(float Dt);
     void RunCombatBalanceCheck(float Dt);
     TSharedPtr<FCombatImpactBudget> ActiveAttackImpactBudget;
     TSharedPtr<FCombatImpactBudget> CombatLaunchImpactBudget;
@@ -161,10 +165,6 @@ private:
     bool CanCounter(const AArenaFighter* Enemy) const;
     bool TryPerfectCounter();
     void RunPerfectCounterCheck();
-    UPROPERTY() TObjectPtr<UAnimSequence> RightPunchAnimation;
-    UPROPERTY() TObjectPtr<UAnimSequence> LeftPunchAnimation;
-    UPROPERTY() TObjectPtr<UAnimSequence> RightKickAnimation;
-    UPROPERTY() TObjectPtr<UAnimSequence> LeftKickAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> NeutralIdleAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> WalkAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> RunAnimation;
@@ -173,8 +173,11 @@ private:
     float LandingAnimationTime = .25f;
     bool bAnimationWasAirborne = false;
     UPROPERTY() TObjectPtr<UAnimSequence> ActiveAnimation;
-    UPROPERTY() TMap<FName, TObjectPtr<UAnimSequence>> ExtendedAnimations;
+    // Per-outfit combat clips from Tools/Animations (see CombatClipNames); missing clips use the neutral pose.
+    UPROPERTY() TMap<FName, TObjectPtr<UAnimSequence>> CombatAnimations;
     UAnimSequence* FindAttackAnimation(FistCombat::Move Move) const;
+    // Maps attack progress to clip time so the clip's contact frame lands on the attack's damage moment.
+    float AttackClipPosition(float Progress, const UAnimSequence* Clip) const;
     float PlayerHitAnimationTime = 100.f;
     float PlayerDeathAnimationTime = 0.f;
     float PlayerKnockdownDuration = 1.f;
