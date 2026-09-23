@@ -52,8 +52,8 @@ Keyboard bindings can be changed in **Pause > Options**. Controller bindings are
 
 ## Known gaps
 
-- Most attacks still use the neutral pose until their Mixamo clips are downloaded; the sword slash, backslash and spin are animated. See **Docs/ANIMATIONS.md**. The sword itself is a placeholder box.
-- The shop, the Succubus Hall hub and Worlds III–VII are not built yet.
+- Animated so far: idle, walk, run, both fist combos, charge and charged strike, sword slash/backslash/spin. The after-dodge moves, air combo and reactions still use the neutral pose until their Mixamo clips are added (see **Docs/ANIMATIONS.md**). The sword is a placeholder box.
+- The shop, the Succubus Hall hub, World III's encounters and Worlds IV–VII are not built yet.
 - Balance values are initial tuning and have not been hands-on playtested.
 
 ## Where things are
