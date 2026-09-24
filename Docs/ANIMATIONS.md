@@ -47,4 +47,10 @@ The sword is still a placeholder box, now held in the right hand (`SwordGripOffs
 
 Meshy generated some outfits standing on tiptoe (heel 6–9 cm above the floor at rest), so every animation looked like she was on her toes. `Tools/Animations/flatten_feet.ps1` fixes an outfit: Blender rotates the feet flat at the ankle, bakes that into the mesh as the new rest pose and lowers the body onto the floor (5–9 cm shorter); Unreal re-imports the mesh and updates its skeleton; then all its clips are rebuilt on the new rest pose. Its own neutral pose is re-fitted from the original. Applied to Goblin Queen, Rat and Ghost. The originals are kept in `Animation Testing\ExtraSkins\<Outfit>\tiptoe`. Rags (2 cm) was left as is.
 
+## Fists
+
+The outfits have no finger bones, so the hands can't be posed by animations. `Tools/Animations/fist_hands.ps1` bakes a loose fist into each model instead. Blender finds the thumb and the separate fingers in the mesh, straightens spread fingers, curls them at three knuckles and folds the thumb across. Only the mesh changes; the skeleton stays the same. Unreal re-imports the meshes and the clips are rebuilt. Her hands are therefore always closed, which suits a fist fighter and still works for holding a sword later. The open-handed originals are kept in `<outfit folder>\openhands` and are always the input, so re-running is safe. Tune `CURL` / `THUMB` at the top of `fist_hands.py`; add `-Preview <folder>` to render colour-coded close-ups without changing anything. Frog is left out (different rig).
+
+If you re-run `flatten_feet.ps1` on an outfit, run `fist_hands.ps1` for it again afterwards (delete its `openhands` copy first so the new flat-footed model becomes the source).
+
 To check feet in game: `... -game -HellgirlFeetPreview` films the equipped outfit side-on and logs its stored sole heights (`FEET MESH` line in the log).

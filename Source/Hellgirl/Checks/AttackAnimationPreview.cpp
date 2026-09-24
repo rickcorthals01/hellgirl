@@ -150,11 +150,20 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
     static float ShotClock = 0.f;
     const int32 Total = UE_ARRAY_COUNT(Moves) * 3;
     if (GetWorld()->GetTimeSeconds() < 2.f) return;
-    if (Shot < 0) Shot = 0;
+    if (Shot < 0)
+    {
+        Shot = 0;
+        // -PreviewOutfit=N shows outfit N instead of the saved one (not saved).
+        int32 PreviewOutfit = -1;
+        if (FParse::Value(FCommandLine::Get(), TEXT("PreviewOutfit="), PreviewOutfit)) SetOutfit(PreviewOutfit);
+    }
     // Pin a near-profile view every frame (a straight punch toward a front camera hides its
     // extension, and the combat camera would otherwise drift between shots).
     SetActorRotation(FRotator::ZeroRotator);
-    DesiredCameraDistance = 340.f;
+    // -AttackPreviewClose frames the upper body, to inspect the hands.
+    const bool Close = FParse::Param(FCommandLine::Get(), TEXT("AttackPreviewClose"));
+    DesiredCameraDistance = Close ? 170.f : 340.f;
+    if (Close) { CameraArm->SocketOffset = FVector(0.f, 0.f, 25.f); CameraArm->bEnableCameraLag = false; }
     if (auto* PC = Cast<APlayerController>(GetController())) PC->SetControlRotation(FRotator(-8.f, 100.f, 0.f));
     if (Shot >= Total)
     {

@@ -17,6 +17,7 @@ if (-not (Select-String (Join-Path $logDir 'FlattenFeet.log') -Pattern 'FLATTEN 
 Write-Host 'Re-importing meshes into Unreal...'
 $env:HELLGIRL_GAME_ROOT = $gameRoot
 $env:HELLGIRL_OUTFITS = $list
+$env:HELLGIRL_CLIPS = Join-Path $PSScriptRoot 'clips.json'
 $script = Join-Path $env:TEMP 'hellgirl_import_outfit_meshes.py'
 Copy-Item (Join-Path $PSScriptRoot 'import_outfit_meshes.py') $script -Force
 $log = Join-Path $logDir 'OutfitMeshImport.log'

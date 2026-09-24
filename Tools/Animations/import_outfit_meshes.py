@@ -1,10 +1,12 @@
-# Unreal (run through flatten_feet.ps1): re-imports re-posed outfit meshes over their existing assets,
-# updating each outfit's skeleton to the new reference pose and keeping its material and physics asset.
-import os, sys
+# Unreal (run through flatten_feet.ps1 or fist_hands.ps1): re-imports reshaped outfit meshes over their
+# existing assets, updating each outfit's skeleton to the new reference pose and keeping its material and
+# physics asset. The source files are the outfit models listed in clips.json.
+import json, os, sys
 import unreal as u
 
 game_root = os.environ["HELLGIRL_GAME_ROOT"]
 outfits = [o for o in os.environ["HELLGIRL_OUTFITS"].split(",") if o]
+sources = json.load(open(os.environ["HELLGIRL_CLIPS"]))["outfits"]
 tools = u.AssetToolsHelpers.get_asset_tools()
 u.SystemLibrary.execute_console_command(None, "Interchange.FeatureFlags.Import.FBX 0")
 failed = []
@@ -26,7 +28,7 @@ for name in outfits:
     opt.skeleton = skeleton
     opt.skeletal_mesh_import_data.set_editor_property("update_skeleton_reference_pose", True)
     task = u.AssetImportTask()
-    task.filename = os.path.join(game_root, "Animation Testing", "ExtraSkins", name, name + ".fbx")
+    task.filename = os.path.join(game_root, sources[name])
     task.destination_path = dest
     task.destination_name = name
     task.automated = True
