@@ -326,6 +326,7 @@ void AArenaGameMode::Tick(float Dt)
         { PC->ShowMainMenu(); bShowStartupMenu=!PC->IsPauseMenuOpen(); }
         return;
     }
+    RunMapShot(Dt);
     if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance()); Wallet && Wallet->PendingLoad) Wallet->RestorePending();
     if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance()); Wallet && Wallet->RunSaveCheck()) return;
     if (bStoryEnabled && TickStory(Dt)) return;

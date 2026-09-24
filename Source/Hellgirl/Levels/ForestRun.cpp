@@ -3,6 +3,7 @@
 // Health and energy carry over between rooms; dying or finishing the run returns to camp.
 #include "Levels/ArenaGameMode.h"
 #include "Levels/MapPieces.h"
+#include "Levels/ForestArt.h"
 #include "Rules/ForestRoomRules.h"
 #include "Fighter/ArenaFighter.h"
 #include "Enemies/EnemySpawnPoint.h"
@@ -33,8 +34,6 @@
 
 namespace
 {
-const TCHAR* ForestCylinder = TEXT("/Engine/BasicShapes/Cylinder.Cylinder");
-const TCHAR* ForestCone = TEXT("/Engine/BasicShapes/Cone.Cone");
 FVector ForestAt(FVector2D P, float Z = 0.f) { return FVector(P.X, P.Y, Z); }
 }
 
@@ -60,66 +59,52 @@ void AArenaGameMode::BuildForestRun()
     const ForestRoom::FPlan Plan = ForestRoom::Make(ForestSeed, ForestRoomNumber);
     MapTitle = FString::Printf(TEXT("FOREST RUN / ROOM %d OF %d%s"), ForestRoomNumber, ForestRoom::RoomsPerRun, Plan.bBoss ? TEXT(" / THE QUEEN") : TEXT(""));
     MapPlatforms.Add(FVector4(0.f, 0.f, ForestRoom::Radius * 2.f, ForestRoom::Radius * 2.f));
-    auto Shape = [&](FVector P, FVector Scale, FLinearColor Color, const TCHAR* MeshPath, bool Collide)
-    {
-        auto* A = Prop(P, Scale, Color);
-        A->GetStaticMeshComponent()->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, MeshPath));
-        A->SetActorEnableCollision(Collide);
-        return A;
-    };
+    UWorld* World = GetWorld();
 
-    // Fixed room shape: forest floor, a trodden clearing, and the trail from west to east.
-    auto* Ground = Prop(FVector(0, 0, -85), FVector(80, 80, 1.6f), FLinearColor(.08f, .115f, .06f));
-    if (auto* Earth = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Environment/Materials/M_EnvironmentEarth.M_EnvironmentEarth")))
-        if (auto* Mat = UMaterialInstanceDynamic::Create(Earth, Ground))
-        {
-            Mat->SetVectorParameterValue(TEXT("Color"), FLinearColor(.34f, .44f, .28f));
-            Ground->GetStaticMeshComponent()->SetMaterial(0, Mat);
-        }
-    Shape(FVector(0, 0, -7), FVector(ForestRoom::Radius * .02f, ForestRoom::Radius * .02f, .15f), FLinearColor(.25f, .19f, .11f), ForestCylinder, true);
-    for (int32 I = -9; I <= 9; ++I)
-        if (FMath::Abs(I) > 2)
-            Shape(FVector(I * 260.f, 0, -1), FVector(3.4f, 3.1f, .09f), FLinearColor(.21f, .15f, .09f), ForestCylinder, false);
+    // An invisible, flat floor to walk on; the visible ground, trees and plants are in ForestScenery.cpp.
+    Prop(FVector(0, 0, -80), FVector(80, 80, 1.6f), FLinearColor::Black)->SetActorHiddenInGame(true);
     BuildForestRunScenery();
 
-    // Cover.
+    // Cover: realistic boulders, fallen logs and stumps from the kit.
     for (int32 I = 0; I < Plan.Cover.Num(); ++I)
     {
         const ForestRoom::FCover& C = Plan.Cover[I];
+        FRandomStream Pick(ForestSeed * 31 + ForestRoomNumber * 7 + I);
         AActor* Piece = nullptr;
         if (C.Type == ForestRoom::ECover::Boulder)
-            Piece = MapPieces::Rock(GetWorld(), ForestAt(C.Position, 190.f * C.Size), FVector(380.f, 330.f, 210.f) * C.Size,
-                FLinearColor(.19f, .2f, .16f), ForestSeed * 31 + ForestRoomNumber * 7 + I, true, false);
+        {
+            UStaticMesh* Mesh = ForestArt::Boulder(Pick.RandRange(0, 6));
+            if (!Mesh) continue;
+            const FBoxSphereBounds B = Mesh->GetBounds();
+            const float Scale = ForestRoom::CoverReach(C) * 2.f / (2.f * FMath::Max(B.BoxExtent.X, B.BoxExtent.Y));
+            const FVector At = ForestAt(C.Position, -(B.Origin.Z - B.BoxExtent.Z) * Scale - 12.f);
+            Piece = ForestArt::Solid(World, Mesh, FTransform(FRotator(0, C.Yaw, 0), At, FVector(Scale)), true);
+        }
         else if (C.Type == ForestRoom::ECover::Log)
-        {
-            Piece = Shape(ForestAt(C.Position, 48.f * C.Size), FVector(1.f, 1.f, 5.2f) * C.Size, FLinearColor(.16f, .09f, .045f), ForestCylinder, true);
-            Piece->SetActorRotation(FRotator(90.f, C.Yaw, 0.f));
-        }
+            Piece = ForestArt::Solid(World, ForestArt::Kit(TEXT("SM_Log")), FTransform(FRotator(0, C.Yaw, 0), ForestAt(C.Position, 38.f * C.Size), FVector(1.1f * C.Size)), true);
         else
-        {
-            Piece = Shape(ForestAt(C.Position, 55.f * C.Size), FVector(1.5f, 1.5f, 1.1f) * C.Size, FLinearColor(.2f, .12f, .06f), ForestCylinder, true);
-            Shape(ForestAt(C.Position, 112.f * C.Size), FVector(1.3f, 1.3f, .04f) * C.Size, FLinearColor(.42f, .3f, .17f), ForestCylinder, false);
-        }
+            Piece = ForestArt::Solid(World, ForestArt::Kit(TEXT("SM_Stump")), FTransform(FRotator(0, C.Yaw, 0), ForestAt(C.Position, -4.f), FVector(.75f * C.Size)), true);
         if (Piece) Piece->Tags.Add(TEXT("ForestCover"));
     }
 
-    // Thorn patches: a dark bramble bed with spikes; standing in one hurts.
-    auto* Spikes = MapPieces::DecorationBatch(GetWorld(), ForestCone, FLinearColor(.2f, .04f, .05f));
+    // Thorn patches: a tangle of brambles with glowing berries and a dull red glow; standing in one hurts.
+    auto* Brambles = ForestArt::Batch(World, ForestArt::Kit(TEXT("SM_Bramble")), true, 2.f);
     FRandomStream Bramble(ForestSeed + ForestRoomNumber * 101);
     for (const ForestRoom::FThorns& T : Plan.Thorns)
     {
-        auto* Bed = Shape(ForestAt(T.Position, 2.f), FVector(T.Radius * .02f, T.Radius * .02f, .05f), FLinearColor(.12f, .03f, .035f), ForestCylinder, false);
-        Bed->Tags.Add(TEXT("ForestThorns"));
-        for (int32 I = 0; I < 26; ++I)
+        const int32 Count = FMath::RoundToInt(FMath::Square(T.Radius / 75.f));
+        for (int32 I = 0; I < Count; ++I)
         {
-            const float A = Bramble.FRandRange(0.f, 2.f * PI), D = FMath::Sqrt(Bramble.FRand()) * T.Radius * .92f;
-            Spikes->AddInstance(FTransform(FRotator(Bramble.FRandRange(-25.f, 25.f), 0, Bramble.FRandRange(-25.f, 25.f)),
-                ForestAt(T.Position + FVector2D(FMath::Cos(A), FMath::Sin(A)) * D, 22.f), FVector(.16f, .16f, Bramble.FRandRange(.35f, .75f))));
+            const float A = Bramble.FRandRange(0.f, 2.f * PI), D = FMath::Sqrt(Bramble.FRand()) * T.Radius * .85f;
+            Brambles->AddInstance(FTransform(FRotator(0, Bramble.FRandRange(0.f, 360.f), 0),
+                ForestAt(T.Position + FVector2D(FMath::Cos(A), FMath::Sin(A)) * D), FVector(Bramble.FRandRange(1.1f, 1.7f))));
         }
+        ForestArt::PointGlow(World, ForestAt(T.Position, 60.f), FLinearColor(1.f, .16f, .08f), 1400.f, T.Radius * 1.6f)->Tags.Add(TEXT("ForestThorns"));
         ForestThorns.Add(FVector4(T.Position.X, T.Position.Y, T.Radius, 0.f));
     }
+    Brambles->BuildTreeIfOutdated(true, true);
 
-    // Waves (goblins), or the Goblin Queen in the last room.
+    // Waves come out of goblin burrows; the Goblin Queen waits in the last room.
     if (Plan.bBoss)
     {
         if (auto* Queen = Site(ForestAt(ForestRoom::QueenSpot, 10.f), TEXT("GOBLIN QUEEN"), 1, 0, false, true))
@@ -138,99 +123,36 @@ void AArenaGameMode::BuildForestRun()
             S->EnemyScale = W.Style == ForestRoom::EWave::Elite ? 1.3f : 1.f;
             S->bInstantGroup = W.Style == ForestRoom::EWave::Ambush;
             S->bGroupGuardsHome = false;
+            S->UseBurrow();
         }
 
-    // The trail marker lights up once the room is clear.
-    ForestExitMarker = Shape(ForestAt(ForestRoom::Exit, 160.f), FVector(.5f, .5f, 3.2f), FLinearColor(.35f, 1.f, .3f), ForestCylinder, false);
-    if (auto* GlowBase = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Environment/Materials/M_EnvironmentGlow.M_EnvironmentGlow")))
-        if (auto* Glow = UMaterialInstanceDynamic::Create(GlowBase, ForestExitMarker))
-        {
-            Glow->SetVectorParameterValue(TEXT("Color"), FLinearColor(.35f, 1.f, .3f));
-            ForestExitMarker->GetStaticMeshComponent()->SetMaterial(0, Glow);
-        }
+    // Rune gateways frame the trail at both ends; a green wisp appears in the exit once the room is clear.
+    ForestArt::Solid(World, ForestArt::Kit(TEXT("SM_Gateway")), FTransform(FRotator::ZeroRotator, ForestAt(ForestRoom::Exit + FVector2D(220.f, 0.f), -5.f), FVector(1.1f)), true);
+    // At the entrance, standing stones either side of the trail (a lintel there would block the camera).
+    for (int32 Side : {-1, 1})
+        ForestArt::Solid(World, ForestArt::Kit(TEXT("SM_StandingStone")), FTransform(FRotator(Side * 4.f, Side * 20.f, 0), ForestAt(ForestRoom::Start + FVector2D(-120.f, Side * 380.f), -8.f), FVector(1.15f)), true);
+    ForestExitMarker = Prop(ForestAt(ForestRoom::Exit + FVector2D(220.f, 0.f), 190.f), FVector(.32f), FLinearColor(.35f, 1.f, .4f), true);
+    ForestExitMarker->SetActorEnableCollision(false);
+    if (auto* Glow = MapPieces::Surface(ForestExitMarker, FLinearColor(.4f, 1.f, .45f), false, true))
+    {
+        Glow->SetScalarParameterValue(TEXT("EmissiveStrength"), 12.f);
+        ForestExitMarker->GetStaticMeshComponent()->SetMaterial(0, Glow);
+    }
     ForestExitMarker->SetActorHiddenInGame(true);
+    ForestExitLight = ForestArt::PointGlow(World, ForestAt(ForestRoom::Exit + FVector2D(150.f, 0.f), 190.f), FLinearColor(.35f, 1.f, .45f), 9000.f, 900.f);
+    ForestExitLight->PointLightComponent->SetVisibility(false);
+    ForestArt::Fireflies(World, ForestAt(ForestRoom::Exit, 150.f), 1.f);
     ExitPosition = ForestAt(ForestRoom::Exit);
     ExitPortal = Prop(ExitPosition + FVector(0, 0, 200), FVector(.4f, 2.8f, 4.f), FLinearColor(.55f, .025f, .9f), true);
     ExitPortal->GetStaticMeshComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     ExitPortal->SetActorHiddenInGame(true);
     TotalSites = SpawnSites.Num();
-
-    // Moonlit forest lighting, as at camp but without the campfire.
-    auto* Moon = GetWorld()->SpawnActor<ADirectionalLight>(FVector(0, 0, 2000), FRotator(-45, -30, 0));
-    Moon->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-    Moon->GetLightComponent()->SetIntensity(2.1f);
-    Moon->GetLightComponent()->SetLightColor(FLinearColor(.42f, .55f, .8f));
-    auto* Sky = GetWorld()->SpawnActor<ASkyLight>();
-    Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-    Sky->GetLightComponent()->SetIntensity(.7f);
-    Sky->GetLightComponent()->SetRealTimeCaptureEnabled(false);
-    auto* Fog = GetWorld()->SpawnActor<AExponentialHeightFog>();
-    Fog->GetComponent()->SetFogDensity(.016f);
-    Fog->GetComponent()->SetFogInscatteringColor(FLinearColor(.028f, .06f, .063f));
-    Fog->GetComponent()->SetStartDistance(1400.f);
-    auto* Post = GetWorld()->SpawnActor<APostProcessVolume>();
-    Post->bUnbound = true;
-    Post->Settings.bOverride_AutoExposureMinBrightness = Post->Settings.bOverride_AutoExposureMaxBrightness = true;
-    Post->Settings.AutoExposureMinBrightness = Post->Settings.AutoExposureMaxBrightness = 1.f;
-    Post->Settings.bOverride_BloomIntensity = true;
-    Post->Settings.BloomIntensity = .45f;
 }
 
-void AArenaGameMode::BuildForestRunScenery()
+void AArenaGameMode::ShowForestExit(bool Open)
 {
-    using namespace MapPieces;
-    // The tree wall is the same every room (it is the room's shape), so it uses a fixed seed.
-    FRandomStream Random(7717);
-    auto* Trunks = DecorationBatch(GetWorld(), ForestCylinder, FLinearColor(.17f, .1f, .055f));
-    auto* Needles = DecorationBatch(GetWorld(), ForestCone, FLinearColor(.17f, .32f, .19f));
-    auto* DarkNeedles = DecorationBatch(GetWorld(), ForestCone, FLinearColor(.1f, .21f, .13f));
-    auto* Ferns = DecorationBatch(GetWorld(), ForestCone, FLinearColor(.11f, .27f, .11f));
-    auto* Fireflies = DecorationBatch(GetWorld(), TEXT("/Engine/BasicShapes/Sphere.Sphere"), FLinearColor(.35f, 1.f, .24f), true);
-    Needles->SetCastShadow(false);
-    DarkNeedles->SetCastShadow(false);
-    for (auto* Batch : {Trunks, Needles, DarkNeedles, Ferns, Fireflies}) Batch->bAutoRebuildTreeOnInstanceChanges = false;
-    for (int32 I = 0; I < 150; ++I)
-    {
-        const float A = I * 2.399963f + Random.FRandRange(-.1f, .1f);
-        const float R = ForestRoom::Radius + Random.FRandRange(120.f, 1000.f);
-        const FVector P(FMath::Cos(A) * R, FMath::Sin(A) * R, 0);
-        // Openings where the trail enters (west) and leaves (east).
-        if (FMath::Abs(P.Y) < 330.f) continue;
-        const float H = Random.FRandRange(700.f, 1250.f), Crown = Random.FRandRange(150.f, 230.f);
-        Trunks->AddInstance(FTransform(FRotator(0, Random.FRandRange(0.f, 360.f), 0), P + FVector(0, 0, H * .5f), FVector(.5f, .5f, H / 100.f)));
-        for (int32 Layer = 0; Layer < 3; ++Layer)
-        {
-            const FVector C = P + FVector(Random.FRandRange(-35.f, 35.f), Random.FRandRange(-35.f, 35.f), H * (.56f + Layer * .067f));
-            ((I + Layer) % 3 == 0 ? DarkNeedles : Needles)->AddInstance(FTransform(FRotator(0, Random.FRandRange(0.f, 360.f), 0), C,
-                FVector(Crown * (1.f - .28f * Layer) / 50.f, Crown * (1.f - .28f * Layer) / 50.f, H * (.5f - .08f * Layer) / 100.f)));
-        }
-    }
-    for (int32 I = 0; I < 260; ++I)
-    {
-        const float A = Random.FRandRange(0.f, 2.f * PI), R = Random.FRandRange(ForestRoom::Radius - 250.f, ForestRoom::Radius + 700.f);
-        const FVector P(FMath::Cos(A) * R, FMath::Sin(A) * R, 20.f);
-        const float S = Random.FRandRange(.25f, .75f);
-        Ferns->AddInstance(FTransform(FRotator(0, Random.FRandRange(0.f, 360.f), 0), P, FVector(S, S, Random.FRandRange(.7f, 1.7f))));
-    }
-    for (int32 I = 0; I < 70; ++I)
-    {
-        const float A = Random.FRandRange(0.f, 2.f * PI), R = Random.FRandRange(900.f, ForestRoom::Radius + 600.f);
-        Fireflies->AddInstance(FTransform(FRotator::ZeroRotator, FVector(FMath::Cos(A) * R, FMath::Sin(A) * R, Random.FRandRange(90.f, 450.f)),
-            FVector(Random.FRandRange(.018f, .045f))));
-    }
-    for (auto* Batch : {Trunks, Needles, DarkNeedles, Ferns, Fireflies}) Batch->BuildTreeIfOutdated(true, true);
-    // Invisible wall along the tree line; the trail openings stay closed too (the exit is inside the clearing).
-    constexpr int32 Sections = 56;
-    for (int32 I = 0; I < Sections; ++I)
-    {
-        const float A = 2.f * PI * I / Sections, B = 2.f * PI * (I + 1) / Sections;
-        const FVector From(ForestRoom::Radius * FMath::Cos(A), ForestRoom::Radius * FMath::Sin(A), 0), To(ForestRoom::Radius * FMath::Cos(B), ForestRoom::Radius * FMath::Sin(B), 0);
-        const FVector Delta = To - From;
-        auto* Wall = Prop((From + To) * .5f + FVector(0, 0, 2900.f), FVector((Delta.Size() + 24.f) / 100.f, .8f, 60.f), FLinearColor::Black);
-        Wall->SetActorRotation(FRotator(0, FMath::RadiansToDegrees(FMath::Atan2(Delta.Y, Delta.X)), 0));
-        Wall->Tags.Add(TEXT("ForestBoundary"));
-        Wall->SetActorHiddenInGame(true);
-    }
+    if (ForestExitMarker) ForestExitMarker->SetActorHiddenInGame(!Open);
+    if (ForestExitLight) ForestExitLight->PointLightComponent->SetVisibility(Open);
 }
 
 void AArenaGameMode::TickForestRun(float Dt)
@@ -263,7 +185,7 @@ void AArenaGameMode::TickForestRun(float Dt)
         Objective = Boss ? (Current->bActivated ? TEXT("Defeat the Goblin Queen") : TEXT("The Goblin Queen approaches"))
             : FString::Printf(TEXT("ROOM %d / WAVE %d OF %d / %s"), ForestRoomNumber, Next + 1, SpawnSites.Num(),
                 Current->bActivated ? *Current->SiteName.RightChop(Current->SiteName.Find(TEXT("/")) + 2) : TEXT("Incoming"));
-        if (ForestExitMarker) ForestExitMarker->SetActorHiddenInGame(true);
+        ShowForestExit(false);
     }
     else if (Boss)
     {
@@ -275,7 +197,7 @@ void AArenaGameMode::TickForestRun(float Dt)
     else
     {
         Objective = TEXT("ROOM CLEAR / Follow the glowing trail east");
-        if (ForestExitMarker) ForestExitMarker->SetActorHiddenInGame(false);
+        ShowForestExit(true);
         if (FVector::Dist2D(Hero->GetActorLocation(), ExitPosition) < 300.f && !FParse::Param(FCommandLine::Get(), TEXT("HellgirlForestRunCheck")))
         {
             TravelToForestRoom(ForestSeed, ForestRoomNumber + 1);
@@ -315,9 +237,60 @@ void AArenaGameMode::RunForestRunCheck()
             Camera = GetWorld()->SpawnActor<ACameraActor>();
             Camera->GetCameraComponent()->SetFieldOfView(70.f);
         }
+        // -PreviewMeshes=/Game/A.A;/Game/B.B lines up those meshes in the clearing, to judge assets in this lighting.
+        static bool Lined = false;
+        FString MeshList;
+        FParse::Value(FCommandLine::Get(), TEXT("PreviewMeshes="), MeshList, false);
+        if (!Lined && !MeshList.IsEmpty())
+        {
+            Lined = true;
+            TArray<FString> Paths;
+            MeshList.ParseIntoArray(Paths, TEXT(";"));
+            float Y = 0.f;
+            TArray<TPair<UStaticMesh*, float>> Meshes;
+            for (const FString& Path : Paths)
+                if (auto* Mesh = LoadObject<UStaticMesh>(nullptr, *Path))
+                {
+                    const FVector Size = Mesh->GetBounds().BoxExtent * 2.f;
+                    const float Scale = FMath::Min(1.f, 420.f / FMath::Max(Size.X, Size.Y));
+                    Meshes.Add({Mesh, Scale});
+                    Y += FMath::Max(Size.X, Size.Y) * Scale + 80.f;
+                }
+            float At = -Y * .5f;
+            for (auto& [Mesh, Scale] : Meshes)
+            {
+                const FBoxSphereBounds B = Mesh->GetBounds();
+                const float Width = FMath::Max(B.BoxExtent.X, B.BoxExtent.Y) * 2.f * Scale;
+                auto* A = GetWorld()->SpawnActor<AStaticMeshActor>(FVector(-600.f, At + Width * .5f, -(B.Origin.Z - B.BoxExtent.Z) * Scale), FRotator::ZeroRotator);
+                A->SetMobility(EComponentMobility::Movable);
+                A->GetStaticMeshComponent()->SetStaticMesh(Mesh);
+                A->SetActorScale3D(FVector(Scale));
+                UE_LOG(LogTemp, Display, TEXT("PREVIEW MESH %s: size %s, scale %.2f, %d LODs, nanite %d"), *Mesh->GetName(),
+                    *(B.BoxExtent * 2.f).ToString(), Scale, Mesh->GetNumLODs(), Mesh->IsNaniteEnabled() ? 1 : 0);
+                At += Width + 80.f;
+            }
+            // -PreviewMaterials=/Game/M.M;... lays out one 4 m tile per material in front of the meshes.
+            FString MaterialList;
+            FParse::Value(FCommandLine::Get(), TEXT("PreviewMaterials="), MaterialList, false);
+            TArray<FString> MaterialPaths;
+            MaterialList.ParseIntoArray(MaterialPaths, TEXT(";"));
+            for (int32 I = 0; I < MaterialPaths.Num(); ++I)
+                if (auto* Material = LoadObject<UMaterialInterface>(nullptr, *MaterialPaths[I]))
+                {
+                    auto* Tile = GetWorld()->SpawnActor<AStaticMeshActor>(FVector(-1150.f, (I - (MaterialPaths.Num() - 1) * .5f) * 420.f, 1.f), FRotator::ZeroRotator);
+                    Tile->SetMobility(EComponentMobility::Movable);
+                    Tile->GetStaticMeshComponent()->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")));
+                    Tile->GetStaticMeshComponent()->SetMaterial(0, Material);
+                    Tile->SetActorScale3D(FVector(4.f));
+                }
+        }
         if (!Camera.IsValid() || Clock < 3.f) return;
-        const FVector Eye = Shot == 0 ? FVector(-600.f, 0.f, 5200.f) : FVector(-3300.f, 0.f, 900.f);
-        const FVector Look = Shot == 0 ? FVector(0.f, 0.f, 0.f) : FVector(0.f, 0.f, 50.f);
+        const bool Lineup = !MeshList.IsEmpty();
+        // Lineup shots: the meshes, a closer angle, then straight down onto the material tiles.
+        const FVector Eye = Lineup ? (Shot == 0 ? FVector(-1700.f, 0.f, 420.f) : Shot == 1 ? FVector(-1100.f, -700.f, 250.f) : FVector(-1450.f, 0.f, 1500.f))
+            : Shot == 0 ? FVector(-600.f, 0.f, 5200.f) : FVector(-3300.f, 0.f, 900.f);
+        const FVector Look = Lineup ? (Shot == 2 ? FVector(-1150.f, 0.f, 0.f) : FVector(-600.f, Shot == 0 ? 0.f : -300.f, 120.f))
+            : Shot == 0 ? FVector(0.f, 0.f, 0.f) : FVector(0.f, 0.f, 50.f);
         Camera->SetActorLocationAndRotation(Eye, (Look - Eye).Rotation());
         PC->SetViewTarget(Camera.Get());
         if (Clock >= 4.f + Shot * 1.5f)

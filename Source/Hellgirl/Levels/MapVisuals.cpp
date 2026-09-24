@@ -130,108 +130,7 @@ void AArenaGameMode::RockPlatform(FVector Center,FVector Size,FLinearColor Color
     Rock(GetWorld(),Center,Size,Color*1.3f,Seed,true);
 }
 
-void AArenaGameMode::BuildForestHubDetails()
-{
-    FRandomStream Random(4291);
-    auto* Trunks=DecorationBatch(GetWorld(),TEXT("/Engine/BasicShapes/Cylinder.Cylinder"),FLinearColor(.18f,.105f,.058f));
-    auto* Needles=DecorationBatch(GetWorld(),TEXT("/Engine/BasicShapes/Cone.Cone"),FLinearColor(.18f,.34f,.2f));
-    auto* DarkNeedles=DecorationBatch(GetWorld(),TEXT("/Engine/BasicShapes/Cone.Cone"),FLinearColor(.11f,.23f,.14f));
-    auto* Moss=DecorationBatch(GetWorld(),TEXT("/Engine/BasicShapes/Sphere.Sphere"),FLinearColor(.12f,.25f,.09f));
-    auto* Ferns=DecorationBatch(GetWorld(),TEXT("/Engine/BasicShapes/Cone.Cone"),FLinearColor(.12f,.29f,.12f));
-    auto* Pebbles=DecorationBatch(GetWorld(),TEXT("/Engine/BasicShapes/Sphere.Sphere"),FLinearColor(.22f,.22f,.18f));
-    auto* Fireflies=DecorationBatch(GetWorld(),TEXT("/Engine/BasicShapes/Sphere.Sphere"),FLinearColor(.35f,1.f,.24f),true);
-    Needles->SetCastShadow(false);
-    DarkNeedles->SetCastShadow(false);
-    for (auto* Batch : {Trunks,Needles,DarkNeedles,Moss,Ferns,Pebbles,Fireflies})
-    {
-        Batch->bAutoRebuildTreeOnInstanceChanges=false;
-        Batch->PreAllocateInstancesMemory(900);
-    }
-    // Uneven tree heights and overlapping crowns form a continuous forest wall.
-    // The center, merchant, and road remain open and readable.
-    for (int32 I=0;I<76;++I)
-    {
-        const float A=I*2.399963f+Random.FRandRange(-.13f,.13f);
-        const float R=Random.FRandRange(1170.f,1720.f);
-        const FVector P(FMath::Cos(A)*R,FMath::Sin(A)*R,0);
-        if (P.X>430.f && FMath::Abs(P.Y)<450.f) continue;
-        const float H=Random.FRandRange(650.f,1120.f);
-        const float Crown=Random.FRandRange(145.f,210.f);
-        Trunks->AddInstance(FTransform(FRotator(0,Random.FRandRange(0.f,360.f),0),P+FVector(0,0,H*.5f),FVector(.48f,.48f,H/100.f)));
-        for (int32 Layer=0;Layer<3;++Layer)
-        {
-            const float T=Layer/3.f;
-            const FVector C=P+FVector(Random.FRandRange(-35.f,35.f),Random.FRandRange(-35.f,35.f),H*(.56f+T*.2f));
-            auto* CrownBatch=(I+Layer)%3==0?DarkNeedles:Needles;
-            CrownBatch->AddInstance(FTransform(FRotator(0,Random.FRandRange(0.f,360.f),0),C,
-                FVector(Crown*(1.f-.28f*Layer)/50.f,Crown*(1.f-.28f*Layer)/50.f,H*(.5f-.08f*Layer)/100.f)));
-        }
-        if (I%3==0)
-        {
-            const FVector M=P+FVector(90.f,70.f,40.f);
-            Moss->AddInstance(FTransform(FRotator::ZeroRotator,M,FVector(1.7f,1.15f,.65f)));
-        }
-        if (I%6==0)
-            Rock(GetWorld(),P+FVector(Random.FRandRange(-180.f,180.f),Random.FRandRange(-180.f,180.f),10.f),
-                FVector(Random.FRandRange(180.f,480.f),Random.FRandRange(220.f,570.f),Random.FRandRange(170.f,420.f)),
-                FLinearColor(.17f,.19f,.14f),6000+I,false,false);
-    }
-    // Moss islands, fern banks, and loose stone break up the flat clearing.
-    for (int32 I=0;I<330;++I)
-    {
-        const float A=Random.FRandRange(0.f,2.f*PI);
-        const float R=Random.FRandRange(950.f,1740.f);
-        const FVector P(FMath::Cos(A)*R,FMath::Sin(A)*R,0.f);
-        if (P.X>380.f && FMath::Abs(P.Y)<350.f) continue;
-        const float S=Random.FRandRange(.22f,.7f);
-        Ferns->AddInstance(FTransform(FRotator(0,Random.FRandRange(0.f,360.f),0),P+FVector(0,0,20.f),FVector(S,S,Random.FRandRange(.65f,1.6f))));
-        if (I%5==0)
-            Moss->AddInstance(FTransform(FRotator::ZeroRotator,P+FVector(20.f,10.f,7.f),FVector(Random.FRandRange(.6f,1.8f),Random.FRandRange(.5f,1.6f),.13f)));
-    }
-    for (int32 I=0;I<170;++I)
-    {
-        const float A=Random.FRandRange(0.f,2.f*PI),R=Random.FRandRange(220.f,1700.f);
-        const FVector P(FMath::Cos(A)*R,FMath::Sin(A)*R,8.f);
-        if ((P.X>280.f && FMath::Abs(P.Y)<280.f) || (FMath::Abs(P.X)<350.f && FMath::Abs(P.Y)<850.f)) continue;
-        Pebbles->AddInstance(FTransform(FRotator(Random.FRandRange(-20.f,20.f),0,0),P,
-            FVector(Random.FRandRange(.18f,.58f),Random.FRandRange(.18f,.48f),Random.FRandRange(.1f,.28f))));
-    }
-    for (int32 I=0;I<55;++I)
-    {
-        const float A=Random.FRandRange(0.f,2.f*PI),R=Random.FRandRange(900.f,1700.f);
-        Fireflies->AddInstance(FTransform(FRotator::ZeroRotator,
-            FVector(FMath::Cos(A)*R,FMath::Sin(A)*R,Random.FRandRange(90.f,430.f)),FVector(Random.FRandRange(.018f,.045f))));
-    }
-    for (auto* Batch : {Trunks,Needles,DarkNeedles,Moss,Ferns,Pebbles,Fireflies})
-        Batch->BuildTreeIfOutdated(true,true);
-
-    // Warm road lanterns carry the eye from the fire to the level-select arch.
-    for (int32 Side : {-1,1})
-    {
-        const FVector P(620.f,Side*330.f,0.f);
-        auto* Post=Prop(P+FVector(0,0,170),FVector(.18f,.18f,3.4f),FLinearColor(.11f,.075f,.04f));
-        Post->SetActorEnableCollision(false);
-        if (auto* Lamp=Prop(P+FVector(0,0,350),FVector(.24f,.24f,.35f),FLinearColor(1.f,.5f,.1f),true))
-        {
-            Lamp->SetActorEnableCollision(false);
-            Lamp->GetStaticMeshComponent()->SetMaterial(0,Surface(Lamp,FLinearColor(1.f,.36f,.06f),false,true));
-        }
-        if (auto* Glow=GetWorld()->SpawnActor<APointLight>(P+FVector(0,0,355),FRotator::ZeroRotator))
-        {
-            auto* Light=CastChecked<UPointLightComponent>(Glow->GetLightComponent());
-            Light->SetMobility(EComponentMobility::Movable);
-            Light->SetLightColor(FLinearColor(1.f,.43f,.16f));
-            Light->SetIntensity(5200.f); Light->SetAttenuationRadius(720.f);
-        }
-    }
-    if (auto* Glow=GetWorld()->SpawnActor<APointLight>(FVector(0,780,300),FRotator::ZeroRotator))
-    {
-        auto* Light=CastChecked<UPointLightComponent>(Glow->GetLightComponent());
-        Light->SetMobility(EComponentMobility::Movable);
-        Light->SetLightColor(FLinearColor(1.f,.59f,.29f));
-        Light->SetIntensity(3300.f); Light->SetAttenuationRadius(730.f);
-    }
-}
+// The camp's dressing is built in ForestScenery.cpp (BuildForestHubDetails).
 
 void AArenaGameMode::BuildEnvironmentDetails()
 {
@@ -339,6 +238,7 @@ void AArenaGameMode::BuildEnvironmentDetails()
 void AArenaGameMode::BuildImpArenaDetails()
 {
     FRandomStream Random(92022);
+    BuildImpArenaInferno();
     UE_LOG(LogTemp,Display,TEXT("IMP ARENA BUILD: sea"));
     // The luminous sea is one continuous surface, well below the playable rock.
     if (auto* Lava=Prop(FVector(0,0,-1080),FVector(420,420,.5f),FLinearColor(.42f,.018f,.004f)))

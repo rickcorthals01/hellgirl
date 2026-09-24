@@ -1,4 +1,5 @@
 #include "Levels/ArenaGameMode.h"
+#include "Levels/ForestArt.h"
 #include "Fighter/ArenaFighter.h"
 #include "Enemies/EnemyTypes.h"
 #include "UI/HellgirlPlayerController.h"
@@ -32,62 +33,34 @@ void AArenaGameMode::BuildForestHub()
 {
     MapTitle=TEXT("FOREST CAMP");
     HubInteractionPoints={FVector(0,0,0),FVector(800,0,0),FVector(-100,650,0)};
-    auto Shape=[&](FVector P,FVector Scale,FLinearColor Color,const TCHAR* MeshPath,bool Collide=true) {
-        auto* A=Prop(P,Scale,Color);
-        A->GetStaticMeshComponent()->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,MeshPath));
-        A->SetActorEnableCollision(Collide); return A;
-    };
-    const TCHAR* Cylinder=TEXT("/Engine/BasicShapes/Cylinder.Cylinder"),*Cone=TEXT("/Engine/BasicShapes/Cone.Cone");
-    // The clearing and road stay level for the existing hub interactions.
-    auto* Ground=Prop(FVector(0,0,-85),FVector(38,38,1.6f),FLinearColor(.095f,.13f,.07f));
-    if (auto* Earth=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Environment/Materials/M_EnvironmentEarth.M_EnvironmentEarth")))
-        if (auto* Mat=UMaterialInstanceDynamic::Create(Earth,Ground))
-        {
-            Mat->SetVectorParameterValue(TEXT("Color"),FLinearColor(.38f,.48f,.32f));
-            Ground->GetStaticMeshComponent()->SetMaterial(0,Mat);
-        }
-    Shape(FVector(0,0,-7),FVector(19.5f,19.5f,.15f),FLinearColor(.29f,.205f,.12f),Cylinder);
-    for (int32 I=0;I<6;++I)
-        Shape(FVector(350+I*130,0,-1),FVector(3.6f,3.3f,.09f),FLinearColor(.23f,.16f,.095f),Cylinder);
+    UWorld* World=GetWorld();
+    // An invisible, level floor keeps the hub interactions where they were; the scenery sits on top of it.
+    Prop(FVector(0,0,-80),FVector(38,38,1.6f),FLinearColor::Black)->SetActorHiddenInGame(true);
     BuildForestHubDetails();
-    // Stone fire ring, charred logs and simple emissive flames.
-    for (int32 I=0;I<12;++I)
-    {
-        const float A=I*PI/6.f;
-        Prop(FVector(FMath::Cos(A)*110,FMath::Sin(A)*110,20),FVector(.55f,.45f,.4f),FLinearColor(.25f,.25f,.22f),true);
-    }
-    for (int32 I=0;I<3;++I)
-    {
-        auto* Log=Shape(FVector(0,0,25),FVector(.28f,.28f,1.6f),FLinearColor(.07f,.035f,.018f),Cylinder);
-        Log->SetActorRotation(FRotator(90,I*60,0));
-    }
-    for (int32 I=0;I<5;++I)
-    {
-        auto* Flame=Shape(FVector((I-2)*17,0,65+I%2*12),FVector(.35f,.35f,1.f),FLinearColor(1,.2f,.015f),Cone,false);
-        if (auto* Base=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Environment/Materials/M_EnvironmentGlow.M_EnvironmentGlow")))
-        {
-            auto* Material=UMaterialInstanceDynamic::Create(Base,Flame);
-            Material->SetVectorParameterValue(TEXT("Color"),FLinearColor(1.f,.24f,.025f));
-            Flame->GetStaticMeshComponent()->SetMaterial(0,Material);
-        }
-    }
+    // The campfire: stone ring, logs and embers from the kit, burning with the stylised fire.
+    ForestArt::Solid(World,ForestArt::Kit(TEXT("SM_Campfire")),FTransform(FRotator(0,20,0),FVector(0,0,0),FVector(1.15f)),true);
+    ForestArt::Fire(World,FVector(0,0,18),1.1f,TEXT("NS_Stylish_Fire_1"));
+    ForestArt::Embers(World,FVector(0,0,60),.5f);
     CampfireLight=GetWorld()->SpawnActor<APointLight>(FVector(0,0,160),FRotator::ZeroRotator);
     CampfireLight->PointLightComponent->SetMobility(EComponentMobility::Movable);
     CampfireLight->PointLightComponent->SetLightColor(FLinearColor(1,.48f,.17f));
-    CampfireLight->PointLightComponent->SetAttenuationRadius(1050);
+    CampfireLight->PointLightComponent->SetAttenuationRadius(1150);
     CampfireLight->PointLightComponent->SetIntensity(14000);
-    // Seats and bedroll on the quiet side of camp.
-    auto* Seat=Shape(FVector(-320,-350,45),FVector(.8f,.8f,4.2f),FLinearColor(.14f,.075f,.035f),Cylinder);
-    Seat->SetActorRotation(FRotator(90,25,0));
-    Prop(FVector(150,-560,15),FVector(2.4f,1.1f,.22f),FLinearColor(.21f,.17f,.22f));
-    Prop(FVector(255,-560,26),FVector(.45f,1.1f,.3f),FLinearColor(.29f,.24f,.27f));
-    // The trail fades into a dark forest arch; the menu opens before the boundary.
+    CampfireLight->PointLightComponent->SetVolumetricScatteringIntensity(1.5f);
+    // A fallen log to sit on and a bedroll on the quiet side of camp.
+    ForestArt::Solid(World,ForestArt::Kit(TEXT("SM_Log")),FTransform(FRotator(0,25,0),FVector(-320,-350,26),FVector(.6f)),true);
+    auto* Bedroll=Prop(FVector(150,-560,12),FVector(2.4f,1.1f,.2f),FLinearColor(.21f,.14f,.18f));
+    Bedroll->SetActorRotation(FRotator(0,-8,0));
+    Prop(FVector(255,-565,24),FVector(.45f,1.05f,.28f),FLinearColor(.3f,.24f,.26f))->SetActorRotation(FRotator(0,-8,0));
+    // The forest road: braziers light the way to a rune gateway, where the level menu opens.
     for (int32 Side : {-1,1})
     {
-        auto* Trunk=Shape(FVector(1220,Side*260,460),FVector(1.3f,1.3f,10.f),FLinearColor(.055f,.045f,.035f),Cylinder);
-        Trunk->SetActorRotation(FRotator(0,0,Side*10));
-        Prop(FVector(1320,Side*300,650),FVector(5,5,7),FLinearColor(.014f,.035f,.025f),true)->SetActorEnableCollision(false);
+        const FVector P(620.f,Side*330.f,0.f);
+        ForestArt::Solid(World,ForestArt::Inferno(TEXT("Props/SM_Brazier_002")),FTransform(FRotator(0,Side*30.f,0),P,FVector(.8f)),true);
+        ForestArt::Fire(World,P+FVector(0,0,128),.45f,TEXT("NS_Stylish_Fire_3"));
+        ForestArt::PointGlow(World,P+FVector(0,0,200),FLinearColor(1.f,.43f,.16f),5200.f,720.f);
     }
+    ForestArt::Solid(World,ForestArt::Kit(TEXT("SM_Gateway")),FTransform(FRotator::ZeroRotator,FVector(1240,0,-5),FVector(1.2f)),true);
     Prop(FVector(1650,0,440),FVector(.5f,6,9),FLinearColor(.008f,.014f,.012f));
     // A friendly display actor, never an enemy fighter, so attacks and targeting cannot hurt him.
     if (GetUnlockedLevel()>=4)
@@ -98,10 +71,13 @@ void AArenaGameMode::BuildForestHub()
         HubMerchant->GetSkeletalMeshComponent()->SetRelativeScale3D(FVector(.8f));
         HubMerchant->GetSkeletalMeshComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
         HubMerchant->GetSkeletalMeshComponent()->PlayAnimation(Model.Idle.LoadSynchronous(),true);
-        Prop(FVector(100,820,90),FVector(2.8f,1.1f,.18f),FLinearColor(.16f,.09f,.04f));
-        for (int32 Side : {-1,1}) Prop(FVector(100+Side*100,820,42),FVector(.15f,.7f,.9f),FLinearColor(.12f,.06f,.03f));
-        Prop(FVector(210,940,35),FVector(.75f,.75f,.7f),FLinearColor(.22f,.13f,.065f));
-        Prop(FVector(170,820,110),FVector(.32f,.32f,.32f),FLinearColor(.38f,.1f,.2f),true);
+        // His stall: a chest of wares, crates, a vase and a heap of coins.
+        ForestArt::Solid(World,ForestArt::Inferno(TEXT("Props/SM_ChestBig_001")),FTransform(FRotator(0,-160,0),FVector(90,830,0),FVector(.55f)),true);
+        ForestArt::Solid(World,ForestArt::Inferno(TEXT("Props/SM_Box_001")),FTransform(FRotator(0,-140,0),FVector(230,930,0),FVector(.5f)),true);
+        ForestArt::Solid(World,ForestArt::Inferno(TEXT("Props/SM_Box_001")),FTransform(FRotator(0,-120,0),FVector(240,925,70),FVector(.35f)),false);
+        ForestArt::Solid(World,ForestArt::Inferno(TEXT("Props/SM_Vase_001")),FTransform(FRotator(0,40,0),FVector(-20,900,0),FVector(.6f)),false);
+        ForestArt::Solid(World,ForestArt::Inferno(TEXT("Props/SM_GoldPileSmall_001")),FTransform(FRotator(0,10,0),FVector(170,760,0),FVector(.5f)),false);
+        ForestArt::PointGlow(World,FVector(0,780,300),FLinearColor(1.f,.59f,.29f),3300.f,730.f);
     }
     // Invisible collision follows the clearing rather than the edge of the ground.
     // Leave only the short, fenced road to level select open.
@@ -127,18 +103,9 @@ void AArenaGameMode::BuildForestHub()
     for (int32 Side : {-1,1})
         Boundary(FVector(990.f,Side*345.f,0),FVector(1460.f,Side*345.f,0));
     Boundary(FVector(1460,-345,0),FVector(1460,345,0));
-    auto* Moon=GetWorld()->SpawnActor<ADirectionalLight>(FVector(0,0,1800),FRotator(-42,-35,0));
-    Moon->GetLightComponent()->SetMobility(EComponentMobility::Movable); Moon->GetLightComponent()->SetIntensity(1.9f);
-    Moon->GetLightComponent()->SetLightColor(FLinearColor(.39f,.53f,.78f));
-    auto* Sky=GetWorld()->SpawnActor<ASkyLight>(); Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable); Sky->GetLightComponent()->SetIntensity(.62f);
-    Sky->GetLightComponent()->SetRealTimeCaptureEnabled(false);
-    auto* Fog=GetWorld()->SpawnActor<AExponentialHeightFog>(); Fog->GetComponent()->SetFogDensity(.018f);
-    Fog->GetComponent()->SetFogInscatteringColor(FLinearColor(.028f,.06f,.063f)); Fog->GetComponent()->SetStartDistance(750.f);
-    auto* Post=GetWorld()->SpawnActor<APostProcessVolume>(); Post->bUnbound=true;
-    Post->Settings.bOverride_AutoExposureMinBrightness=Post->Settings.bOverride_AutoExposureMaxBrightness=true;
-    Post->Settings.AutoExposureMinBrightness=Post->Settings.AutoExposureMaxBrightness=1.f;
-    Post->Settings.bOverride_BloomIntensity=true; Post->Settings.BloomIntensity=.48f;
-    Post->Settings.bOverride_AmbientOcclusionIntensity=true; Post->Settings.AmbientOcclusionIntensity=1.f;
+    const FRotator MoonLight(-30.f,200.f,0.f);
+    ForestArt::NightSky(World,-MoonLight.Vector());
+    ForestArt::Moonlight(World,MoonLight,.018f);
 }
 int32 AArenaGameMode::GetHubInteraction() const
 {

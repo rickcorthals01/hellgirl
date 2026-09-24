@@ -147,7 +147,10 @@ void AArenaGameMode::RunForestHubCheck(float Dt)
             View->GetCameraComponent()->SetFieldOfView(72); PC->SetViewTarget(View); Phase=1;
         }
         if (Phase==1 && Time>3.f) { FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/ForestHub.png"),false,false); Phase=2; }
-        if (Phase==2 && Time>4.f) { UE_LOG(LogTemp,Display,TEXT("HUB PREVIEW CHECK PASSED")); FPlatformMisc::RequestExitWithStatus(false,0); }
+        // Then the player's own view of camp.
+        if (Phase==2 && Time>4.f) { PC->SetViewTarget(PC->GetPawn()); Phase=3; }
+        if (Phase==3 && Time>5.5f) { FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/ForestHubPlayer.png"),false,false); Phase=4; }
+        if (Phase==4 && Time>6.5f) { UE_LOG(LogTemp,Display,TEXT("HUB PREVIEW CHECK PASSED")); FPlatformMisc::RequestExitWithStatus(false,0); }
         return;
     }
     if (Phase==0)

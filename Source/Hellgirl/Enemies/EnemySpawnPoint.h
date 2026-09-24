@@ -33,11 +33,16 @@ public:
     bool bCleared = false;
     int32 LivingEnemies() const;
     bool RegisterReinforcement(AArenaFighter* Enemy);
+    // Goblins come out of a dirt burrow instead of a burning hell rift.
+    void UseBurrow();
 private:
     void SpawnOne();
     UPROPERTY() TObjectPtr<UStaticMeshComponent> Portal;
     UPROPERTY() TObjectPtr<UTextRenderComponent> Label;
     UPROPERTY() TObjectPtr<UPointLightComponent> Glow;
+    UPROPERTY() TObjectPtr<class UNiagaraComponent> Fire;
+    UPROPERTY() TObjectPtr<class UParticleSystem> ArrivalSmoke;
+    bool bBurrow = false;
     TArray<TWeakObjectPtr<AArenaFighter>> Enemies;
     int32 Spawned = 0;
     float SpawnDelay = 0.f;

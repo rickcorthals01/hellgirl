@@ -10,33 +10,51 @@
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "DrawDebugHelpers.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
+#include "Particles/ParticleSystem.h"
 #include "UObject/ConstructorHelpers.h"
 
 AEnemySpawnPoint::AEnemySpawnPoint()
 {
     PrimaryActorTick.bCanEverTick = true;
     RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+    // A ring of obsidian shards around a glowing crack; it burns while its enemies are coming through.
     Portal = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Rift"));
     Portal->SetupAttachment(RootComponent);
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> Mesh(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
-    Portal->SetStaticMesh(Mesh.Object);
-    Portal->SetRelativeLocation(FVector(0.f, 0.f, 180.f));
-    Portal->SetRelativeScale3D(FVector(.5f, 2.3f, 4.f));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> Rift(TEXT("/Game/Environment/ForestKit/SM_HellRift.SM_HellRift"));
+    Portal->SetStaticMesh(Rift.Object);
+    Portal->SetRelativeLocation(FVector(0.f, 0.f, 2.f));
     Portal->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Fire = CreateDefaultSubobject<UNiagaraComponent>(TEXT("RiftFire"));
+    Fire->SetupAttachment(RootComponent);
+    static ConstructorHelpers::FObjectFinder<UNiagaraSystem> Flames(TEXT("/Game/Stylish_Fire_VFX/Niagara/NS_Stylish_Fire_2.NS_Stylish_Fire_2"));
+    Fire->SetAsset(Flames.Object);
+    Fire->SetRelativeLocation(FVector(0.f, 0.f, 10.f));
+    Fire->SetRelativeScale3D(FVector(1.3f));
+    Fire->bAutoActivate = false;
+    static ConstructorHelpers::FObjectFinder<UParticleSystem> Smoke(TEXT("/Game/Realistic_Starter_VFX_Pack_Vol2/Particles/Smoke/P_Smoke_A.P_Smoke_A"));
+    ArrivalSmoke = Smoke.Object;
     Glow = CreateDefaultSubobject<UPointLightComponent>(TEXT("Glow"));
     Glow->SetupAttachment(RootComponent);
-    Glow->SetRelativeLocation(FVector(0.f, 0.f, 200.f));
-    Glow->SetLightColor(FLinearColor(1.f, .12f, .025f));
-    Glow->SetIntensity(15000.f);
-    Glow->SetAttenuationRadius(1100.f);
+    Glow->SetRelativeLocation(FVector(0.f, 0.f, 90.f));
+    Glow->SetLightColor(FLinearColor(1.f, .22f, .04f));
+    Glow->SetIntensity(3000.f);
+    Glow->SetAttenuationRadius(700.f);
     Glow->SetCastShadows(false);
+    // The site name is shown by the HUD objective; the old floating label stays hidden.
     Label = CreateDefaultSubobject<UTextRenderComponent>(TEXT("SiteLabel"));
     Label->SetupAttachment(RootComponent);
-    Label->SetRelativeLocation(FVector(0.f, 0.f, 480.f));
-    Label->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
-    Label->SetWorldSize(60.f);
-    Label->SetTextRenderColor(FColor(255, 130, 50));
+    Label->SetHiddenInGame(true);
+}
+
+void AEnemySpawnPoint::UseBurrow()
+{
+    bBurrow = true;
+    if (auto* Burrow = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/Environment/ForestKit/SM_Burrow.SM_Burrow"))) Portal->SetStaticMesh(Burrow);
+    Fire->SetAsset(nullptr);
+    Glow->SetLightColor(FLinearColor(1.f, .45f, .15f));
+    Glow->SetRelativeLocation(FVector(0.f, 0.f, 40.f));
 }
 
 int32 AEnemySpawnPoint::LivingEnemies() const
@@ -103,7 +121,7 @@ void AEnemySpawnPoint::SpawnOne()
     Enemies.Add(Enemy);
     ++Spawned;
     SpawnDelay = .55f;
-    DrawDebugSphere(GetWorld(), Enemy->GetActorLocation(), 130.f, 12, FColor::Orange, false, .4f, 0, 4.f);
+    if (ArrivalSmoke) UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ArrivalSmoke, FVector(X, Y, GroundZ + 20.f), FRotator::ZeroRotator, FVector(.6f));
 }
 
 void AEnemySpawnPoint::Tick(float Dt)
@@ -126,13 +144,9 @@ void AEnemySpawnPoint::Tick(float Dt)
         }
         if (Spawned >= EnemyCount && LivingEnemies() == 0) bCleared = true;
     }
-    const FColor Color = bCleared ? FColor(80, 160, 110) : (bActivated ? FColor::Red : FColor::Orange);
-    Label->SetTextRenderColor(Color);
-    Label->SetText(FText::FromString(SiteName + (bCleared ? TEXT(" / CLEARED") : (bActivated ? TEXT(" / ACTIVE") : TEXT(" / DORMANT")))));
-    Glow->SetIntensity(bCleared ? 1000.f : (bActivated ? 30000.f : 15000.f));
-    Portal->SetVisibility(!bCleared);
-    DrawDebugCircle(GetWorld(), GetActorLocation() + FVector(0.f, 0.f, 15.f), 230.f, 32, Color, false, -1.f, 0, 5.f,
-        FVector::ForwardVector, FVector::RightVector, false);
-    if (APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0))
-        Label->SetWorldRotation((Camera->GetCameraLocation() - Label->GetComponentLocation()).Rotation());
+    // Burning while enemies come through, smouldering before, cold once cleared.
+    const bool Burning = bActivated && !bCleared;
+    if (Burning != Fire->IsActive()) { if (Burning) Fire->Activate(true); else Fire->Deactivate(); }
+    const float Flicker = 1.f + .15f * FMath::Sin(GetWorld()->GetTimeSeconds() * 13.f) + .08f * FMath::Sin(GetWorld()->GetTimeSeconds() * 29.f);
+    Glow->SetIntensity(bCleared ? 0.f : (Burning ? (bBurrow ? 4000.f : 9000.f) * Flicker : 1800.f));
 }

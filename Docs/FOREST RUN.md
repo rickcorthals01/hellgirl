@@ -20,6 +20,10 @@ Safety rules keep every room fair. The centre (6.5 m) and both doorways stay cle
 
 The rules and the planner live in `Source/Hellgirl/Rules/ForestRoomRules.h`; building the room is in `Levels/ForestRun.cpp`. To change what can appear, edit `ForestRoom::Make`.
 
+## Look
+
+See `Docs/ENVIRONMENT.md` for the pieces: the generated forest kit for trees, logs, stumps, plants, brambles, burrows and the gateway; realistic boulders; Pack Bonus grass; fireflies; the night sky and moonlight. The trail is marked by stepping stones. Waves come out of goblin burrows. The exit is a rune gateway where a green wisp appears once the room is clear, and standing stones mark the entrance.
+
 ## Testing
 
 - `Tests\run-checks.ps1 -Only ForestRun` plans 1,600 rooms (400 seeds × 4 rooms). It checks each is fair and repeatable and that the rooms vary, then checks that a fight room and the Queen's room are built as planned.

@@ -39,6 +39,7 @@ public:
     void RunGoblinStageCheck();
     void BuildImpArena();
     void BuildImpArenaDetails();
+    void BuildImpArenaInferno();
     void TickImpArena(float Dt);
     void RunImpArenaCheck();
     void BuildSuccubusCourt();
@@ -53,6 +54,8 @@ public:
     void BuildForestRun();
     void BuildForestRunScenery();
     void TickForestRun(float Dt);
+    void ShowForestExit(bool Open);
+    void RunMapShot(float Dt);
     void RunForestRunCheck();
     bool bWon = false;
     FString MapTitle, Objective, Prompt;
@@ -98,4 +101,5 @@ private:
     float QueenFleeClock=0.f;
     TArray<FVector4> ForestThorns; // X, Y, radius
     UPROPERTY() TObjectPtr<AStaticMeshActor> ForestExitMarker;
+    UPROPERTY() TObjectPtr<class APointLight> ForestExitLight;
 };
