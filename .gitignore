@@ -16,3 +16,11 @@ Logs/
 *Build.json
 *Build.txt
 *-backup-*
+
+# Fab asset packs (about 1.3 GB, over the free GitHub LFS quota). Re-add them from the Fab library:
+# Unreal: Window > Fab > My Library > Add to Project. See Docs/ENVIRONMENT.md.
+Content/Inferno_World_Free/
+Content/Pack_Bonus/
+Content/Realistic_Starter_VFX_Pack_Vol2/
+Content/Rock_Collection_04/
+Content/Stylish_Fire_VFX/
