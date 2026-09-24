@@ -38,6 +38,26 @@ That (re)creates the materials (`Tools/Materials/create_forest_materials.py`), r
 - `Levels/ImpArenaScenery.cpp`: World II's Inferno dressing, on top of the cavern in `MapVisuals.cpp`.
 - `Enemies/EnemySpawnPoint.cpp`: every enemy spawn is a hell rift that burns while its wave comes through, or a goblin burrow in the forest (`UseBurrow`). Enemies arrive with a puff of smoke, and the old floating labels and debug circles are gone.
 
+## Hit feedback and HUD
+
+Every landed hit (`AArenaFighter::PlayImpact`) gives:
+- **Sparks:** a spark burst at the contact point, `P_Sparks_F` for normal hits and blocks and the bigger `P_Sparks_G` for heavy ones.
+- **Flash:** a 0.07 s flash of light, warm for hits and cold blue for blocks.
+- **Hit-stop:** a brief freeze, 0.04 s for a light hit and 0.085 s for a heavy one.
+- **Camera shake:** when Hellgirl is hit, or lands a heavy blow.
+
+Hit-stop and the shake are switched off when the command line contains "Check", because the automated checks measure timing.
+
+The HUD (`UI/ArenaHUD.cpp`) is drawn without big boxes:
+- **Top left:** title and objective.
+- **Top right:** a small minimap with coins underneath.
+- **Top centre:** the boss bar.
+- **Bottom left:** health, energy tubes, stamina, and CHARGE, SLAM and weapon labels.
+- **Centre:** move callouts that fade.
+- **Controls:** shown only for the first 12 seconds of a level.
+
+`-HellgirlMapShot -MapShotImpacts` films a heavy and a light hit on a goblin. `-MapShotEmitters=<list>` plays particle effects one by one to compare them.
+
 ## Looking at it
 
 These all need a GPU and a window:

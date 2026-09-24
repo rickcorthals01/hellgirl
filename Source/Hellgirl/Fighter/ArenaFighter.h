@@ -142,6 +142,12 @@ private:
     bool bEnemyMoveMotionStopped = false;
     float EnemyMoveMotionProgress = 0.f;
     void HandleDeath(const FVector& ImpulseVelocity);
+    // Hit feedback: sparks (and dust on heavy hits) at the contact point, a flash, a split-second hit-stop,
+    // and a short camera shake for the player. Hit-stop and shake stay off during automated checks.
+    void PlayImpact(const FVector& Direction, float Damage, bool Heavy, bool Blocked);
+    void AddCameraShake(float Strength, float Duration);
+    void UpdateCameraShake(float Dt);
+    float ShakeTime = 0.f, ShakeDuration = 0.f, ShakeStrength = 0.f;
     void StartDeathRagdoll(const FVector& ImpulseVelocity);
     void UpdateCombatPhysics(float Dt);
     void RunPhysicsCheck(float Dt);

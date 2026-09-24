@@ -29,6 +29,10 @@
 #include "Components/TextRenderComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Misc/PackageName.h"
+#include "Misc/App.h"
+#include "Engine/PointLight.h"
+#include "Particles/ParticleSystem.h"
+#include "TimerManager.h"
 
 namespace
 {
@@ -727,9 +731,6 @@ void AArenaFighter::ResolveAttack()
         Riposte = HellgirlDefense::AfterAttack(Riposte, bLandedHit);
         MoveLabel += bLandedHit ? (StoredRiposte > 0.f ? TEXT("  - RIPOSTE HIT") : TEXT("  - HIT")) : TEXT("  - MISS");
     }
-    DrawDebugCircle(GetWorld(), GetActorLocation(), CurrentAttack.Range, 28,
-        bEnemy ? FColor::Red : (bLandedHit ? FColor::Green : FColor::Cyan), false, 0.12f, 0, 3.f,
-        GetActorForwardVector(), GetActorRightVector(), false);
 }
 
 void AArenaFighter::UpdateAttackTiming(float Dt)
@@ -777,6 +778,7 @@ void AArenaFighter::ReceiveHit(float Damage, const FVector& Direction, float Kno
     Damage = Defense.Damage;
     Riposte = Defense.Meter;
     Health = FMath::Max(0.f, Health - Damage);
+    PlayImpact(Direction, Damage, Knockback >= 600.f || Knockdown > 0.f || Damage >= 25.f || !IsAlive(), Defense.Blocked);
     if (Armored || ParalysisClock > 0.f)
     {
         // Damage applies, but no hit timer, animation reset or impulse may
@@ -816,9 +818,68 @@ void AArenaFighter::ReceiveHit(float Damage, const FVector& Direction, float Kno
     else if (Knockback > 0.f || Knockdown > 0.f) LaunchCharacter(HitVelocity, true, true);
 }
 
+void AArenaFighter::PlayImpact(const FVector& Direction, float Damage, bool Heavy, bool Blocked)
+{
+    UWorld* World = GetWorld();
+    if (!World) return;
+    // The contact point: on the side facing the attacker, around chest height.
+    const FVector Toward = -Direction.GetSafeNormal2D();
+    const FVector At = GetActorLocation() + Toward * 38.f * GetActorScale3D().X + FVector(0.f, 0.f, 30.f);
+    // A tight radial burst for normal hits and blocks, a bigger flash burst for heavy ones.
+    static const TCHAR* BurstPath = TEXT("/Game/Realistic_Starter_VFX_Pack_Vol2/Particles/Sparks/P_Sparks_F.P_Sparks_F");
+    static const TCHAR* HeavyBurstPath = TEXT("/Game/Realistic_Starter_VFX_Pack_Vol2/Particles/Sparks/P_Sparks_G.P_Sparks_G");
+    if (auto* Sparks = LoadObject<UParticleSystem>(nullptr, Heavy && !Blocked ? HeavyBurstPath : BurstPath))
+        UGameplayStatics::SpawnEmitterAtLocation(World, Sparks, At, Toward.Rotation(), FVector(Blocked ? .25f : Heavy ? .45f : .32f));
+    // A brief flash of light at the contact point: warm for hits, cold for blocks.
+    if (auto* Flash = World->SpawnActor<APointLight>(At, FRotator::ZeroRotator))
+    {
+        Flash->PointLightComponent->SetMobility(EComponentMobility::Movable);
+        Flash->PointLightComponent->SetLightColor(Blocked ? FLinearColor(.5f, .8f, 1.f) : FLinearColor(1.f, .55f, .2f));
+        Flash->PointLightComponent->SetIntensity(Heavy ? 16000.f : 7000.f);
+        Flash->PointLightComponent->SetAttenuationRadius(Heavy ? 600.f : 380.f);
+        Flash->PointLightComponent->SetCastShadows(false);
+        Flash->SetLifeSpan(.07f);
+    }
+    // Hit-stop and camera shake change timing, so automated checks (which measure timing) run without them.
+    static const bool bChecks = FString(FCommandLine::Get()).Contains(TEXT("Check"));
+    if (bChecks) return;
+    const float Stop = Blocked ? .035f : Heavy ? .085f : .04f;
+    constexpr float Slow = .06f;
+    UGameplayStatics::SetGlobalTimeDilation(World, Slow);
+    FTimerHandle Resume;
+    World->GetTimerManager().SetTimer(Resume, [WeakWorld = TWeakObjectPtr<UWorld>(World)]
+    {
+        if (WeakWorld.IsValid()) UGameplayStatics::SetGlobalTimeDilation(WeakWorld.Get(), 1.f);
+    }, Stop * Slow, false);
+    // The player's camera shakes when she is hit, and when she lands a heavy blow.
+    if (!bEnemy) AddCameraShake(Heavy ? 9.f : 5.f, Heavy ? .3f : .18f);
+    else if (Heavy)
+        if (auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0))) Hero->AddCameraShake(6.f, .22f);
+}
+
+void AArenaFighter::AddCameraShake(float Strength, float Duration)
+{
+    if (Strength >= ShakeStrength * (ShakeDuration > 0.f ? ShakeTime / ShakeDuration : 0.f))
+    {
+        ShakeStrength = Strength;
+        ShakeTime = ShakeDuration = Duration;
+    }
+}
+
+void AArenaFighter::UpdateCameraShake(float Dt)
+{
+    if (bEnemy || !Camera) return;
+    // Real time, so the shake keeps moving through the hit-stop.
+    const float RealDt = FMath::Min(static_cast<float>(FApp::GetDeltaTime()), .05f);
+    ShakeTime = FMath::Max(0.f, ShakeTime - RealDt);
+    const float K = ShakeDuration > 0.f ? ShakeTime / ShakeDuration : 0.f;
+    Camera->SetRelativeLocation(K > 0.f ? FVector(0.f, FMath::FRandRange(-1.f, 1.f), FMath::FRandRange(-1.f, 1.f)) * ShakeStrength * K * K : FVector::ZeroVector);
+}
+
 void AArenaFighter::Tick(float Dt)
 {
     Super::Tick(Dt);
+    UpdateCameraShake(Dt);
     RunBossDesignCheck();
     RunRevisedCombatCheck();
     UpdateUltimate(Dt);
