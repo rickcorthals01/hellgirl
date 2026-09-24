@@ -190,7 +190,12 @@ void AArenaFighter::BeginPlay()
     // Only forward portal travel supplies energy. Fresh games and restarts
     // begin empty, independently of the persistent coin wallet.
     if (const auto* GM = Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(this)))
+    {
         Energy = FMath::Clamp(FCString::Atof(*UGameplayStatics::ParseOption(GM->OptionsString, TEXT("CombatEnergy"))), 0.f, MaxEnergy);
+        // A forest run carries health from one room to the next.
+        if (!bEnemy && UGameplayStatics::HasOption(GM->OptionsString, TEXT("RunHealth")))
+            Health = FMath::Clamp(FCString::Atof(*UGameplayStatics::ParseOption(GM->OptionsString, TEXT("RunHealth"))), 1.f, MaxHealth);
+    }
     NormalGravity = GetCharacterMovement()->GravityScale;
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
     if (GetMesh()->GetSkeletalMeshAsset() && !bEnemy)

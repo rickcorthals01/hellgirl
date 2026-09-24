@@ -45,6 +45,15 @@ public:
     void TickSuccubusCourt(float Dt);
     void RunSuccubusCourtCheck();
     void TravelToSuccubusCourt();
+    // Forest run (URL option ForestRun=1?Seed=N?Room=R): randomised forest rooms, see Levels/ForestRun.cpp.
+    bool bForestRun = false;
+    int32 ForestSeed = 1, ForestRoomNumber = 1;
+    void StartForestRun();
+    void TravelToForestRoom(int32 Seed, int32 Room);
+    void BuildForestRun();
+    void BuildForestRunScenery();
+    void TickForestRun(float Dt);
+    void RunForestRunCheck();
     bool bWon = false;
     FString MapTitle, Objective, Prompt;
     TArray<FVector4> MapPlatforms;
@@ -87,4 +96,6 @@ private:
     TSet<FName> PlayedStory;
     TWeakObjectPtr<class AArenaFighter> SurrenderedQueen;
     float QueenFleeClock=0.f;
+    TArray<FVector4> ForestThorns; // X, Y, radius
+    UPROPERTY() TObjectPtr<AStaticMeshActor> ForestExitMarker;
 };

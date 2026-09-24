@@ -91,7 +91,8 @@ void AEnemySpawnPoint::SpawnOne()
     Enemy->SetEnemyType(Flying ? FlyingType : GroundType);
     Enemy->HomePosition = GetActorLocation();
     Enemy->EncounterSite = this;
-    Enemy->bGuardHome = bInstantGroup;
+    Enemy->bGuardHome = bInstantGroup && bGroupGuardsHome;
+    if (!bBoss && EnemyScale != 1.f) Enemy->SetActorScale3D(FVector(EnemyScale));
     if (bBoss)
     {
         Enemy->MaxHealth = Enemy->Health = 1350.f;

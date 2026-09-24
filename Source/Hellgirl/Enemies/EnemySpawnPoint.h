@@ -26,6 +26,10 @@ public:
     bool bEnabled = true;
     bool bBoss = false;
     bool bInstantGroup = false;
+    // Instant groups guard their spawn spot unless this is off (an ambush rushes the player instead).
+    bool bGroupGuardsHome = true;
+    // Size of non-boss enemies from this site (elite waves are drawn larger).
+    float EnemyScale = 1.f;
     bool bCleared = false;
     int32 LivingEnemies() const;
     bool RegisterReinforcement(AArenaFighter* Enemy);

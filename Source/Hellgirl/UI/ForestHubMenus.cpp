@@ -53,6 +53,7 @@ public:
         AddStage(GoblinStages,1,TEXT("STAGE I  /  FIRST RAID"),TEXT("Survive the first Goblin waves"),Unlocked>=1);
         if (Unlocked>=1) AddStage(GoblinStages,2,TEXT("STAGE II  /  SURVIVAL"),TEXT("Five growing waves"),Unlocked>=2);
         if (Unlocked>=2) AddStage(GoblinStages,3,TEXT("STAGE III  /  THE QUEEN"),TEXT("Cross the ruins and defeat the Goblin Queen"),Unlocked>=3);
+        AddStage(GoblinStages,ForestRun,TEXT("FOREST RUN  /  RANDOM ROOMS"),TEXT("Three random clearings, then the Goblin Queen · dying ends the run"),true);
         AddStage(ImpStages,4,TEXT("STAGE I  /  TORTURE ARENA"),TEXT("Five Imp waves · Imp Commander"),Unlocked>=4);
         AddStage(ImpStages,5,TEXT("STAGE II  /  COMING LATER"),TEXT("Next stage preview"),false);
         AddStage(CourtStages,CourtPreview,TEXT("THE COURT  /  MAP PREVIEW"),TEXT("Walk the court · no enemies yet"),true);
@@ -172,6 +173,11 @@ private:
                         auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get()));
                         Owner->ResumeGame(); if (GM) GM->TravelToSuccubusCourt();
                     }
+                    else if (Owner.IsValid() && Level==ForestRun)
+                    {
+                        auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get()));
+                        Owner->ResumeGame(); if (GM) GM->StartForestRun();
+                    }
                     else if (Owner.IsValid() && Level<=Unlocked && Level<=4)
                     {
                         auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get()));
@@ -193,6 +199,8 @@ private:
     TSharedPtr<SVerticalBox> GoblinStages,ImpStages,CourtStages;
     // World III is a map preview reached by its own option, not a campaign level number.
     static constexpr int32 CourtPreview=100;
+    // The forest run is a chain of random rooms, also outside the campaign level numbers.
+    static constexpr int32 ForestRun=101;
     TSharedPtr<SButton> BackButton,GoblinFirstButton,ImpFirstButton,ImpWorldButton,CourtWorldButton,CourtFirstButton;
 };
 

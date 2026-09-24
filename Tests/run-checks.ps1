@@ -30,6 +30,8 @@ $checks = @(
     @('Map',            '/Engine/Maps/Entry?StageMap=2', 0), @('Map', '/Engine/Maps/Entry?StageMap=3', 0),
     @('ImpArena',       '/Engine/Maps/Entry?StageMap=1?CampaignLevel=4', 60),
     @('Court',          '/Engine/Maps/Entry?SuccubusCourt=1', 60),
+    # Random forest rooms: the planner over many seeds, then one fight room and the boss room as built.
+    @('ForestRun',      '/Engine/Maps/Entry?ForestRun=1?Seed=4242?Room=2', 60), @('ForestRun', '/Engine/Maps/Entry?ForestRun=1?Seed=4242?Room=4', 60),
     @('Hub',            '/Engine/Maps/Entry?ForestHub=1', 60), @('Dialogue', '/Engine/Maps/Entry?ForestHub=1', 0),
     # Controller: roll into the level-select road holding B (and, Quick, press B the frame the menu opens).
     @('HubRoll',        '/Engine/Maps/Entry?ForestHub=1', 60), @('HubRoll', '/Engine/Maps/Entry?ForestHub=1', 60, '-RollQuickBack'),
@@ -57,7 +59,7 @@ $results = @()
 try {
     foreach ($c in $checks) {
         $name, $url, $fps, $extra = $c
-        $label = if ($url -match 'StageMap=([23])') { "$name$($matches[1])" } elseif ($extra) { "$name" + ($extra -replace '^-Roll','') } else { $name }
+        $label = if ($url -match 'StageMap=([23])') { "$name$($matches[1])" } elseif ($url -match 'Room=(\d)') { "$name$($matches[1])" } elseif ($extra) { "$name" + ($extra -replace '^-Roll','') } else { $name }
         $log = Join-Path $logDir "$label.log"
         $argList = @("`"$project`"", $url, '-game', '-nullrhi', '-unattended', '-nosound', '-NoSplash', "-Hellgirl$($name)Check", "-abslog=`"$log`"")
         if ($fps -gt 0) { $argList += @('-UseFixedTimeStep', "-FPS=$fps") }

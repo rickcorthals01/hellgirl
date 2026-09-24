@@ -34,6 +34,7 @@ void AArenaHUD::DrawHUD()
     const float MapX = FMath::Max(20.f, Canvas->ClipX - 210.f), MapY = 155.f, MapSize = 180.f;
     DrawRect(FLinearColor(.015f, .02f, .015f, .88f), MapX - 10.f, MapY - 25.f, MapSize + 20.f, MapSize + 55.f);
     DrawText(GM->bSuccubusCourt ? FString(TEXT("N / WORLD III / THE COURT"))
+        : GM->bForestRun ? FString::Printf(TEXT("N / FOREST RUN / ROOM %d"), GM->ForestRoomNumber)
         : FString::Printf(TEXT("N / STAGE %d / LEVEL %d"), GM->CampaignLevel<=3?1:2, GM->CampaignLevel<=3?GM->CampaignLevel:1), FLinearColor::White, MapX, MapY - 20.f);
     auto OnMap = [&](float X, float Y)
     {
