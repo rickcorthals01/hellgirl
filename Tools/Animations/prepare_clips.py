@@ -100,6 +100,8 @@ def retarget(target, name, parts, mirrored, out_path, strike=None, contact=None,
         if part.get("reverse"):
             frames.reverse()
         frames = frames + [frames[-1]] * part.get("hold", 0)
+        # A later piece continues horizontally from where the previous one ended.
+        joined = None
         for f in frames:
             scene.frame_set(f)
             delta = {}
@@ -110,7 +112,11 @@ def retarget(target, name, parts, mirrored, out_path, strike=None, contact=None,
             offset = hips - src_root_head
             if mirrored:
                 offset.x = -offset.x
-            samples.append((delta, offset * height_ratio))
+            offset = offset * height_ratio
+            if joined is None:
+                joined = (samples[-1][1] - offset) if samples else offset * 0
+                joined.z = 0
+            samples.append((delta, offset + joined))
             source_frames.append(f)
             if strike:
                 limb = (S_world @ source.pose.bones[src_names[strike]].matrix).translation

@@ -39,7 +39,7 @@ The game loads whatever clips exist for the equipped outfit; anything missing fa
 | Dodge, Hit, Knockdown, Death | Reactions |
 | Idle, Walk, Run | Standing, walking and running for every outfit except Frog (Mixamo Standing Idle and the Female Locomotion Pack; the Meshy walks kept tiptoe feet) |
 
-Current sources: everything except Hit and SwordThrust has a clip; the sword slash, backslash and spin use the Great Sword pack. Air moves use `lift: 0` (the jump physics already lifts her), DodgeSlam keeps a third of its leap. Knockdown is Mixamo "Knocked Down" (fall onto her back), a short hold, then the same fall played back quickly so she springs up: the game's knockdowns last only about a second. "Getting Up" was not used because it starts face-down with her head the other way round; a get-up that starts lying on her back (e.g. "Kip Up") can replace the reversed piece in the Knockdown entry's `then` list. `Hit To Body.fbx` holds a single pose, not an animation, so Hit is skipped until it is downloaded again.
+Current sources: everything except SwordThrust has a clip; the sword slash, backslash and spin use the Great Sword pack. Air moves use `lift: 0` (the jump physics already lifts her), DodgeSlam keeps a third of its leap. Knockdown is Mixamo "Knocked Down" up to the moment she lies on her back, a short hold, then "Kip Up" at double speed: the game's knockdowns last only about a second, and the whole clip is fitted into that time. ("Getting Up" doesn't fit: it starts face-down with her head the other way round.) Hit ("Hit To Body") is fitted into the 0.3 s hit window.
 
 The sword is still a placeholder box, now held in the right hand (`SwordGripOffset` / `SwordGripRotation` on the fighter).
 

@@ -133,7 +133,7 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
         return;
     }
     if (!FParse::Param(FCommandLine::Get(), TEXT("HellgirlAttackPreview"))) return;
-    // Special: 1 = charged strike (full charge), 2 = holding heavy (charging loop), 3 = dodge roll, 4 = knockdown.
+    // Special: 1 = charged strike (full charge), 2 = holding heavy (charging loop), 3 = dodge roll, 4 = knockdown, 5 = hit reaction.
     struct FPreviewMove { const TCHAR* Clip; bool Heavy; int32 Combo; bool Air; bool AfterDodge; bool Sword; int32 Special = 0; };
     static const FPreviewMove Moves[] = {
         {TEXT("Dodge"), false, 0, false, false, false, 3},
@@ -144,7 +144,7 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
         {TEXT("Headbutt"), false, 0, false, true, false}, {TEXT("DodgeSlam"), true, 0, false, true, false},
         {TEXT("AirPunch"), false, 0, true, false, false}, {TEXT("AirLeftPunch"), false, 1, true, false, false},
         {TEXT("AirKick"), false, 2, true, false, false}, {TEXT("AirCrashKick"), false, 3, true, false, false},
-        {TEXT("AirSlam"), true, 0, true, false, false}, {TEXT("Knockdown"), false, 0, false, false, false, 4},
+        {TEXT("AirSlam"), true, 0, true, false, false}, {TEXT("Knockdown"), false, 0, false, false, false, 4}, {TEXT("Hit"), false, 0, false, false, false, 5},
         {TEXT("SwordSlash"), false, 0, false, false, true}, {TEXT("SwordBackslash"), false, 1, false, false, true},
         {TEXT("SwordThrust"), false, 2, false, false, true}, {TEXT("SwordSpin"), false, 3, false, false, true}};
     static int32 Shot = -1;
@@ -187,6 +187,8 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
     // A typical knockdown lasts .9 s; the pose code maps its clip over that time.
     PlayerKnockdownDuration = .9f;
     KnockdownClock = Move.Special == 4 ? PlayerKnockdownDuration * (1.f - Progress) + Dt : 0.f;
+    // The hit reaction runs .3 s on its own timer, which the pose code advances by this frame's time.
+    PlayerHitAnimationTime = Move.Special == 5 ? Progress * .3f - Dt : 100.f;
     // The roll plays on its own timer, which the pose code advances by this frame's time.
     DodgeAnimationTime = Move.Special == 3 ? Progress * DodgeAnimationDuration - Dt : 100.f;
     bHitResolved = true;
@@ -200,7 +202,8 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
         ShotFrames = 0;
         const UAnimSequence* Expected = Move.Special == 2 ? CombatAnimations.FindRef(TEXT("Charge")).Get()
             : Move.Special == 3 ? CombatAnimations.FindRef(TEXT("Dodge")).Get()
-            : Move.Special == 4 ? CombatAnimations.FindRef(TEXT("Knockdown")).Get() : FindAttackAnimation(CurrentAttack.Type);
+            : Move.Special == 4 ? CombatAnimations.FindRef(TEXT("Knockdown")).Get()
+            : Move.Special == 5 ? CombatAnimations.FindRef(TEXT("Hit")).Get() : FindAttackAnimation(CurrentAttack.Type);
         UE_LOG(LogTemp, Display, TEXT("ATTACK PREVIEW %s_%d: expected %s at %.3fs, mesh plays %s at %.3fs"), Move.Clip, Shot % 3,
             // The charging loop runs on world time, so only its clip is compared.
             Expected ? *Expected->GetName() : TEXT("none"), Move.Special == 2 ? GetMesh()->GetPosition()

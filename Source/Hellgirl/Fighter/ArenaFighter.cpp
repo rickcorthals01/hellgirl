@@ -1086,8 +1086,9 @@ void AArenaFighter::UpdatePose(float Dt)
         }
         else if (PlayerHitAnimationTime < .3f)
         {
+            // The whole flinch (recoil and back) is fitted into the .3 s hit window.
             Clip = CombatAnimations.FindRef(TEXT("Hit"));
-            Position = PlayerHitAnimationTime;
+            if (Clip) Position = PlayerHitAnimationTime / .3f * Clip->GetPlayLength();
         }
         else if (bHeavyHeld || IsBlocking())
         {
