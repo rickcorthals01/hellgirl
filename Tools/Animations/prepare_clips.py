@@ -23,17 +23,23 @@ def mirror_name(name):
     return name.replace("Left", "\0").replace("Right", "Left").replace("\0", "Right")
 
 
+def segments(clip):
+    """The clip's source pieces: its own file (and trim), then any 'then' pieces played after it."""
+    parts = [{"file": clip["file"], "trim": clip.get("trim"), "hold": clip.get("hold", 0)}] + clip.get("then", [])
+    return [dict(p, path=os.path.join(mixamo, p["file"])) for p in parts]
+
+
 def resolve(name):
-    """Returns (source file, mirrored, trim) or (None, ...) when the clip has no source yet."""
+    """Returns (source segments, mirrored, spec the options come from) or (None, ...) when a source is missing."""
     clip = cfg["clips"][name]
-    path = os.path.join(mixamo, clip["file"])
-    if os.path.exists(path):
-        return path, False, clip.get("trim")
+    parts = segments(clip)
+    if all(os.path.exists(p["path"]) for p in parts):
+        return parts, False, clip
     other = clip.get("mirror_of")
     if other:
-        path = os.path.join(mixamo, cfg["clips"][other]["file"])
-        if os.path.exists(path):
-            return path, True, cfg["clips"][other].get("trim")
+        parts = segments(cfg["clips"][other])
+        if all(os.path.exists(p["path"]) for p in parts):
+            return parts, True, cfg["clips"][other]
     return None, False, None
 
 
@@ -52,52 +58,70 @@ def depth(bone):
     return 0 if bone.parent is None else 1 + depth(bone.parent)
 
 
-def retarget(target, name, source_path, mirrored, trim, out_path, strike=None, contact=None):
+class NotAnimated(Exception):
+    """A source file holds a model or a single pose but no animation (e.g. downloaded as a T-pose)."""
+
+
+def retarget(target, name, parts, mirrored, out_path, strike=None, contact=None, lift=1.0, slide=1.0):
+    """parts: source pieces played one after another, each {path, trim, reverse, step, hold}.
+    lift scales upward hip motion (0 for air moves, whose height the game's physics already provides);
+    slide scales the horizontal hip motion that is left after net travel is removed."""
     scene = bpy.context.scene
-    source, imported = import_armature(source_path)
-    action = source.animation_data.action
-    start, end = trim or [int(round(v)) for v in action.frame_range]
     bones = sorted(target.data.bones, key=depth)
     root = bones[0].name
     src_names = {b.name: (mirror_name(b.name) if mirrored else b.name) for b in bones}
-    missing = [n for n in src_names.values() if n not in source.data.bones]
-    if missing:
-        raise RuntimeError(f"{name}: source lacks bones {missing}")
-
-    S_world, T_world = source.matrix_world, target.matrix_world
+    T_world = target.matrix_world
     T_world_rot_inv = rot3(T_world).inverted()
     T_world_inv = T_world.inverted()
-    src_rest = {}
-    for b in bones:
-        r = rot3(S_world @ source.data.bones[src_names[b.name]].matrix_local)
-        src_rest[b.name] = MIRROR @ r @ MIRROR if mirrored else r
     tgt_rest = {b.name: rot3(T_world @ b.matrix_local) for b in bones}
-    src_root_head = (S_world @ source.data.bones[src_names[root]].matrix_local).translation
     tgt_root_head = (T_world @ target.data.bones[root].matrix_local).translation
-    height_ratio = tgt_root_head.z / max(src_root_head.z, 1e-4)
 
-    # Pass 1: sample the source.
-    frames = list(range(start, end + 1))
-    samples = []
-    reach = []
-    for f in frames:
-        scene.frame_set(f)
-        pose = {}
+    # Pass 1: sample every piece as each bone's world rotation relative to its source rest pose.
+    samples, reach, source_frames = [], [], []
+    for part in parts:
+        source, imported = import_armature(part["path"])
+        action = source.animation_data.action if source.animation_data else None
+        if not action or action.frame_range[1] - action.frame_range[0] < 1:
+            for obj in imported:
+                bpy.data.objects.remove(obj, do_unlink=True)
+            raise NotAnimated(os.path.relpath(part["path"], mixamo))
+        missing = [n for n in src_names.values() if n not in source.data.bones]
+        if missing:
+            raise RuntimeError(f"{name}: source lacks bones {missing}")
+        S_world = source.matrix_world
+        src_rest = {}
         for b in bones:
-            r = rot3(S_world @ source.pose.bones[src_names[b.name]].matrix)
-            pose[b.name] = MIRROR @ r @ MIRROR if mirrored else r
-        hips = (S_world @ source.pose.bones[src_names[root]].matrix).translation
-        offset = hips - src_root_head
-        if mirrored:
-            offset.x = -offset.x
-        samples.append((pose, offset * height_ratio))
-        if strike:
-            limb = (S_world @ source.pose.bones[src_names[strike]].matrix).translation
-            reach.append((limb - hips).to_2d().length)
+            r = rot3(S_world @ source.data.bones[src_names[b.name]].matrix_local)
+            src_rest[b.name] = MIRROR @ r @ MIRROR if mirrored else r
+        src_root_head = (S_world @ source.data.bones[src_names[root]].matrix_local).translation
+        height_ratio = tgt_root_head.z / max(src_root_head.z, 1e-4)
+        start, end = part.get("trim") or [int(round(v)) for v in action.frame_range]
+        frames = list(range(start, end + 1, part.get("step", 1)))
+        if part.get("reverse"):
+            frames.reverse()
+        frames = frames + [frames[-1]] * part.get("hold", 0)
+        for f in frames:
+            scene.frame_set(f)
+            delta = {}
+            for b in bones:
+                r = rot3(S_world @ source.pose.bones[src_names[b.name]].matrix)
+                delta[b.name] = (MIRROR @ r @ MIRROR if mirrored else r) @ src_rest[b.name].inverted()
+            hips = (S_world @ source.pose.bones[src_names[root]].matrix).translation
+            offset = hips - src_root_head
+            if mirrored:
+                offset.x = -offset.x
+            samples.append((delta, offset * height_ratio))
+            source_frames.append(f)
+            if strike:
+                limb = (S_world @ source.pose.bones[src_names[strike]].matrix).translation
+                reach.append((limb - hips).to_2d().length)
+        for obj in imported:
+            bpy.data.objects.remove(obj, do_unlink=True)
+        bpy.data.actions.remove(action)
 
-    # Contact: an explicit source frame, else the frame where the striking limb is farthest from the hips.
+    # Contact: an explicit frame of the first piece, else the frame where the striking limb is farthest from the hips.
     if contact is not None:
-        contact_index = min(max(contact - start, 0), len(frames) - 1)
+        contact_index = min(range(len(source_frames)), key=lambda i: abs(source_frames[i] - contact))
     elif reach:
         contact_index = max(range(len(reach)), key=reach.__getitem__)
     else:
@@ -109,6 +133,10 @@ def retarget(target, name, source_path, mirrored, trim, out_path, strike=None, c
         t = i / max(1, len(samples) - 1)
         offset.x -= first.x + (last.x - first.x) * t
         offset.y -= first.y + (last.y - first.y) * t
+        offset.x *= slide
+        offset.y *= slide
+        if offset.z > 0:
+            offset.z *= lift
 
     # Pass 2: write keys on the target, parents first.
     target.animation_data_clear()
@@ -117,13 +145,13 @@ def retarget(target, name, source_path, mirrored, trim, out_path, strike=None, c
     for pb in target.pose.bones:
         pb.rotation_mode = "QUATERNION"
     worst = 0.0
-    for i, (pose, offset) in enumerate(samples):
+    for i, (delta, offset) in enumerate(samples):
         frame = i + 1
         pose_arm = {}
         for b in bones:
             rest_rel = b.parent.matrix_local.inverted() @ b.matrix_local if b.parent else b.matrix_local
             parent_pose = pose_arm[b.parent.name] if b.parent else Matrix.Identity(4)
-            desired_rot = T_world_rot_inv @ (pose[b.name] @ src_rest[b.name].inverted() @ tgt_rest[b.name])
+            desired_rot = T_world_rot_inv @ (delta[b.name] @ tgt_rest[b.name])
             if b.parent:
                 location = (parent_pose @ rest_rel).translation
             else:
@@ -142,9 +170,9 @@ def retarget(target, name, source_path, mirrored, trim, out_path, strike=None, c
     # world-space change from rest must match the source's.
     for i in range(0, len(samples), max(1, len(samples) // 6)):
         scene.frame_set(i + 1)
-        pose = samples[i][0]
+        delta = samples[i][0]
         for b in bones:
-            want = pose[b.name] @ src_rest[b.name].inverted()
+            want = delta[b.name]
             got = rot3(T_world @ target.pose.bones[b.name].matrix) @ tgt_rest[b.name].inverted()
             worst = max(worst, want.to_quaternion().rotation_difference(got.to_quaternion()).angle)
 
@@ -156,16 +184,13 @@ def retarget(target, name, source_path, mirrored, trim, out_path, strike=None, c
     bpy.ops.export_scene.fbx(filepath=out_path, use_selection=True, object_types={"ARMATURE"}, add_leaf_bones=False,
                              axis_forward="-Y", axis_up="Z", bake_anim=True, bake_anim_use_all_actions=False,
                              bake_anim_use_nla_strips=False, bake_anim_simplify_factor=0)
-    for obj in imported:
-        bpy.data.objects.remove(obj, do_unlink=True)
-    bpy.data.actions.remove(action)
     bpy.data.actions.remove(target.animation_data.action)
     target.animation_data_clear()
     result = {"frames": len(samples), "fps": scene.render.fps, "mirrored": mirrored,
-              "source": os.path.relpath(source_path, mixamo), "fit_error_deg": round(worst * 57.2958, 3)}
+              "source": " + ".join(os.path.relpath(p["path"], mixamo) for p in parts), "fit_error_deg": round(worst * 57.2958, 3)}
     if contact_index is not None:
-        result["contact_frame"] = start + contact_index
-        result["contact_fraction"] = round(contact_index / max(1, len(frames) - 1), 4)
+        result["contact_frame"] = source_frames[contact_index]
+        result["contact_fraction"] = round(contact_index / max(1, len(samples) - 1), 4)
     return result
 
 
@@ -180,13 +205,19 @@ for outfit, rel in cfg["outfits"].items():
     for name in cfg["clips"]:
         if only and name not in only:
             continue
-        path, mirrored, trim = resolve(name)
-        if not path:
+        parts, mirrored, source_spec = resolve(name)
+        if not parts:
             report[outfit][name] = {"skipped": "no source file yet"}
             continue
         clip = cfg["clips"][name]
-        report[outfit][name] = retarget(target, name, path, mirrored, trim, os.path.join(out_root, outfit, name + ".fbx"),
-                                        clip.get("strike"), clip.get("contact"))
+        try:
+            report[outfit][name] = retarget(target, name, parts, mirrored, os.path.join(out_root, outfit, name + ".fbx"),
+                                            clip.get("strike"), clip.get("contact", source_spec.get("contact") if mirrored else None),
+                                            source_spec.get("lift", 1.0), source_spec.get("slide", 1.0))
+        except NotAnimated as e:
+            report[outfit][name] = {"skipped": f"{e} has no animation (re-download it from Mixamo)"}
+            print(f"CLIP {outfit}/{name}: skipped, {e} has no animation")
+            continue
         print(f"CLIP {outfit}/{name}: {report[outfit][name]}")
     # Re-posed outfits: re-fit their own original neutral pose onto the new rest pose.
     folder = cfg.get("outfit_clip_folders", {}).get(outfit)
@@ -197,7 +228,7 @@ for outfit, rel in cfg["outfits"].items():
         if not os.path.exists(path):
             report[outfit][name] = {"skipped": "no source file yet"}
             continue
-        report[outfit][name] = retarget(target, name, path, False, None, os.path.join(out_root, outfit, name + ".fbx"))
+        report[outfit][name] = retarget(target, name, [{"path": path}], False, os.path.join(out_root, outfit, name + ".fbx"))
         print(f"CLIP {outfit}/{name}: {report[outfit][name]}")
 json.dump(report, open(os.path.join(out_root, "prepare_report.json"), "w"), indent=1)
 print("PREPARE CLIPS DONE")
