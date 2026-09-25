@@ -120,8 +120,11 @@ void AHellgirlPlayerController::RunStoryCheck()
                 if (Id==TEXT("L2_PortalHelp") && !GM->IsSoulPortalOpen()) { Fail(TEXT("The portal help showed without its portal")); return false; }
                 if (Id==TEXT("L3_SubjectsReply") && GM->IsSoulPortalOpen()) { Fail(TEXT("Subjects? before continuing through the portal")); return false; }
                 if (Id==TEXT("QueenLowHealth") && HellgirlProgress::UltimatesUnlocked()) { Fail(TEXT("Ultimates were unlocked before the Queen's 30% moment")); return false; }
-                if (Id==TEXT("QueenDefeat") && Page==0 && (!HellgirlProgress::UltimatesUnlocked() || GM->Tip.IsEmpty() || Hero->Energy<Hero->MaxEnergy))
-                { Fail(TEXT("Ultimate unlock, full energy or tip missing after 30%")); return false; }
+                // The how-to box names the ultimate key.
+                if (Id==TEXT("L3_UltimateTip") && (!HellgirlProgress::UltimatesUnlocked() || PC->GetConversationLine().Contains(TEXT("{UltimateKey}"))))
+                { Fail(TEXT("Ultimate tip before the unlock, or its key was not filled in")); return false; }
+                if (Id==TEXT("QueenDefeat") && Page==0 && (!HellgirlProgress::UltimatesUnlocked() || Hero->Energy<Hero->MaxEnergy))
+                { Fail(TEXT("Ultimate unlock or full energy missing after 30%")); return false; }
             }
             if (FParse::Param(FCommandLine::Get(),TEXT("StoryShots")))
             {
@@ -200,8 +203,8 @@ void AHellgirlPlayerController::RunStoryCheck()
         {
             const TArray<FName> Expected=GM->CampaignLevel==2
                 ? TArray<FName>{TEXT("L2_Start"),TEXT("L2_PortalHelp"),TEXT("L2_Army")}
-                : TArray<FName>{TEXT("L3_Goblins"),TEXT("L3_TalkToMe"),TEXT("L3_Subjects"),TEXT("L3_SubjectsReply"),TEXT("L3_BossStart"),TEXT("QueenLowHealth"),TEXT("QueenDefeat"),TEXT("L3_Escaped")};
-            const int32 Pages=GM->CampaignLevel==2?4:28, Portals=GM->CampaignLevel==2?2:3;
+                : TArray<FName>{TEXT("L3_Goblins"),TEXT("L3_TalkToMe"),TEXT("L3_Subjects"),TEXT("L3_SubjectsReply"),TEXT("L3_BossStart"),TEXT("QueenLowHealth"),TEXT("L3_UltimateTip"),TEXT("QueenDefeat"),TEXT("L3_Escaped")};
+            const int32 Pages=GM->CampaignLevel==2?4:29, Portals=GM->CampaignLevel==2?2:3;
             if (State->Seen!=Expected || State->Pages!=Pages || State->Portals!=Portals)
             {
                 FString Got; for (FName N:State->Seen) Got+=N.ToString()+TEXT(" ");

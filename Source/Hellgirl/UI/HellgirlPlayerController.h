@@ -33,6 +33,7 @@ public:
     bool ShowConversation(FName Id);
     FName GetConversation() const { return ConversationId; }
     int32 GetConversationPage() const { return ConversationPage; }
+    FString GetConversationLine() const { return ConversationLines.IsValidIndex(ConversationPage) ? ConversationLines[ConversationPage].ToString() : FString(); }
     // The portrait shown on the current conversation page (null when none).
     UTexture2D* GetConversationPortrait() const { return ConversationPortraits.IsValidIndex(ConversationPage) ? ConversationPortraits[ConversationPage].Get() : nullptr; }
     // A black screen that fades to the game over Seconds (real time, so it runs during dialogue).

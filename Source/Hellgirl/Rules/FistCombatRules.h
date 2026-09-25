@@ -39,7 +39,9 @@ inline AttackSpec Select(bool Heavy, int Combo, bool Airborne, bool AfterDodge, 
         }
     }
     if (AfterDodge)
-        return Heavy ? AttackSpec{Move::DodgeSlam, .55f, .45f, 14.f, 210.f, 0.f, 0.f, 0}
+        // Dodge + heavy: a slam that hits everyone around her (area move, softer toward the edge) and launches them
+        // away. It costs a full energy tube (Rules/CombatEnergyRules.h).
+        return Heavy ? AttackSpec{Move::DodgeSlam, .55f, .45f, 26.f, 400.f, 450.f, 0.f, 0}
                      : AttackSpec{Move::Headbutt, .4f, .4f, 28.f, 180.f, 100.f, 0.f, 0};
     if (Heavy)
     {

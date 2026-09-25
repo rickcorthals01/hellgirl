@@ -69,3 +69,8 @@ Landing hits fills a combo meter. Each full bar adds 0.1 to a damage multiplier,
 - **Details:** each attack counts once, however many enemies it hits. The bonus uses the meter as it was before the hit.
 
 All numbers are in `Source/Hellgirl/Rules/ComboRules.h`. `-HellgirlComboCheck` tests the rules and a 1.5x punch. The bonus stays off in other automated checks, so they keep measuring exact damage. The HUD shows the multiplier under the minimap: parchment at low tiers, then gold and ember, then red. It pops when it goes up.
+
+**Dodge slam (2026-09-25):** dodge + heavy is an area slam.
+- **Reach:** 400. **Damage:** 26 at the centre, softer toward the edge.
+- It launches everyone it hits away from Hellgirl.
+- It costs a full energy tube (`HellgirlEnergy::DodgeSlamCost`); other slams cost half a tube.

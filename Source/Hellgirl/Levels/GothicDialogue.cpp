@@ -21,6 +21,7 @@
 #include "Styling/CoreStyle.h"
 #include "Containers/Ticker.h"
 #include "HAL/PlatformTime.h"
+#include "GameFramework/InputSettings.h"
 
 #include "Widgets/SLeafWidget.h"
 #include "Rendering/DrawElements.h"
@@ -271,6 +272,14 @@ bool AHellgirlPlayerController::ShowConversation(FName Id)
     {
         FString Speaker,Line,Mood,Style;
         if (!Script.GetString(*Id.ToString(),*FString::Printf(TEXT("Line%d"),I),Line)) break;
+        // {UltimateKey} names the keys bound to the ultimate (Special), e.g. "Q / Gamepad Right Thumbstick Button".
+        if (Line.Contains(TEXT("{UltimateKey}")))
+        {
+            FString Keys;
+            for (const FInputActionKeyMapping& Mapping : GetDefault<UInputSettings>()->GetActionMappings())
+                if (Mapping.ActionName==TEXT("Special")) Keys+=(Keys.IsEmpty()?TEXT(""):TEXT(" / "))+Mapping.Key.GetDisplayName().ToString();
+            Line.ReplaceInline(TEXT("{UltimateKey}"),Keys.IsEmpty()?TEXT("Q"):*Keys);
+        }
         Script.GetString(*Id.ToString(),*FString::Printf(TEXT("Speaker%d"),I),Speaker);
         Script.GetString(*Id.ToString(),*FString::Printf(TEXT("Mood%d"),I),Mood);
         Script.GetString(*Id.ToString(),*FString::Printf(TEXT("Style%d"),I),Style);

@@ -155,3 +155,5 @@ Replaces the carried-souls rules above.
   - They are profile-wide: stored in `[HellgirlAchievements]` with the unlock date, not per save slot, and a new game doesn't clear them.
   - Nothing is backdated: an achievement only unlocks when it happens.
   - A short "ACHIEVEMENT" notice shows when one unlocks. The full achievement system comes later.
+
+**Ultimate tip (2026-09-25):** in Stage 3, the how-to after "I'll show you!" is now a dialogue box (`[L3_UltimateTip]`), not on-screen text. Its `{UltimateKey}` is filled in with the keys bound to the ultimate.

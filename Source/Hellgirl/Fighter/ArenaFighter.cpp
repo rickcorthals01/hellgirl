@@ -561,7 +561,7 @@ void AArenaFighter::StartAttack(bool Heavy)
     case Move::DoubleJab: MoveLabel = TEXT("4 / 4   DOUBLE LEFT JAB"); break;
     case Move::RightHeavyKick: MoveLabel = SelectedWeapon == 1 ? TEXT("HEAVY RIGHT SLASH") : TEXT("HEAVY RIGHT KICK"); break;
     case Move::LeftHeavyKick: MoveLabel = SelectedWeapon == 1 ? TEXT("HEAVY LEFT SLASH") : TEXT("HEAVY LEFT KICK"); break;
-    case Move::DodgeSlam: MoveLabel = TEXT("DODGE FOLLOW-UP / SMALL SLAM"); break;
+    case Move::DodgeSlam: MoveLabel = TEXT("DODGE FOLLOW-UP / AREA SLAM"); break;
     case Move::SwordSlash: MoveLabel = TEXT("1 / 4   RIGHT SWORD SLASH"); break;
     case Move::SwordBackslash: MoveLabel = TEXT("2 / 4   LEFT SWORD SLASH"); break;
     case Move::SwordThrust: MoveLabel = TEXT("3 / 4   DASH THRUST"); break;

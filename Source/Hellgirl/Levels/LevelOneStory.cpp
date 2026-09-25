@@ -57,11 +57,8 @@ void AArenaGameMode::StoryFinished(FName Moment)
         // "I'll show you!": her ultimate awakens, with the energy bar already full.
         HellgirlProgress::SetFlag(TEXT("UltimatesUnlocked"));
         if (Player) Player->Energy=Player->MaxEnergy;
-        FString Keys;
-        for (const FInputActionKeyMapping& Mapping : GetDefault<UInputSettings>()->GetActionMappings())
-            if (Mapping.ActionName==TEXT("Special")) Keys+=(Keys.IsEmpty()?TEXT(""):TEXT(" / "))+Mapping.Key.GetDisplayName().ToString();
-        Tip=FString::Printf(TEXT("ULTIMATE UNLOCKED  ·  Press %s to unleash your ultimate after filling up the energy bar"),Keys.IsEmpty()?TEXT("Q"):*Keys);
-        TipUntil=FPlatformTime::Seconds()+10.0;
+        // The how-to follows in its own box (L3_UltimateTip; the key comes from the input settings).
+        QueueStory(TEXT("L3_UltimateTip"));
     }
     if (Moment==TEXT("QueenDefeat") && SurrenderedQueen.IsValid())
     {
