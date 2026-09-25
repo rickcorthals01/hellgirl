@@ -1,6 +1,7 @@
 // Forest run: a chain of randomised forest rooms (Rules/ForestRoomRules.h decides what is in each room).
 // URL options: ForestRun=1?Seed=N?Room=R. Rooms 1-3 are goblin fights, room 4 is the Goblin Queen.
 // Health and energy carry over between rooms; dying or finishing the run returns to camp.
+#include "Rules/EnemyTuning.h"
 #include "Levels/ArenaGameMode.h"
 #include "Levels/MapPieces.h"
 #include "Levels/ForestArt.h"
@@ -170,7 +171,7 @@ void AArenaGameMode::TickForestRun(float Dt)
     // Waves arrive one after another, with a short breather in between.
     int32 Next = 0;
     while (Next < SpawnSites.Num() && SpawnSites[Next]->bCleared) ++Next;
-    if (Next != ArenaWaveIndex) { ArenaWaveIndex = Next; WaveCountdown = Next == 0 ? 2.5f : 3.f; }
+    if (Next != ArenaWaveIndex) { ArenaWaveIndex = Next; WaveCountdown = Next == 0 ? 2.5f : EnemyTuning::WaveBreak(3.f); }
     const bool Boss = ForestRoomNumber == ForestRoom::RoomsPerRun;
     Prompt.Empty();
     PromptAction = 0;

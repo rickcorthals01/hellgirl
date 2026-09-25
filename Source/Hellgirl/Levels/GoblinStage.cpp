@@ -1,3 +1,4 @@
+#include "Rules/EnemyTuning.h"
 #include "Levels/ArenaGameMode.h"
 #include "Fighter/ArenaFighter.h"
 #include "Enemies/EnemySpawnPoint.h"
@@ -17,7 +18,7 @@ void AArenaGameMode::TickGoblinPrelude(float Dt)
     ActivatedSites=ClearedSites=EnemiesRemaining=0;
     for (auto Site:SpawnSites) { ActivatedSites+=Site->bActivated; ClearedSites+=Site->bCleared; EnemiesRemaining+=Site->LivingEnemies(); }
     int32 Next=0; while (Next<5 && SpawnSites[Next]->bCleared) ++Next;
-    if (Next!=ArenaWaveIndex) { ArenaWaveIndex=Next; WaveCountdown=Next==0?2.f:4.f; }
+    if (Next!=ArenaWaveIndex) { ArenaWaveIndex=Next; WaveCountdown=Next==0?2.f:EnemyTuning::WaveBreak(4.f); }
     for (int32 I=0;I<2;++I)
     {
         const bool Open=CampaignLevel==1 && Next>=(I==0?1:3);

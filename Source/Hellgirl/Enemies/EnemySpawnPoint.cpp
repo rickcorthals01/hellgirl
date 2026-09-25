@@ -132,7 +132,7 @@ void AEnemySpawnPoint::SpawnOne()
     }
     Enemies.Add(Enemy);
     ++Spawned;
-    SpawnDelay = .55f;
+    SpawnDelay = EnemyTuning::SpawnInterval;
     if (ArrivalSmoke) UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ArrivalSmoke, FVector(X, Y, GroundZ + 20.f), FRotator::ZeroRotator, FVector(.6f));
 }
 

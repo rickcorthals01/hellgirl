@@ -1,3 +1,4 @@
+#include "Rules/EnemyTuning.h"
 #include "Levels/ArenaGameMode.h"
 #include "Progress/HellgirlWallet.h"
 #include "Fighter/ArenaFighter.h"
@@ -371,7 +372,7 @@ void AArenaGameMode::Tick(float Dt)
         }
         int32 Next = 0;
         while (Next < SpawnSites.Num() && SpawnSites[Next]->bCleared) ++Next;
-        if (Next != ArenaWaveIndex) { ArenaWaveIndex = Next; WaveCountdown = Next == 0 ? 1.f : 3.f; }
+        if (Next != ArenaWaveIndex) { ArenaWaveIndex = Next; WaveCountdown = Next == 0 ? 1.f : EnemyTuning::WaveBreak(3.f); }
         if (Next < SpawnSites.Num())
         {
             const float X = Player->GetActorLocation().X;

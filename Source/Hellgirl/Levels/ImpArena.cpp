@@ -1,3 +1,4 @@
+#include "Rules/EnemyTuning.h"
 #include "Levels/ArenaGameMode.h"
 #include "Fighter/ArenaFighter.h"
 #include "Enemies/EnemySpawnPoint.h"
@@ -43,7 +44,7 @@ void AArenaGameMode::TickImpArena(float Dt)
     if (Next!=ArenaWaveIndex)
     {
         ArenaWaveIndex=Next;
-        WaveCountdown=Next==0 ? 2.f : 4.f;
+        WaveCountdown=Next==0 ? 2.f : EnemyTuning::WaveBreak(4.f);
     }
     Prompt.Empty(); PromptAction=0;
     if (Next<SpawnSites.Num())
