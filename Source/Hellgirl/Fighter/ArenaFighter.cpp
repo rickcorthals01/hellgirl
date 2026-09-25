@@ -825,18 +825,18 @@ void AArenaFighter::PlayImpact(const FVector& Direction, float Damage, bool Heav
     // The contact point: on the side facing the attacker, around chest height.
     const FVector Toward = -Direction.GetSafeNormal2D();
     const FVector At = GetActorLocation() + Toward * 38.f * GetActorScale3D().X + FVector(0.f, 0.f, 30.f);
-    // A tight radial burst for normal hits and blocks, a bigger flash burst for heavy ones.
+    // Only heavy hits throw a small puff of sparks; light hits and blocks rely on the flash and hit-stop.
     static const TCHAR* BurstPath = TEXT("/Game/Realistic_Starter_VFX_Pack_Vol2/Particles/Sparks/P_Sparks_F.P_Sparks_F");
-    static const TCHAR* HeavyBurstPath = TEXT("/Game/Realistic_Starter_VFX_Pack_Vol2/Particles/Sparks/P_Sparks_G.P_Sparks_G");
-    if (auto* Sparks = LoadObject<UParticleSystem>(nullptr, Heavy && !Blocked ? HeavyBurstPath : BurstPath))
-        UGameplayStatics::SpawnEmitterAtLocation(World, Sparks, At, Toward.Rotation(), FVector(Blocked ? .25f : Heavy ? .45f : .32f));
+    if (Heavy && !Blocked)
+        if (auto* Sparks = LoadObject<UParticleSystem>(nullptr, BurstPath))
+            UGameplayStatics::SpawnEmitterAtLocation(World, Sparks, At, Toward.Rotation(), FVector(.18f));
     // A brief flash of light at the contact point: warm for hits, cold for blocks.
     if (auto* Flash = World->SpawnActor<APointLight>(At, FRotator::ZeroRotator))
     {
         Flash->PointLightComponent->SetMobility(EComponentMobility::Movable);
         Flash->PointLightComponent->SetLightColor(Blocked ? FLinearColor(.5f, .8f, 1.f) : FLinearColor(1.f, .55f, .2f));
-        Flash->PointLightComponent->SetIntensity(Heavy ? 16000.f : 7000.f);
-        Flash->PointLightComponent->SetAttenuationRadius(Heavy ? 600.f : 380.f);
+        Flash->PointLightComponent->SetIntensity(Blocked ? 3000.f : Heavy ? 9000.f : 4000.f);
+        Flash->PointLightComponent->SetAttenuationRadius(Heavy ? 480.f : 320.f);
         Flash->PointLightComponent->SetCastShadows(false);
         Flash->SetLifeSpan(.07f);
     }

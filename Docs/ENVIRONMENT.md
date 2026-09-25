@@ -1,4 +1,4 @@
-# Environment art
+﻿# Environment art
 
 The maps are still built in code, but they are now dressed with real meshes, materials and effects instead of engine cubes, spheres and cones.
 
@@ -6,14 +6,14 @@ The maps are still built in code, but they are now dressed with real meshes, mat
 
 | Source | What it gives | Used in |
 |---|---|---|
-| **Forest kit** (generated, `Content/Environment/ForestKit`) | Pines ×3, dead tree, rocks, standing stone, log, stump, fern, grass ×2, mushrooms (plain and glowing), bramble, goblin burrow, hell rift, rune gateway, campfire | Forest run, camp, enemy portals everywhere |
+| **Forest kit** (generated, `Content/Environment/ForestKit`) | Pines Ã—3, dead tree, rocks, standing stone, log, stump, fern, grass Ã—2, mushrooms (plain and glowing), bramble, goblin burrow, hell rift, rune gateway, campfire | Forest run, camp, enemy portals everywhere |
 | Rock_Collection_04 (Fab) | 7 realistic boulders | Forest cover, stepping stones, rocks among the trees |
 | Pack_Bonus (Fab) | Tiling ground materials | Grass_1 forest floor, Stone_3 flagstones at the campfire, Stone_2 cracked floor in the Imp arena |
 | Inferno_World_Free (Fab) | Hell props | Imp arena: braziers, columns, giant ribs, spikes, bones, gold, knight statues. Camp: merchant's chest, crates, vase, gold, road braziers |
 | Stylish_Fire_VFX (Fab) | Niagara fire | Campfire, braziers, burning hell rifts |
 | Realistic_Starter_VFX_Pack_Vol2 (Fab) | Cascade effects | Fireflies, embers, the smoke puff when an enemy arrives |
 
-The Fab packs are downloaded into `Content/` from your Fab library (Unreal: Window → Fab → My Library → Add to Project).
+The Fab packs are downloaded into `Content/` from your Fab library (Unreal: Window â†’ Fab â†’ My Library â†’ Add to Project).
 
 ## The forest kit
 
@@ -41,7 +41,7 @@ That (re)creates the materials (`Tools/Materials/create_forest_materials.py`), r
 ## Hit feedback and HUD
 
 Every landed hit (`AArenaFighter::PlayImpact`) gives:
-- **Sparks:** a spark burst at the contact point, `P_Sparks_F` for normal hits and blocks and the bigger `P_Sparks_G` for heavy ones.
+- **Sparks:** heavy hits only, a small `P_Sparks_F` puff at the contact point. Light hits and blocks rely on the flash and hit-stop.
 - **Flash:** a 0.07 s flash of light, warm for hits and cold blue for blocks.
 - **Hit-stop:** a brief freeze, 0.04 s for a light hit and 0.085 s for a heavy one.
 - **Camera shake:** when Hellgirl is hit, or lands a heavy blow.
