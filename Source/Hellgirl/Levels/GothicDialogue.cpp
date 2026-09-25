@@ -133,8 +133,25 @@ void AHellgirlPlayerController::PresentDialoguePage(FText Speaker,FText Line,UTe
     if (PauseWidget.IsValid()) GetWorld()->GetGameViewport()->RemoveViewportWidgetContent(PauseWidget.ToSharedRef());
     auto Widget=SNew(SGothicDialogue).Owner(this).Frame(FrameTexture).Portrait(Portrait).PortraitLeft(bPortraitLeft).Narration(bNarration).Speaker(Speaker).Line(Line);
     PauseWidget=Widget; GetWorld()->GetGameViewport()->AddViewportWidgetContent(Widget,110);
-    bShowMouseCursor=true; FInputModeUIOnly Mode; Mode.SetWidgetToFocus(Widget->ContinueButton);
+    DialoguePageShownAt=FPlatformTime::Seconds();
+    // Game-and-UI, so the controller's fallback keys still work if the box loses focus.
+    bShowMouseCursor=true; FInputModeGameAndUI Mode; Mode.SetWidgetToFocus(Widget->ContinueButton); Mode.SetHideCursorDuringCapture(false);
     Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock); SetInputMode(Mode);
+    // A new widget can only take focus once it has been laid out; focus it again shortly after (as the menus do).
+    TWeakObjectPtr<AHellgirlPlayerController> Weak(this);
+    TWeakPtr<SGothicDialogue> WeakWidget(Widget);
+    for (const float Delay : {.05f,.3f})
+        FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([Weak,WeakWidget](float)
+        {
+            const auto Box=WeakWidget.Pin();
+            if (Weak.IsValid() && Box.IsValid() && Weak->IsDialogueOpen() && Weak->PauseWidget==Box && Box->ContinueButton.IsValid())
+            {
+                FSlateApplication::Get().SetKeyboardFocus(Box->ContinueButton,EFocusCause::SetDirectly);
+                FSlateApplication::Get().SetAllUserFocus(Box->ContinueButton,EFocusCause::SetDirectly);
+                Weak->bShowMouseCursor=true;
+            }
+            return false;
+        }),Delay);
 }
 void AHellgirlPlayerController::CloseDialogue() { if (bDialogueOpen && ConversationId.IsNone()) ResumeGame(); }
 void AHellgirlPlayerController::ContinueDialogue()

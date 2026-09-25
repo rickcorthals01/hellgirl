@@ -50,6 +50,8 @@ private:
     void PresentDialoguePage(FText Speaker,FText Line,UTexture2D* Portrait,bool bPortraitLeft=false,bool bNarration=false);
     UTexture2D* FindPortrait(const FString& Speaker,const FString& Mood) const;
     TSharedPtr<SWidget> FadeWidget;
+    void ContinueDialogueFromGame();
+    double DialoguePageShownAt = 0.0;
     bool bMenuOpen = false;
     bool bDialogueOpen = false;
     int32 DialogueNextHubMenu = -1;

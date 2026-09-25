@@ -149,6 +149,18 @@ void AHellgirlPlayerController::SetupInputComponent()
     Super::SetupInputComponent();
     InputComponent->BindAction("Interact",IE_Pressed,this,&AHellgirlPlayerController::InteractWithHub).bConsumeInput=false;
     InputComponent->BindAction("PauseMenu",IE_Pressed,this,&AHellgirlPlayerController::TogglePauseMenu).bExecuteWhenPaused=true;
+    // Fallback for dialogue: if something took focus away from the dialogue box (the editor viewport, a level
+    // change), these keys still reach the controller. They never consume input, so play is unaffected.
+    for (const FKey& Key : {EKeys::SpaceBar,EKeys::Enter,EKeys::E,EKeys::Gamepad_FaceButton_Bottom,EKeys::LeftMouseButton})
+    {
+        FInputKeyBinding& Binding=InputComponent->BindKey(Key,IE_Pressed,this,&AHellgirlPlayerController::ContinueDialogueFromGame);
+        Binding.bExecuteWhenPaused=true; Binding.bConsumeInput=false;
+    }
+}
+void AHellgirlPlayerController::ContinueDialogueFromGame()
+{
+    // Ignore the press that opened the box (e.g. E at the merchant).
+    if (bDialogueOpen && FPlatformTime::Seconds()-DialoguePageShownAt>.25) ContinueDialogue();
 }
 void AHellgirlPlayerController::TogglePauseMenu()
 {
