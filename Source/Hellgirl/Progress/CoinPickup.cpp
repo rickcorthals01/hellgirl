@@ -44,7 +44,7 @@ ACoinPickup::ACoinPickup()
 
 void ACoinPickup::SetAmount(int32 Value)
 {
-    Amount = FMath::Clamp(Value, 1, 6);
+    Amount = FMath::Clamp(Value, 1, 12); // up to 6, more with the Greed upgrade
     Label->SetText(FText::FromString(FString::Printf(TEXT("+%d"), Amount)));
     if (UMaterialInstanceDynamic* Material = Coin->CreateAndSetMaterialInstanceDynamic(0))
     {

@@ -76,6 +76,15 @@ public:
     // Soul portal menu choices: continue to the next wave, stock carried souls, or (endless / exit) leave for camp.
     enum class EPortalChoice : uint8 { Continue, Stock, Leave, Stay };
     void ChoosePortal(EPortalChoice Choice);
+    // Soul portal upgrades (Rules/PortalUpgrades.h): three offers per portal, each can be bought once with carried souls;
+    // they last for the rest of the level.
+    const TArray<int32>& GetPortalOffers() const { return PortalOffers; }
+    bool IsOfferSold(int32 Offer) const { return OfferSold.IsValidIndex(Offer) && OfferSold[Offer]; }
+    int32 GetUpgradeLevel(int32 Upgrade) const { return UpgradeLevels.IsValidIndex(Upgrade) ? UpgradeLevels[Upgrade] : 0; }
+    int32 GetUpgradeCost(int32 Upgrade) const;
+    bool BuyUpgrade(int32 Offer);
+    const TArray<int32>& GetUpgradeLevels() const { return UpgradeLevels; }
+    void RestoreUpgrades(const TArray<int32>& Levels);
     bool IsSoulPortalOpen() const;
     bool IsPortalIntroPending() const;
     FVector GetSoulPortalLocation() const;
@@ -139,6 +148,10 @@ private:
     bool bKeepCarriedSouls = false; // set when moving on to the next forest room
     int32 ScriptStep = -1;
     int32 EndlessWaveStart = 0; // first spawn site of the current endless wave
+    TArray<int32> UpgradeLevels, PortalOffers;
+    TArray<bool> OfferSold;
+    void RollPortalOffers();
+    void ApplyUpgrades();
     int32 LastLivingEnemies = -1;
     float StragglerClock = 0.f;
     void TickPortalMenus(class AArenaFighter* Hero);

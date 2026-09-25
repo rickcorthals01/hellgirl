@@ -39,6 +39,7 @@ public:
     // Souls picked up in the level but not yet banked, and the story unlocks (Progress/CampaignProgress.h).
     UPROPERTY(SaveGame) int64 Carried=0;
     UPROPERTY(SaveGame) TArray<FString> Flags;
+    UPROPERTY(SaveGame) TArray<int32> Upgrades; // soul portal upgrade levels bought in this level
 };
 
 UCLASS()

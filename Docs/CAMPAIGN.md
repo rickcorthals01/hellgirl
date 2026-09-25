@@ -73,7 +73,7 @@ Built from the scripts in `Developer idea folder lol\Dialog and Story` (01 to 03
 - A forest run carries them from room to room and banks them when the run is won. Camp pickups go straight to the bank.
 
 **Portals:**
-- **Soul portal:** Continue / Stock souls / Upgrades (coming soon). In endless mode there is also a Leave option.
+- **Soul portal:** Continue / Stock souls / three upgrade offers (see below). In endless mode there is also a Leave option.
 - **Exit portal:** "Leave the map and go back to camp?" YES / NO.
 - Walking in opens the menu. After closing it, E / Y reopens it.
 - Both use the kit's rune gateway (`AWavePortal`): blue for the soul portal, purple for the exit.
@@ -97,3 +97,24 @@ Built from the scripts in `Developer idea folder lol\Dialog and Story` (01 to 03
 - **Stage 2 army:** its packs now start at X −2400 and 2300. At ±2850 they spawned past the gates, so the wave, and the exit portal after it, never finished.
 - **Stragglers:** once a wave is down to its last four goblins and 12 s pass without a kill, goblins more than 900 units from Hellgirl are brought back near her. Goblins that fell through the floor are brought back too. This covers goblins knocked onto a wall top or stuck on a ledge.
 - **`NaturalWaves` check:** runs Stage 2, Stage 3 and endless for real. Hellgirl stands still and only goblins that reach her die. It fails on a stall, or if a goblin appears beyond its wave's gate.
+
+**Soul portal upgrades (2026-09-25):**
+- Each blue portal rolls **3 random offers** from a pool of 8. They are paid with **carried** souls, so every portal is a choice: spend them on power now, stock them to keep them, or risk carrying them.
+- Each offer can be bought once per portal. There is no limit on how many you buy, so saving up lets you buy several at once.
+- **Prices:** set to about one portal's worth of souls. A Stage 2 portal drops about 40 souls and later portals 60–120. Each level you already own makes the next one 40% dearer.
+
+| Upgrade | Effect per level | Base price |
+|---|---|---|
+| Fury | +15% damage | 50 |
+| Iron Skin | −15% damage taken (at most −55%) | 45 |
+| Vitality | +25 max health, healed | 35 |
+| Swiftness | +10% move speed (at most +40%) | 30 |
+| Soul Hunger | +25% energy from hits | 35 |
+| Second Wind | heal half your health (spent at once) | 25 |
+| Bloodthirst | heal 3 per kill | 45 |
+| Greed | +1 soul from every drop | 40 |
+
+- Upgrades last for the rest of the level or endless run. A new level starts without them.
+- They are shown above the health bar and kept in save slots.
+- **Code:** the rules and stats are in `Source/Hellgirl/Rules/PortalUpgrades.h`, buying is in `Levels/SoulUpgrades.cpp`, and the stats apply through `AArenaFighter::Upgrades`.
+- The `Endless` check buys offers at each portal: it verifies the price, that each offer sells once, the stats and fresh offers.

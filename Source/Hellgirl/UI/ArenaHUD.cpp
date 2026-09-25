@@ -7,6 +7,7 @@
 #include "UI/HellgirlPlayerController.h"
 #include "Progress/HellgirlWallet.h"
 #include "Progress/CampaignProgress.h"
+#include "Rules/PortalUpgrades.h"
 #include "Rules/StageOneLayout.h"
 #include "Enemies/EnemySpawnPoint.h"
 #include "HAL/PlatformTime.h"
@@ -178,6 +179,15 @@ void AArenaHUD::DrawHUD()
         Say(FString::Printf(TEXT("ULTIMATE  %.1f"), Player->GetUltimateTime()), FLinearColor(.85f, .6f, 1.f), VX, VY - 28.f, 1.15f);
     else if (Player->HasUltimate() && EnergyAmount >= EnergyCapacity)
         Say(TEXT("ULTIMATE READY  ·  Q / RIGHT STICK"), FLinearColor(.85f, .6f, 1.f), VX, VY - 28.f, 1.05f, .75f + .25f * FMath::Sin(Now * 5.0));
+    // Soul portal upgrades owned this level.
+    {
+        FString Owned;
+        static const TCHAR* Numerals[] = {TEXT(""), TEXT(""), TEXT(" II"), TEXT(" III"), TEXT(" IV"), TEXT(" V"), TEXT(" VI")};
+        const TArray<int32>& Levels = GM->GetUpgradeLevels();
+        for (int32 I = 0; I < Levels.Num(); ++I)
+            if (Levels[I] > 0) Owned += (Owned.IsEmpty() ? TEXT("") : TEXT("  ·  ")) + FString(HellgirlUpgrades::Info(I).Name) + Numerals[FMath::Min(Levels[I], 6)];
+        if (!Owned.IsEmpty()) Say(Owned, SoulBlue, VX, VY - 52.f, .85f, .9f);
+    }
     if (Player->GetWeaponMenuTime() > 0.f) Centered(TEXT("UP / 1  FISTS          RIGHT / 2  SWORD"), Ember, H * .3f, 1.1f);
 
     // ---- Right: the combo multiplier, with a bar filling toward the next tier. ----

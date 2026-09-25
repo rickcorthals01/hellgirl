@@ -4,6 +4,7 @@
 #include "Rules/FistCombatRules.h"
 #include "Rules/ComboRules.h"
 #include "Progress/CampaignProgress.h"
+#include "Rules/PortalUpgrades.h"
 #include "Enemies/EnemyTypes.h"
 #include "Enemies/EnemyMovesetState.h"
 #include "ArenaFighter.generated.h"
@@ -71,6 +72,8 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat") float MediumAirDashRange = 600.f;
     void ReceiveHit(float Damage, const FVector& Direction, float Knockback = 160.f, float Knockdown = 0.f, TSharedPtr<FCombatImpactBudget> ImpactBudget = nullptr);
     const HellgirlCombo::FMeter& GetComboMeter() const { return ComboMeter; }
+    // Soul portal upgrades bought this level (Rules/PortalUpgrades.h); enemies keep the neutral defaults.
+    HellgirlUpgrades::FStats Upgrades;
     // Stage 1 opening: Hellgirl lies on the floor (no control) until released, then plays the get-up.
     void BeginWakeUp() { WakeUpTime = 0.f; bWakeHeld = true; }
     void ReleaseWakeUp() { bWakeHeld = false; }

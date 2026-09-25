@@ -689,7 +689,7 @@ void AArenaFighter::ResolveAttack()
     const float StoredRiposte = bEnemy ? 0.f : Riposte;
     const bool Critical = !bEnemy && CurrentAttack.Type == FistCombat::Move::Headbutt && FMath::FRand() < .25f;
     const float Damage = CurrentAttack.Damage * HellgirlDefense::BonusMultiplier(StoredRiposte)
-        * ((!bEnemy && UltimateClock > 0.f && ActiveUltimate == 0) ? 1.5f : 1.f) * (Critical ? 1.5f : 1.f) * (bEnemy ? 1.f : ComboMultiplier());
+        * ((!bEnemy && UltimateClock > 0.f && ActiveUltimate == 0) ? 1.5f : 1.f) * (Critical ? 1.5f : 1.f) * (bEnemy ? 1.f : ComboMultiplier() * Upgrades.Damage);
     if (Critical) MoveLabel += TEXT(" / CRITICAL");
     Fighters.Sort([this](const AActor& A, const AActor& B) { return FVector::DistSquared(A.GetActorLocation(), GetActorLocation()) < FVector::DistSquared(B.GetActorLocation(), GetActorLocation()); });
     const bool PlayerArea = !bEnemy && FistCombat::IsPlayerAreaMove(CurrentAttack.Type);
@@ -727,7 +727,7 @@ void AArenaFighter::ResolveAttack()
     {
         if (bLandedHit && !bAttackEnergyGranted && UltimateClock <= 0.f)
         {
-            Energy = FMath::Clamp(Energy + HellgirlEnergy::Gain(CurrentAttack.Type), 0.f, MaxEnergy);
+            Energy = FMath::Clamp(Energy + HellgirlEnergy::Gain(CurrentAttack.Type) * Upgrades.Energy, 0.f, MaxEnergy);
             bAttackEnergyGranted = true;
         }
         Riposte = HellgirlDefense::AfterAttack(Riposte, bLandedHit);
@@ -773,7 +773,7 @@ bool AArenaFighter::IsBossAttackArmored() const
 void AArenaFighter::ReceiveHit(float Damage, const FVector& Direction, float Knockback, float Knockdown, TSharedPtr<FCombatImpactBudget> ImpactBudget)
 {
     if (!IsAlive() || DodgeClock > 0.f || HitClock > 0.f) return;
-    Damage = FilterEnemyDamage(Damage);
+    Damage = FilterEnemyDamage(Damage) * Upgrades.DamageTaken;
     if (Damage <= 0.f) return;
     const bool Armored = IsBossAttackArmored();
     // Direction points away from the attacker, so negate it to test the guarded front.
@@ -995,7 +995,7 @@ void AArenaFighter::Tick(float Dt)
     UpdatePose(Dt);
     const bool Guarding = IsBlocking();
     const bool Sprinting = !bEnemy && bSprintHeld && !bWalkHeld && !Guarding && AttackClock <= 0.f && !bHeavyHeld && GetCharacterMovement()->IsMovingOnGround();
-    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * GetSpeedMultiplier() * ((!bEnemy && bWalkHeld) ? .4f : (Sprinting ? 1.5f : 1.f)) * ((AttackClock > 0.f || bHeavyHeld || Guarding) ? .3f : 1.f);
+    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * GetSpeedMultiplier() * Upgrades.Speed * ((!bEnemy && bWalkHeld) ? .4f : (Sprinting ? 1.5f : 1.f)) * ((AttackClock > 0.f || bHeavyHeld || Guarding) ? .3f : 1.f);
     UpdatePlayerMomentum(Dt);
     GetCharacterMovement()->bOrientRotationToMovement = AttackClock <= 0.f && DodgeClock <= 0.f && !bHeavyHeld && !Guarding;
     if (Guarding && Controller)

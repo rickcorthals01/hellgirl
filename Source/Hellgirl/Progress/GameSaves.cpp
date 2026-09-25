@@ -56,6 +56,7 @@ FString UHellgirlWallet::SaveSlot(int32 Slot)
     Save->Camera=PC?PC->GetControlRotation():FRotator::ZeroRotator;
     Save->Health=Hero->Health; Save->Energy=Hero->Energy; Save->Stamina=Hero->Stamina;
     for (auto Site:GM->GetSpawnSites()) Save->Cleared.Add(Site->bCleared);
+    Save->Upgrades=GM->GetUpgradeLevels();
     Save->Story=GM->PlayedStory.Array(); Save->Date=FDateTime::Now().ToString(TEXT("%Y-%m-%d %H:%M"));
     for (TActorIterator<ACoinPickup> It(GetWorld());It;++It) if (!It->bCollected)
     { Save->PickupLocations.Add(It->GetActorLocation()); Save->PickupAmounts.Add(It->bHeart?-1:It->Amount); }
@@ -99,6 +100,7 @@ void UHellgirlWallet::RestorePending()
     GConfig->Flush(false,GGameUserSettingsIni);
     }
     Hero->SetOutfit(Save->Outfit==4 && !bGoblinQueenOwned?0:Save->Outfit);
+    GM->RestoreUpgrades(Save->Upgrades); // before health, which Vitality may raise past 100
     Hero->Health=FMath::Clamp(Save->Health,1.f,Hero->MaxHealth); Hero->Energy=FMath::Clamp(Save->Energy,0.f,Hero->MaxEnergy);
     Hero->Stamina=FMath::Clamp(Save->Stamina,0.f,100.f);
     const bool bOldImpLayout=Save->Level==4 && !Save->bHub && Save->ImpArenaLayoutVersion==0;

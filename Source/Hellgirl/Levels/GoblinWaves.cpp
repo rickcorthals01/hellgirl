@@ -5,6 +5,7 @@
 #include "Enemies/EnemySpawnPoint.h"
 #include "Progress/HellgirlWallet.h"
 #include "Progress/CampaignProgress.h"
+#include "Rules/PortalUpgrades.h"
 #include "UI/HellgirlPlayerController.h"
 #include "Engine/StaticMeshActor.h"
 #include "Kismet/GameplayStatics.h"
@@ -242,6 +243,7 @@ void AArenaGameMode::TickGoblinWaves(float Dt)
         {
             SoulPortal->Open(S.Spot, Hero->GetActorLocation(), false);
             OpenPortalId = S.Id; OpenPortalIntro = S.Intro; bPortalMenuDeclined = false;
+            RollPortalOffers();
         }
         if (!S.Intro.IsNone()) QueueStory(S.Intro);
         Objective = TEXT("A soul portal has opened / Step inside");
@@ -306,6 +308,7 @@ void AArenaGameMode::TickEndless(float Dt)
         {
             SoulPortal->Open(FVector(0, -650, 0), Hero->GetActorLocation(), false);
             OpenPortalId = PortalId; bPortalMenuDeclined = false;
+            RollPortalOffers();
         }
         Objective = FString::Printf(TEXT("WAVE %d CLEARED  /  Step into the soul portal"), EndlessWave);
         TickPortalMenus(Hero);
@@ -355,7 +358,29 @@ bool AArenaGameMode::RunEndlessCheck()
     for (int32 Guard = 0; Guard < 200 && EndlessWave < 10; ++Guard)
     {
         TickEndless(10.f);
-        if (IsSoulPortalOpen()) { ++Portals; Passed &= EndlessWave % 3 == 0; ChoosePortal(EPortalChoice::Continue); continue; }
+        if (IsSoulPortalOpen())
+        {
+            ++Portals; Passed &= EndlessWave % 3 == 0;
+            // Upgrades: three different offers, a fresh choice each portal, one purchase paid from carried souls.
+            TSet<int32> Distinct(PortalOffers);
+            Passed &= PortalOffers.Num() == HellgirlUpgrades::OffersPerPortal && Distinct.Num() == PortalOffers.Num() && !IsOfferSold(0) && !IsOfferSold(1) && !IsOfferSold(2);
+            Wallet->Carried = 5;
+            Passed &= !BuyUpgrade(0) && Wallet->Carried == 5;
+            Wallet->Carried = 500;
+            const int32 Upgrade = PortalOffers[0], Before = GetUpgradeLevel(Upgrade), Price = GetUpgradeCost(Upgrade);
+            // Any offer can be bought (each once): saving up buys several at one portal.
+            Passed &= BuyUpgrade(0) && Wallet->Carried == 500 - Price && !BuyUpgrade(0) && Wallet->Carried == 500 - Price;
+            const int32 SecondPrice = GetUpgradeCost(PortalOffers[1]);
+            Passed &= BuyUpgrade(1) && Wallet->Carried == 500 - Price - SecondPrice && IsOfferSold(0) && IsOfferSold(1) && !IsOfferSold(2);
+            Passed &= GetUpgradeLevel(Upgrade) == Before + (HellgirlUpgrades::IsInstant(Upgrade) ? 0 : 1);
+            const HellgirlUpgrades::FStats Expected = HellgirlUpgrades::Stats(UpgradeLevels);
+            Passed &= Hero->Upgrades.Damage == Expected.Damage && Hero->Upgrades.DamageTaken == Expected.DamageTaken && Hero->Upgrades.Speed == Expected.Speed
+                && Hero->Upgrades.BonusSouls == Expected.BonusSouls;
+            if (!Passed) UE_LOG(LogTemp, Error, TEXT("Upgrade purchase failed at portal %d (upgrade %d, price %d)"), Portals, Upgrade, Price);
+            Wallet->Carried = 0;
+            ChoosePortal(EPortalChoice::Continue);
+            continue;
+        }
         int32 Started = 0;
         for (int32 I = EndlessWaveStart; I < SpawnSites.Num(); ++I) if (!SpawnSites[I]->bCleared) { ++Started; SpawnSites[I]->bCleared = true; }
         if (Started == 2) { ++Armies; Passed &= EndlessWave % 5 == 0; }
@@ -367,7 +392,9 @@ bool AArenaGameMode::RunEndlessCheck()
     Hero->ApplyPhysicsDamage(1000000.f, FVector::ZeroVector);
     Tick(0.f);
     Passed &= !Hero->IsAlive() && Wallet->Carried == 0 && Wallet->LastLost == 7;
-    if (Passed) { UE_LOG(LogTemp, Display, TEXT("ENDLESS CHECK PASSED: ten waves, armies on 5 and 10, soul portals after 3/6/9, tougher goblins, best wave, carried souls lost on death")); }
+    // Prices climb 40% per level owned.
+    Passed &= HellgirlUpgrades::Cost(0, 0) == 50 && HellgirlUpgrades::Cost(0, 1) == 70 && HellgirlUpgrades::Cost(0, 2) == 90;
+    if (Passed) { UE_LOG(LogTemp, Display, TEXT("ENDLESS CHECK PASSED: ten waves, armies on 5 and 10, soul portals after 3/6/9 with three fresh upgrade offers, each buyable once, tougher goblins, best wave, carried souls lost on death")); }
     else { UE_LOG(LogTemp, Error, TEXT("ENDLESS CHECK FAILED: wave %d, %d portals, %d armies, best %d, carried %lld"), EndlessWave, Portals, Armies, HellgirlProgress::EndlessBest(), Wallet->Carried); }
     FPlatformMisc::RequestExitWithStatus(false, Passed ? 0 : 1);
     return true;
