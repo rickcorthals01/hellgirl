@@ -150,8 +150,8 @@ Replaces the carried-souls rules above.
 - **Wave 50 (story to come):** the first time a run reaches wave 50 after Stage 3 has been won, conversation `[E_Wave50]` in `Content/Dialogue/LevelOne.ini` plays and sets the `EndlessWave50` flag. Until that conversation is written, nothing happens.
 
 **Goblin Queen outfit and achievements (2026-09-25):**
-- **Outfit:** now costs **20000 Soul Coins** and can only be bought after clearing wave 50 of endless Goblins. The shop shows the requirement until then.
+- **Outfit:** now costs **20000 Soul Coins** and can only be bought after clearing wave 50 of endless Goblins. The shop shows the requirement until then. The goblin has no greeting any more: after his first talk, he opens the shop straight away.
 - **Achievements (first two):** `Progress/Achievements.h` records **Beaten wave 50 · Goblins** (on clearing endless wave 50) and **Bought the Goblin Queen outfit**.
   - They are profile-wide: stored in `[HellgirlAchievements]` with the unlock date, not per save slot, and a new game doesn't clear them.
-  - Earlier progress counts: an outfit already owned, or a best wave of 50+, unlocks them quietly at startup.
+  - Nothing is backdated: an achievement only unlocks when it happens.
   - A short "ACHIEVEMENT" notice shows when one unlocks. The full achievement system comes later.

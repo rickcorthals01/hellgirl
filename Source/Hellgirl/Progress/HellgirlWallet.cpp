@@ -11,14 +11,11 @@ namespace { const FString WalletSlot = TEXT("HellgirlWallet_v1"); }
 void UHellgirlWallet::Init()
 {
     Super::Init();
-    if (HellgirlProgress::EndlessBest() >= 50) HellgirlAchievements::Unlock(HellgirlAchievements::EndlessGoblins50, false);
     if (UGameplayStatics::DoesSaveGameExist(WalletSlot, 0))
     {
         const UHellgirlWalletSave* Save = Cast<UHellgirlWalletSave>(UGameplayStatics::LoadGameFromSlot(WalletSlot, 0));
         bLoadFailed = !Save || Save->Coins < 0;
         if (!bLoadFailed) { Coins = Save->Coins; bGoblinQueenOwned = Save->bGoblinQueenOwned; }
-        // Progress from before achievements existed counts (quietly).
-        if (!bLoadFailed && bGoblinQueenOwned) HellgirlAchievements::Unlock(HellgirlAchievements::GoblinQueenOutfit, false);
     }
 }
 

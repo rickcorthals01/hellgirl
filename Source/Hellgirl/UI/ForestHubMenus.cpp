@@ -296,11 +296,7 @@ void AHellgirlPlayerController::InteractWithHub()
         HellgirlProgress::SetFlag(TEXT("ShopUnlocked"));
         DialogueNextHubMenu=2;
     }
-    else if (Kind==2)
-    {
-        ShowDialogue(FText::FromString(TEXT("Goblin Merchant")),FText::FromString(TEXT("Take a look. The Goblin Queen outfit is yours for 20000 Soul Coins, once you have beaten fifty waves of goblins.")));
-        if (bDialogueOpen) DialogueNextHubMenu=2;
-    }
+    // After the first talk, the goblin just opens his shop (as the campfire and road open theirs).
     else if (Kind>=0) OpenHubMenu(Kind);
 }
 void AHellgirlPlayerController::OpenHubMenu(int32 Kind)
