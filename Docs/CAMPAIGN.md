@@ -1,16 +1,19 @@
 # Campaign — current implementation
 
-| Level | Enemies | Boss | State |
-|---|---|---|---|
-| 1 | Goblins | Goblin Queen (female goblin model) | Playable castle placeholder |
-| 2 | Ground and flying imps | Imp Commander | Playable castle placeholder |
-| 3 | Succubi | Succubus Queen | Planned |
-| 4 | Ghosts | Ghost King | Planned |
-| 5 | Rats | Rat Queen | Planned |
-| 6 | Frogs | Frog King | Planned |
-| 7 | Apostles | Lucifer | Planned |
-| Special finale | Lucifer | Lucifer, Devil Form | Planned |
+Worlds, from `Developer idea folder lol\Dialog and Story\Levels , Enemies, Bosses.txt` (updated 2026-09-25). The level select shows the first five for overview and dev testing.
 
+| World | Enemies | Boss | State |
+|---|---|---|---|
+| I · Goblin Ruins | Goblins | Goblin Queen | Playable: three stages and endless goblins |
+| II · The Swamp | Rats and Frogs | Rat Queen and Frog King (two boss fights) | Coming later |
+| III · Succubus Court | Succubi | Succubus Queen | Map preview only |
+| IV · The Lower Circles | Ghosts | Ghost King | Coming later |
+| V · Imp Torture Arena | Imps | Imp Commander | Playable (campaign level 4) |
+| VI | (another enemy type) | | Planned |
+| VII | Apostles | Lucifer | Planned |
+| Final special stage | Lucifer | Lucifer, Devil Form | Planned |
+
+The older notes below describe the castle and Imp levels as first built.
 Level 1 uses one opening wave, two further waves, then the boss to match the new story. Level 2 keeps two waves, three waves, then its boss. Both use the castle's three gated sections. Level 1 has only ground goblins; Level 2 mixes ground and flying imps. Defeating each level unlocks the next. Completed levels return to the forest camp. The forest road opens unlocked level selection. Level 3 remains unavailable; the old lava/astral maps are excluded from campaign progression.
 
 The previous lava (Gulps/slurpers) and astral (succubi) layouts are preserved in source and accessible for development using Entry?StageMap=2 and Entry?StageMap=3. Campaign levels use Entry?StageMap=1?CampaignLevel=1 or 2. Layout identity and campaign level are separate.

@@ -24,6 +24,8 @@
 #include "Progress/CampaignProgress.h"
 #include "Progress/Achievements.h"
 
+// The level select at the camp's forest road: the first five worlds (from "Levels, Enemies, Bosses.txt"), shown for
+// overview and dev testing even where nothing is playable yet. A world opens its list of stages.
 class SLevelSelectMenu : public SCompoundWidget
 {
 public:
@@ -34,7 +36,7 @@ public:
     TSharedPtr<SButton> OpenFirstWorldForPreview()
     {
         SelectedWorld=1; bStageOpen=true;
-        return GoblinFirstButton;
+        return FirstStageButtons[1];
     }
 
     void Construct(const FArguments& Args)
@@ -44,27 +46,48 @@ public:
         Unlocked=GM?GM->GetUnlockedLevel():1;
         Frame.SetResourceObject(Args._Frame);
         Frame.ImageSize=FVector2D(400,640); Frame.DrawAs=ESlateBrushDrawType::Image;
-        Worlds=SNew(SHorizontalBox);
-        GoblinStages=SNew(SVerticalBox);
-        ImpStages=SNew(SVerticalBox);
-        CourtStages=SNew(SVerticalBox);
-        AddWorld(1,TEXT("WORLD I  /  GOBLIN RUINS"),TEXT("Three stages · Goblin Queen"),true);
-        AddWorld(2,TEXT("WORLD II  /  IMP TORTURE ARENA"),TEXT("Imp waves · Imp Commander"),Unlocked>=4);
-        if (Unlocked>=4)
-            AddWorld(3,TEXT("WORLD III  /  SUCCUBUS COURT"),TEXT("Map preview · no enemies yet"),true);
-        AddStage(GoblinStages,1,TEXT("STAGE I  /  FIRST RAID"),TEXT("Survive the first Goblin waves"),Unlocked>=1);
-        if (Unlocked>=1) AddStage(GoblinStages,2,TEXT("STAGE II  /  THE GOBLIN ARMY"),TEXT("Seven waves · soul portals"),Unlocked>=2);
-        if (Unlocked>=2) AddStage(GoblinStages,3,TEXT("STAGE III  /  THE QUEEN"),TEXT("Fourteen waves across the ruins, then the Goblin Queen"),Unlocked>=3);
+        WorldRows=SNew(SVerticalBox);
+        for (int32 Row=0;Row<2;++Row)
+        {
+            TSharedPtr<SHorizontalBox> Line=SNew(SHorizontalBox);
+            WorldLines.Add(Line);
+            WorldRows->AddSlot().AutoHeight().HAlign(HAlign_Center).Padding(0,6)[Line.ToSharedRef()];
+        }
+        StagePanels.SetNum(WorldCount+1); WorldButtons.SetNum(WorldCount+1); FirstStageButtons.SetNum(WorldCount+1);
+        for (int32 World=1;World<=WorldCount;++World) StagePanels[World]=SNew(SVerticalBox);
+
+        AddWorld(1,TEXT("WORLD I"),TEXT("GOBLIN RUINS"),TEXT("Goblins · Goblin Queen"));
+        AddWorld(2,TEXT("WORLD II"),TEXT("THE SWAMP"),TEXT("Rats & Frogs · Rat Queen & Frog King"));
+        AddWorld(3,TEXT("WORLD III"),TEXT("SUCCUBUS COURT"),TEXT("Succubi · Succubus Queen"));
+        AddWorld(4,TEXT("WORLD IV"),TEXT("THE LOWER CIRCLES"),TEXT("Ghosts · Ghost King"));
+        AddWorld(5,TEXT("WORLD V"),TEXT("IMP TORTURE ARENA"),TEXT("Imps · Imp Commander"));
+
+        // World I: the Goblin campaign and its endless mode.
+        AddStage(1,1,TEXT("STAGE I  /  FIRST RAID"),TEXT("Survive the first Goblin waves"),Unlocked>=1);
+        if (Unlocked>=1) AddStage(1,2,TEXT("STAGE II  /  THE GOBLIN ARMY"),TEXT("Seven waves · soul portals"),Unlocked>=2);
+        if (Unlocked>=2) AddStage(1,3,TEXT("STAGE III  /  THE QUEEN"),TEXT("Fourteen waves across the ruins, then the Goblin Queen"),Unlocked>=3);
         // Unlocked by beating Stage 2 (02.5).
-        if (HellgirlProgress::Flag(TEXT("Stage2Won"))) AddStage(GoblinStages,Endless,TEXT("ENDLESS  /  GOBLIN WAVES"),
+        if (HellgirlProgress::Flag(TEXT("Stage2Won"))) AddStage(1,Endless,TEXT("ENDLESS  /  GOBLIN WAVES"),
             *FString::Printf(TEXT("Waves that never stop · best wave %d"),HellgirlProgress::EndlessBest()),true);
         // The forest run (random rooms, Levels/ForestRun.cpp) is out of the game for now; its code stays for later:
-        // AddStage(GoblinStages,ForestRun,TEXT("FOREST RUN  /  RANDOM ROOMS"),TEXT("Three random clearings, then the Queen · dying ends the run"),true);
-        AddStage(ImpStages,4,TEXT("STAGE I  /  TORTURE ARENA"),TEXT("Five Imp waves · Imp Commander"),Unlocked>=4);
-        AddStage(ImpStages,5,TEXT("STAGE II  /  COMING LATER"),TEXT("Next stage preview"),false);
-        AddStage(CourtStages,CourtPreview,TEXT("THE COURT  /  MAP PREVIEW"),TEXT("Walk the court · no enemies yet"),true);
+        // AddStage(1,ForestRun,TEXT("FOREST RUN  /  RANDOM ROOMS"),TEXT("Three random clearings, then the Queen · dying ends the run"),true);
+        // World II: the swamp (to be designed).
+        AddStage(2,ComingLater,TEXT("THE SWAMP  /  COMING LATER"),TEXT("Rats and frogs · the Rat Queen and the Frog King"),false);
+        // World III: the court can be walked; its fight comes later.
+        AddStage(3,CourtPreview,TEXT("THE COURT  /  MAP PREVIEW"),TEXT("Walk the court · no enemies yet"),true);
+        AddStage(3,ComingLater,TEXT("THE SUCCUBUS QUEEN  /  COMING LATER"),TEXT("Succubi · the Succubus Queen"),false);
+        // World IV: the lower circles of hell (to be designed).
+        AddStage(4,ComingLater,TEXT("THE LOWER CIRCLES  /  COMING LATER"),TEXT("Ghosts · the Ghost King"),false);
+        // World V: the Imp arena (campaign level 4).
+        AddStage(5,4,TEXT("STAGE I  /  TORTURE ARENA"),TEXT("Five Imp waves · Imp Commander"),Unlocked>=4);
+        AddStage(5,ComingLater,TEXT("STAGE II  /  COMING LATER"),TEXT("Next stage preview"),false);
+        FirstButton=WorldButtons[1];
 
         const FLinearColor Ivory(.94f,.88f,.77f);
+        TSharedRef<SOverlay> Pages=SNew(SOverlay)
+            + SOverlay::Slot().HAlign(HAlign_Center)[SNew(SBox).Visibility_Lambda([this]() { return bStageOpen?EVisibility::Collapsed:EVisibility::Visible; })[WorldRows.ToSharedRef()]];
+        for (int32 World=1;World<=WorldCount;++World)
+            Pages->AddSlot().HAlign(HAlign_Center)[SNew(SBox).WidthOverride(560).Visibility_Lambda([this,World]() { return bStageOpen && SelectedWorld==World?EVisibility::Visible:EVisibility::Collapsed; })[StagePanels[World].ToSharedRef()]];
         ChildSlot[SNew(SOverlay)
             + SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
                 .BorderBackgroundColor(FLinearColor(.012f,.008f,.02f,.72f))]
@@ -78,16 +101,11 @@ public:
                       + SVerticalBox::Slot().AutoHeight().Padding(0,0,0,8)
                         [SNew(STextBlock).Text_Lambda([this]() { return FText::FromString(bStageOpen?TEXT("CHOOSE A STAGE"):TEXT("CHOOSE A WORLD")); })
                             .Font(FCoreStyle::GetDefaultFontStyle("Regular",29)).ColorAndOpacity(Ivory).Justification(ETextJustify::Center)]
-                      + SVerticalBox::Slot().AutoHeight().Padding(0,0,0,22)
+                      + SVerticalBox::Slot().AutoHeight().Padding(0,0,0,16)
                         [SNew(STextBlock).Text(FText::FromString(TEXT("—  †  —"))).Font(FCoreStyle::GetDefaultFontStyle("Regular",18))
                             .ColorAndOpacity(FLinearColor(.64f,.49f,.35f)).Justification(ETextJustify::Center)]
-                      + SVerticalBox::Slot().FillHeight(1)
-                        [SNew(SOverlay)
-                          + SOverlay::Slot().HAlign(HAlign_Center)[SNew(SBox).Visibility_Lambda([this]() { return bStageOpen?EVisibility::Collapsed:EVisibility::Visible; })[Worlds.ToSharedRef()]]
-                          + SOverlay::Slot().HAlign(HAlign_Center)[SNew(SBox).WidthOverride(520).Visibility_Lambda([this]() { return bStageOpen && SelectedWorld==1?EVisibility::Visible:EVisibility::Collapsed; })[GoblinStages.ToSharedRef()]]
-                          + SOverlay::Slot().HAlign(HAlign_Center)[SNew(SBox).WidthOverride(520).Visibility_Lambda([this]() { return bStageOpen && SelectedWorld==2?EVisibility::Visible:EVisibility::Collapsed; })[ImpStages.ToSharedRef()]]
-                          + SOverlay::Slot().HAlign(HAlign_Center)[SNew(SBox).WidthOverride(520).Visibility_Lambda([this]() { return bStageOpen && SelectedWorld==3?EVisibility::Visible:EVisibility::Collapsed; })[CourtStages.ToSharedRef()]]]
-                      + SVerticalBox::Slot().AutoHeight().Padding(0,18,0,6)
+                      + SVerticalBox::Slot().FillHeight(1)[Pages]
+                      + SVerticalBox::Slot().AutoHeight().Padding(0,14,0,6)
                         [SAssignNew(BackButton,SButton).HAlign(HAlign_Center).ContentPadding(FMargin(22,10))
                             .ButtonColorAndOpacity(FLinearColor(.12f,.065f,.085f,.9f))
                             .OnClicked_Lambda([this]() { GoBack(); return FReply::Handled(); })
@@ -125,48 +143,38 @@ private:
         if (bStageOpen)
         {
             bStageOpen=false;
-            FocusLater(SelectedWorld==2?ImpWorldButton:SelectedWorld==3?CourtWorldButton:FirstButton);
+            FocusLater(WorldButtons.IsValidIndex(SelectedWorld)?WorldButtons[SelectedWorld]:FirstButton);
         }
         else if (Owner.IsValid()) Owner->ResumeGame();
     }
-    void AddWorld(int32 World,const TCHAR* Title,const TCHAR* Detail,bool Available)
+    // A world card: "WORLD II", its name, and its enemies and bosses. Every card opens its stage list.
+    void AddWorld(int32 World,const TCHAR* Number,const TCHAR* Name,const TCHAR* Detail)
     {
-        const FLinearColor Ink=Available?FLinearColor(.94f,.88f,.77f):FLinearColor(.43f,.43f,.45f);
+        const FLinearColor Ink(.94f,.88f,.77f),Faint(.66f,.6f,.55f);
         auto Card=SNew(SVerticalBox)
-            + SVerticalBox::Slot().FillHeight(1).VAlign(VAlign_Center)[SNew(STextBlock).Text(FText::FromString(Title))
-                .Font(FCoreStyle::GetDefaultFontStyle("Regular",19)).ColorAndOpacity(Ink)
-                .AutoWrapText(true).Justification(ETextJustify::Center)]
-            + SVerticalBox::Slot().AutoHeight().Padding(0,12,0,0)[SNew(STextBlock)
-                .Text(FText::FromString(FString(Detail)+(Available?TEXT(""):TEXT("  /  LOCKED"))))
-                .Font(FCoreStyle::GetDefaultFontStyle("Regular",12)).ColorAndOpacity(Ink)
-                .AutoWrapText(true).Justification(ETextJustify::Center)];
-        if (Available)
-        {
-            TSharedPtr<SButton> Button;
-            Worlds->AddSlot().AutoWidth().Padding(6,0)[SNew(SBox).WidthOverride(225).HeightOverride(196)
-                [SAssignNew(Button,SButton).ContentPadding(FMargin(16,18))
-                .ButtonColorAndOpacity(FLinearColor(.16f,.08f,.11f,.95f))
-                .OnClicked_Lambda([this,World]() {
-                    if (World==2 && Unlocked<4) return FReply::Handled();
-                    SelectedWorld=World; bStageOpen=true;
-                    FocusLater(World==1?GoblinFirstButton:World==2?ImpFirstButton:CourtFirstButton);
-                    return FReply::Handled(); })[Card]]];
-            if (World==1) FirstButton=Button;
-            if (World==2) ImpWorldButton=Button;
-            if (World==3) CourtWorldButton=Button;
-        }
-        else Worlds->AddSlot().AutoWidth().Padding(6,0)[SNew(SBox).WidthOverride(225).HeightOverride(196)
-            [SNew(SBorder).Padding(FMargin(16,18))
-                .BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(.07f,.07f,.08f,.8f))[Card]]];
+            + SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Text(FText::FromString(Number))
+                .Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).ColorAndOpacity(FLinearColor(.64f,.49f,.35f)).Justification(ETextJustify::Center)]
+            + SVerticalBox::Slot().FillHeight(1).VAlign(VAlign_Center)[SNew(STextBlock).Text(FText::FromString(Name))
+                .Font(FCoreStyle::GetDefaultFontStyle("Regular",18)).ColorAndOpacity(Ink).AutoWrapText(true).Justification(ETextJustify::Center)]
+            + SVerticalBox::Slot().AutoHeight().Padding(0,8,0,0)[SNew(STextBlock).Text(FText::FromString(Detail))
+                .Font(FCoreStyle::GetDefaultFontStyle("Regular",11)).ColorAndOpacity(Faint).AutoWrapText(true).Justification(ETextJustify::Center)];
+        WorldLines[World<=3?0:1]->AddSlot().AutoWidth().Padding(6,0)[SNew(SBox).WidthOverride(225).HeightOverride(172)
+            [SAssignNew(WorldButtons[World],SButton).ContentPadding(FMargin(14,14))
+            .ButtonColorAndOpacity(FLinearColor(.16f,.08f,.11f,.95f))
+            .OnClicked_Lambda([this,World]() {
+                SelectedWorld=World; bStageOpen=true;
+                FocusLater(FirstStageButtons[World].IsValid()?FirstStageButtons[World]:BackButton);
+                return FReply::Handled(); })[Card]]];
     }
-    void AddStage(TSharedPtr<SVerticalBox> Panel,int32 Level,const TCHAR* Title,const TCHAR* Detail,bool Available)
+    void AddStage(int32 World,int32 Level,const TCHAR* Title,const TCHAR* Detail,bool Available)
     {
+        const TSharedPtr<SVerticalBox> Panel=StagePanels[World];
         const FLinearColor Ink=Available?FLinearColor(.94f,.88f,.77f):FLinearColor(.43f,.43f,.45f);
         auto Card=SNew(SVerticalBox)
             + SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Text(FText::FromString(Title))
                 .Font(FCoreStyle::GetDefaultFontStyle("Regular",20)).ColorAndOpacity(Ink)]
             + SVerticalBox::Slot().AutoHeight().Padding(0,5,0,0)[SNew(STextBlock)
-                .Text(FText::FromString(FString(Detail)+(Available?TEXT(""):Level==5?TEXT("  /  UNAVAILABLE"):TEXT("  /  LOCKED"))))
+                .Text(FText::FromString(FString(Detail)+(Available||Level==ComingLater?TEXT(""):TEXT("  /  LOCKED"))))
                 .Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).ColorAndOpacity(Ink)];
         if (Available)
         {
@@ -174,30 +182,14 @@ private:
             Panel->AddSlot().AutoHeight().Padding(0,4)[SAssignNew(Button,SButton).ContentPadding(FMargin(18,9))
                 .ButtonColorAndOpacity(FLinearColor(.16f,.08f,.11f,.95f))
                 .OnClicked_Lambda([this,Level]() {
-                    if (Owner.IsValid() && Level==CourtPreview)
-                    {
-                        auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get()));
-                        Owner->ResumeGame(); if (GM) GM->TravelToSuccubusCourt();
-                    }
-                    else if (Owner.IsValid() && Level==ForestRun)
-                    {
-                        auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get()));
-                        Owner->ResumeGame(); if (GM) GM->StartForestRun();
-                    }
-                    else if (Owner.IsValid() && Level==Endless)
-                    {
-                        auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get()));
-                        Owner->ResumeGame(); if (GM) GM->StartEndless();
-                    }
-                    else if (Owner.IsValid() && Level<=Unlocked && Level<=4)
-                    {
-                        auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get()));
-                        Owner->ResumeGame(); if (GM) GM->TravelToCampaign(Level);
-                    }
+                    auto* GM=Owner.IsValid()?Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get())):nullptr;
+                    if (!Owner.IsValid()) return FReply::Handled();
+                    if (Level==CourtPreview) { Owner->ResumeGame(); if (GM) GM->TravelToSuccubusCourt(); }
+                    else if (Level==ForestRun) { Owner->ResumeGame(); if (GM) GM->StartForestRun(); }
+                    else if (Level==Endless) { Owner->ResumeGame(); if (GM) GM->StartEndless(); }
+                    else if (Level>=1 && Level<=Unlocked && Level<=4) { Owner->ResumeGame(); if (GM) GM->TravelToCampaign(Level); }
                     return FReply::Handled(); })[Card]];
-            if (Level==1) GoblinFirstButton=Button;
-            if (Level==4) ImpFirstButton=Button;
-            if (Level==CourtPreview) CourtFirstButton=Button;
+            if (!FirstStageButtons[World].IsValid()) FirstStageButtons[World]=Button;
         }
         else Panel->AddSlot().AutoHeight().Padding(0,4)[SNew(SBorder).Padding(FMargin(18,9))
             .BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(.07f,.07f,.08f,.8f))[Card]];
@@ -206,15 +198,17 @@ private:
     FSlateBrush Frame;
     int32 Unlocked=1,SelectedWorld=0;
     bool bStageOpen=false;
-    TSharedPtr<SHorizontalBox> Worlds;
-    TSharedPtr<SVerticalBox> GoblinStages,ImpStages,CourtStages;
-    // World III is a map preview reached by its own option, not a campaign level number.
-    static constexpr int32 CourtPreview=100;
-    // The forest run is a chain of random rooms, also outside the campaign level numbers.
-    static constexpr int32 ForestRun=101;
-    // Endless goblin waves in the Stage 2 arena.
-    static constexpr int32 Endless=102;
-    TSharedPtr<SButton> BackButton,GoblinFirstButton,ImpFirstButton,ImpWorldButton,CourtWorldButton,CourtFirstButton;
+    static constexpr int32 WorldCount=5;
+    TSharedPtr<SVerticalBox> WorldRows;
+    TArray<TSharedPtr<SHorizontalBox>> WorldLines;          // two rows of world cards: I-III, IV-V
+    TArray<TSharedPtr<SVerticalBox>> StagePanels;           // by world number (1-5)
+    TArray<TSharedPtr<SButton>> WorldButtons, FirstStageButtons;
+    // Stage ids outside the campaign level numbers (1-4):
+    static constexpr int32 CourtPreview=100;  // World III's court, a map preview
+    static constexpr int32 ForestRun=101;     // the random-rooms forest run (out of the game for now)
+    static constexpr int32 Endless=102;       // endless goblin waves in the Stage 2 arena
+    static constexpr int32 ComingLater=-1;    // a stage still to be designed
+    TSharedPtr<SButton> BackButton;
 };
 
 class SForestHubMenu : public SCompoundWidget
