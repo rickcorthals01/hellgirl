@@ -89,6 +89,9 @@ public:
     bool IsBossHidden() const;
     float FilterEnemyDamage(float Damage);
     void UpdateGoblinTactics(float Dt, AArenaFighter* Player);
+    EEnemyMove GetEnemyMove() const { return EnemyMove; }
+    // Checks only: whether a perfect dodge right now would counter Enemy.
+    bool CouldCounter(const AArenaFighter* Enemy) const { return CanCounter(Enemy); }
     void RunBossDesignCheck();
     FString MoveLabel = TEXT("FISTS READY");
     int32 GetComboStep() const { return ComboClock > 0.f ? Combo : 0; }
@@ -145,6 +148,7 @@ private:
     TSharedPtr<FCombatImpactBudget> CombatLaunchImpactBudget;
     EEnemyMove EnemyMove = EEnemyMove::None;
     float EnemyMoveCooldown = 0.f;
+    float GoblinQuickSlashClock = 0.f; // until this goblin may quick-slash again
     float EnemyDecisionClock = 0.f;
     int32 EnemyAttackSerial = 0;
     FVector EnemyMoveStart = FVector::ZeroVector;

@@ -71,6 +71,7 @@ public:
     void TickEndless(float Dt);
     bool RunEndlessCheck();
     void RunNaturalWavesCheck(float Dt);
+    void RunQuickSlashCheck(float Dt);
     void RescueStragglers(class AArenaFighter* Hero, float Dt);
     void StartEndless();
     // Soul portal menu choices: continue to the next wave, stock carried souls, or (endless / exit) leave for camp.

@@ -628,6 +628,8 @@ bool AArenaFighter::CanCounter(const AArenaFighter* Enemy) const
     if (!Enemy || !Enemy->bEnemy || !Enemy->IsAlive() || Enemy->bHitResolved || Enemy->AttackClock <= 0.f) return false;
     // A timed dodge still evades bosses, but must not become an interrupting counter.
     if (Enemy->IsBossAttackArmored()) return false;
+    // The goblin quick slash is too fast to counter.
+    if (Enemy->EnemyMove == EEnemyMove::GoblinQuickSlash) return false;
     const float UntilHit = Enemy->AttackClock - Enemy->CurrentAttack.Duration * (1.f - Enemy->CurrentAttack.ContactFraction);
     if (UntilHit <= 0.f || UntilHit > PerfectDodgeWindow) return false;
     const FVector Delta = GetActorLocation() - Enemy->GetActorLocation();
@@ -917,7 +919,8 @@ void AArenaFighter::Tick(float Dt)
     RunCombatBalanceCheck(Dt);
     RunAttackAnimationPreview(Dt);
     const float UntilHit = AttackClock - CurrentAttack.Duration * (1.f - CurrentAttack.ContactFraction);
-    const bool FlashNow = bEnemy && IsAlive() && !bHitResolved && AttackClock > 0.f && UntilHit > 0.f && UntilHit <= PerfectDodgeWindow;
+    const bool FlashNow = bEnemy && IsAlive() && !bHitResolved && AttackClock > 0.f && UntilHit > 0.f && UntilHit <= PerfectDodgeWindow
+        && EnemyMove != EEnemyMove::GoblinQuickSlash; // no counter flash for a move that cannot be countered
     AttackFlash->SetVisibility(FlashNow);
     if (FlashNow)
     {

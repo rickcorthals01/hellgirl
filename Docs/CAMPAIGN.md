@@ -120,3 +120,8 @@ Built from the scripts in `Developer idea folder lol\Dialog and Story` (01 to 03
 - The `Endless` check buys offers at each portal: it verifies the price, that each offer sells once, the stats and fresh offers.
 
 **Goblin tuning (2026-09-25):** goblins hit harder and attack faster. Their dagger slash deals AttackDamage x1.2 (13 at difficulty 1, was 10, and more in later endless waves). The slash cycle is 1.9 s (was 2.55 s). Up to six goblins attack at once (was two), with attack starts at least 0.3 s apart (was 0.45 s). Other enemies are unchanged. The numbers are in `Rules/EnemyTuning.h`.
+
+**Goblin moves (2026-09-25):** goblins have two attacks.
+- **Dagger slash:** 1.3 s, 13 damage at difficulty 1, can be countered with a perfect dodge.
+- **Quick slash:** 0.5 s, about 5 damage. A perfect dodge can't counter it, it shows no counter flash, and a normal dodge still avoids it. Each goblin uses it at most once every 6 s and opens with it when it reaches Hellgirl.
+- The `QuickSlash` check (at camp) covers it. Tuning is in `Rules/EnemyTuning.h`.

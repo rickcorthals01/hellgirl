@@ -114,6 +114,9 @@ void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
     case EEnemyMove::GoblinSlash:
         Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::GoblinSlashSeconds,.6f,AttackDamage*EnemyTuning::GoblinDamageScale,185.f,100.f,0.f,0};
         Recovery=EnemyTuning::GoblinRecovery; Label=TEXT("GOBLIN / DAGGER SLASH"); break;
+    case EEnemyMove::GoblinQuickSlash:
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::GoblinQuickSlashSeconds,.6f,AttackDamage*EnemyTuning::GoblinQuickSlashDamageScale,EnemyTuning::GoblinQuickSlashReach+15.f,60.f,0.f,0};
+        Recovery=EnemyTuning::GoblinQuickSlashRecovery; Label=TEXT("GOBLIN / QUICK SLASH"); break;
     case EEnemyMove::QueenMelee:
         Spec = {FistCombat::Move::EnemyClaw,1.6f,.6f,20.f,250.f,200.f,0.f,0}; Recovery=.7f; Label=TEXT("QUEEN / SHADOW ATTACK"); break;
     case EEnemyMove::QueenClaw:
@@ -199,6 +202,7 @@ void AArenaFighter::UpdateEnemyMoveMotion(float Dt)
 {
     if (!bEnemy || !UsesCastleMoves(this)) return;
     EnemyMoveCooldown = FMath::Max(0.f, EnemyMoveCooldown - Dt);
+    GoblinQuickSlashClock = FMath::Max(0.f, GoblinQuickSlashClock - Dt);
     EnemyDecisionClock = FMath::Max(0.f, EnemyDecisionClock - Dt);
     if (EnemyMove == EEnemyMove::None) return;
     if (!IsAlive() || bCombatLaunched || KnockdownClock > 0.f || HitClock > 0.f || AttackClock <= 0.f)

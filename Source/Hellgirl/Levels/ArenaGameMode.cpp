@@ -333,6 +333,7 @@ void AArenaGameMode::Tick(float Dt)
         return;
     }
     RunMapShot(Dt);
+    RunQuickSlashCheck(Dt);
     // Falling loses every carried soul; only stocked or won souls are safe.
     if (const auto* Hero=Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this,0)); Hero && !Hero->IsAlive() && !bPlayerDeathHandled && !bForestHub)
     {

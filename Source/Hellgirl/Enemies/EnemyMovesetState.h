@@ -5,5 +5,7 @@
 enum class EEnemyMove : unsigned char
 {
     None, ImpClaw, ImpPounce, FlyingDive,
-    CommanderCleave, CommanderRush, CommanderSlam, CommanderJumpSlam, GoblinSlash, QueenMelee, QueenClaw
+    CommanderCleave, CommanderRush, CommanderSlam, CommanderJumpSlam, GoblinSlash, QueenMelee, QueenClaw,
+    // A fast, weak goblin slash that a perfect dodge cannot counter (Rules/EnemyTuning.h).
+    GoblinQuickSlash
 };

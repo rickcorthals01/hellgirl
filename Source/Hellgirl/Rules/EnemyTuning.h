@@ -26,4 +26,12 @@ constexpr float GoblinSlashSeconds = 1.3f;
 constexpr float GoblinRecovery = .6f;
 constexpr int32 GoblinAttackSlots = 6;
 constexpr float GoblinAttackSpacing = .3f;
+// The quick slash: a fast swing (0.5 s, the hit at 60%) for about 45% of the slash damage (5 at difficulty 1).
+// A perfect dodge cannot counter it and it shows no counter flash. Each goblin can use it once every 6 s; a goblin
+// arriving at Hellgirl opens with it.
+constexpr float GoblinQuickSlashSeconds = .5f;
+constexpr float GoblinQuickSlashRecovery = .35f;
+constexpr float GoblinQuickSlashDamageScale = .45f;
+constexpr float GoblinQuickSlashCooldown = 6.f;
+constexpr float GoblinQuickSlashReach = 220.f;
 }
