@@ -1,5 +1,6 @@
 #include "Fighter/ArenaFighter.h"
 #include "Enemies/EnemyMovesetState.h"
+#include "Rules/EnemyTuning.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/World.h"
@@ -81,6 +82,10 @@ bool AArenaFighter::CanBeginEnemyMove(const AArenaFighter* Player) const
         return false;
 
     const float Now = GetWorld()->GetTimeSeconds();
+    // Goblins crowd in: more of them may attack at once, with less spacing (Rules/EnemyTuning.h).
+    const bool Goblin = EnemyType == EHellgirlEnemyType::Goblins;
+    const float Spacing = Goblin ? EnemyTuning::GoblinAttackSpacing : .45f;
+    const int32 Slots = Goblin ? EnemyTuning::GoblinAttackSlots : 2;
     int32 Active = 0;
     for (TActorIterator<AArenaFighter> It(GetWorld()); It; ++It)
     {
@@ -90,12 +95,12 @@ bool AArenaFighter::CanBeginEnemyMove(const AArenaFighter* Player) const
             continue;
         // Per-actor timestamps live in this world, including the short time a
         // just-defeated attacker remains present. No static scheduler survives travel.
-        if (Now - Other->EnemyLastAttackTime < .45f) return false;
+        if (Now - Other->EnemyLastAttackTime < Spacing) return false;
         if (Other->IsAlive() && !Other->bCombatLaunched && Other->EnemyMove != EEnemyMove::None
             && Other->AttackClock > 0.f && Other->KnockdownClock <= 0.f && Other->HitClock <= 0.f)
             ++Active;
     }
-    return Active < 2;
+    return Active < Slots;
 }
 
 void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
@@ -107,7 +112,8 @@ void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
     switch (Move)
     {
     case EEnemyMove::GoblinSlash:
-        Spec = {FistCombat::Move::EnemyClaw,1.65f,.65f,10.f,185.f,100.f,0.f,0}; Recovery=.9f; Label=TEXT("GOBLIN / DAGGER SLASH"); break;
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::GoblinSlashSeconds,.6f,AttackDamage*EnemyTuning::GoblinDamageScale,185.f,100.f,0.f,0};
+        Recovery=EnemyTuning::GoblinRecovery; Label=TEXT("GOBLIN / DAGGER SLASH"); break;
     case EEnemyMove::QueenMelee:
         Spec = {FistCombat::Move::EnemyClaw,1.6f,.6f,20.f,250.f,200.f,0.f,0}; Recovery=.7f; Label=TEXT("QUEEN / SHADOW ATTACK"); break;
     case EEnemyMove::QueenClaw:
