@@ -285,6 +285,14 @@ void AArenaGameMode::TickEndless(float Dt)
 {
     auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
     if (!Hero || !Hero->IsAlive()) return;
+    // Story to come: the first time a run reaches wave 50 after the Queen fled in Stage 3, the conversation
+    // [E_Wave50] in Content/Dialogue/LevelOne.ini plays. Until it is written nothing happens (and nothing is marked).
+    if (EndlessWave >= 50 && !bWave50Tried && HellgirlProgress::Flag(TEXT("Stage3Won")) && !HellgirlProgress::Flag(TEXT("EndlessWave50")))
+        if (auto* PC = Cast<AHellgirlPlayerController>(Hero->GetController()); PC && !PC->IsPauseMenuOpen())
+        {
+            bWave50Tried = true;
+            if (PC->ShowConversation(TEXT("E_Wave50"))) HellgirlProgress::SetFlag(TEXT("EndlessWave50"));
+        }
     ActivatedSites = ClearedSites = EnemiesRemaining = 0;
     bool WaveDone = true;
     for (int32 I = 0; I < SpawnSites.Num(); ++I)
@@ -324,7 +332,8 @@ void AArenaGameMode::TickEndless(float Dt)
     ++EndlessWave;
     EndlessWaveStart = SpawnSites.Num();
     FRandomStream Random(EndlessWave * 7919);
-    // Tougher goblins every four waves; every fifth wave is an army charging from both ends.
+    // Tougher goblins every four waves; every fifth wave is an army charging from both ends, and every tenth the
+    // Goblin Queen joins it (a boss fight with no dialogue in endless).
     const int32 Difficulty = FMath::Min(1 + (EndlessWave - 1) / 4, 6);
     TArray<AEnemySpawnPoint*> Wave;
     if (EndlessWave % 5 == 0)
@@ -340,6 +349,8 @@ void AArenaGameMode::TickEndless(float Dt)
         if (auto* S = Site(FVector(FMath::Cos(Angle) * Radius, FMath::Sin(Angle) * Radius, 10), FString::Printf(TEXT("WAVE %d"), EndlessWave), FMath::Min(3 + EndlessWave, 16), 0, false))
             Wave.Add(S);
     }
+    if (EndlessWave % 10 == 0)
+        if (auto* S = Site(FVector(0, 1500, 10), FString::Printf(TEXT("WAVE %d / THE GOBLIN QUEEN"), EndlessWave), 1, 0, false, true)) Wave.Add(S);
     for (auto* S : Wave) { S->Difficulty = Difficulty; S->bEnabled = true; S->bActivated = true; }
 }
 
@@ -360,7 +371,7 @@ bool AArenaGameMode::RunEndlessCheck()
     bool Passed = SpawnSites.IsEmpty() && Wallet->bInLevel && Wallet->LevelSouls.Earned == 0;
     const int64 CoinsBefore = Wallet->Coins;
     int64 StockedTotal = 0;
-    int32 Portals = 0, Armies = 0;
+    int32 Portals = 0, Armies = 0, Queens = 0;
     for (int32 Guard = 0; Guard < 200 && EndlessWave < 10; ++Guard)
     {
         TickEndless(10.f);
@@ -391,12 +402,18 @@ bool AArenaGameMode::RunEndlessCheck()
             ChoosePortal(EPortalChoice::Continue);
             continue;
         }
-        int32 Started = 0;
-        for (int32 I = EndlessWaveStart; I < SpawnSites.Num(); ++I) if (!SpawnSites[I]->bCleared) { ++Started; SpawnSites[I]->bCleared = true; }
-        if (Started == 2) { ++Armies; Passed &= EndlessWave % 5 == 0; }
+        int32 Started = 0, Bosses = 0;
+        for (int32 I = EndlessWaveStart; I < SpawnSites.Num(); ++I)
+            if (!SpawnSites[I]->bCleared)
+            {
+                ++Started; SpawnSites[I]->bCleared = true;
+                if (SpawnSites[I]->bBoss) { ++Bosses; Passed &= SpawnSites[I]->GroundType == EHellgirlEnemyType::GoblinQueen; }
+            }
+        if (Bosses) { ++Queens; Passed &= EndlessWave % 10 == 0; }
+        if (Started - Bosses == 2) { ++Armies; Passed &= EndlessWave % 5 == 0; }
     }
     TickEndless(0.f);
-    Passed &= EndlessWave == 10 && Portals == 3 && Armies == 2 && HellgirlProgress::EndlessBest() >= 9
+    Passed &= EndlessWave == 10 && Portals == 3 && Armies == 2 && Queens == 1 && HellgirlProgress::EndlessBest() >= 9
         && SpawnSites.Last()->Difficulty == 3 && SpawnSites[0]->Difficulty == 1;
     // Falling: nothing more goes to camp (the stocked Soul Coins stay).
     Wallet->LevelSouls.Souls = 7;
@@ -410,7 +427,7 @@ bool AArenaGameMode::RunEndlessCheck()
     Passed &= R.Speed == 30 && R.Combo == 15 && R.Energy == 10 && R.Total == 135 && HellgirlSouls::Compute(100, 0, 290.f, 40, 0.f, 0.f, 0.f).Total == 100;
     // Prices climb 40% per level owned.
     Passed &= HellgirlUpgrades::Cost(0, 0) == 43 && HellgirlUpgrades::Cost(0, 1) == 60 && HellgirlUpgrades::Cost(0, 2) == 77;
-    if (Passed) { UE_LOG(LogTemp, Display, TEXT("ENDLESS CHECK PASSED: ten waves, armies on 5 and 10, soul portals after 3/6/9 with five fresh upgrade offers, each buyable once, stocking Souls as Soul Coins, tougher goblins, best wave, a fall depositing nothing more, the Soul Coin reward")); }
+    if (Passed) { UE_LOG(LogTemp, Display, TEXT("ENDLESS CHECK PASSED: ten waves, armies on 5 and 10, the Goblin Queen on 10, soul portals after 3/6/9 with five fresh upgrade offers, each buyable once, stocking Souls as Soul Coins, tougher goblins, best wave, a fall depositing nothing more, the Soul Coin reward")); }
     else { UE_LOG(LogTemp, Error, TEXT("ENDLESS CHECK FAILED: wave %d, %d portals, %d armies, best %d, souls %lld"), EndlessWave, Portals, Armies, HellgirlProgress::EndlessBest(), Wallet->LevelSouls.Souls); }
     FPlatformMisc::RequestExitWithStatus(false, Passed ? 0 : 1);
     return true;
@@ -435,7 +452,8 @@ void AArenaGameMode::RunNaturalWavesCheck(float Dt)
     Clock += Dt; SinceProgress += Dt;
     Hero->Health = Hero->MaxHealth = 100000.f;
     auto Finish = [](bool Passed) { FPlatformMisc::RequestExitWithStatus(false, Passed ? 0 : 1); };
-    if (bEndless ? EndlessWave >= 8 && Portals >= 2 : IsExitOpen())
+    // Endless runs to wave 11, past the Goblin Queen on wave 10.
+    if (bEndless ? EndlessWave >= 11 && Portals >= 3 : IsExitOpen())
     {
         UE_LOG(LogTemp, Display, TEXT("NATURAL WAVES CHECK PASSED: level %d%s, %d soul portals, %.0f s"), CampaignLevel, bEndless ? TEXT(" endless") : TEXT(""), Portals, Clock);
         Finish(true); return;

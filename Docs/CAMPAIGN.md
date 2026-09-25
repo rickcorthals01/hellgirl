@@ -143,3 +143,8 @@ Replaces the carried-souls rules above.
 - **Soul Coins** are the camp wallet. The camp HUD, shop, merchant and save slots all use Soul Coins.
 - **Code:** the rules are in `Rules/SoulRewards.h`. The wallet keeps `LevelSouls` (Souls, Earned, Stocked, time, combat time, combo time, energy spent, kills), and save slots keep it too.
 - Upgrade prices were cut 15%: Fury 43, Iron Skin 38, Vitality 30, Swiftness 26, Soul Hunger 30, Second Wind 21, Bloodthirst 38, Greed 34.
+
+**Endless and the forest run (2026-09-25):**
+- **Forest run:** out of the game for now. Its level-select card is commented out in `UI/ForestHubMenus.cpp`, and its code and checks stay for later.
+- **Endless Queen:** every 10th endless wave, the Goblin Queen joins the army as a boss fight (no dialogue in endless). The wave only ends when she's defeated too.
+- **Wave 50 (story to come):** the first time a run reaches wave 50 after Stage 3 has been won, conversation `[E_Wave50]` in `Content/Dialogue/LevelOne.ini` plays and sets the `EndlessWave50` flag. Until that conversation is written, nothing happens.

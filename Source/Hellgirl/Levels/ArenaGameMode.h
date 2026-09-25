@@ -151,6 +151,7 @@ private:
     void TrackLevelSouls(float Dt);
     int32 ScriptStep = -1;
     int32 EndlessWaveStart = 0; // first spawn site of the current endless wave
+    bool bWave50Tried = false;
     TArray<int32> UpgradeLevels, PortalOffers;
     TArray<bool> OfferSold;
     void RollPortalOffers();

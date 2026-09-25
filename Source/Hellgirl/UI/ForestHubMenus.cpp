@@ -57,7 +57,8 @@ public:
         // Unlocked by beating Stage 2 (02.5).
         if (HellgirlProgress::Flag(TEXT("Stage2Won"))) AddStage(GoblinStages,Endless,TEXT("ENDLESS  /  GOBLIN WAVES"),
             *FString::Printf(TEXT("Waves that never stop · best wave %d"),HellgirlProgress::EndlessBest()),true);
-        AddStage(GoblinStages,ForestRun,TEXT("FOREST RUN  /  RANDOM ROOMS"),TEXT("Three random clearings, then the Queen · dying ends the run"),true);
+        // The forest run (random rooms, Levels/ForestRun.cpp) is out of the game for now; its code stays for later:
+        // AddStage(GoblinStages,ForestRun,TEXT("FOREST RUN  /  RANDOM ROOMS"),TEXT("Three random clearings, then the Queen · dying ends the run"),true);
         AddStage(ImpStages,4,TEXT("STAGE I  /  TORTURE ARENA"),TEXT("Five Imp waves · Imp Commander"),Unlocked>=4);
         AddStage(ImpStages,5,TEXT("STAGE II  /  COMING LATER"),TEXT("Next stage preview"),false);
         AddStage(CourtStages,CourtPreview,TEXT("THE COURT  /  MAP PREVIEW"),TEXT("Walk the court · no enemies yet"),true);
