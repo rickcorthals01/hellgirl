@@ -10,7 +10,7 @@
 
 namespace
 {
-const FLinearColor SoulBlue(.08f, .35f, 1.f), ExitPurple(.45f, .04f, 1.f);
+const FLinearColor PortalSoulBlue(.08f, .35f, 1.f), PortalExitPurple(.45f, .04f, 1.f);
 }
 
 AWavePortal::AWavePortal()
@@ -28,8 +28,8 @@ AWavePortal::AWavePortal()
     Gateway->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
     Membrane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Membrane"));
     Membrane->SetupAttachment(RootComponent);
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> Sphere(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
-    Membrane->SetStaticMesh(Sphere.Object);
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereMesh(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
+    Membrane->SetStaticMesh(SphereMesh.Object);
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> GlowMaterial(TEXT("/Game/Environment/Materials/M_EnvironmentGlow.M_EnvironmentGlow"));
     if (GlowMaterial.Succeeded()) Membrane->SetMaterial(0, GlowMaterial.Object);
     Membrane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -57,7 +57,7 @@ void AWavePortal::Open(const FVector& Where, const FVector& Facing, bool bExitPo
     const FVector Toward = (Facing - Ground).GetSafeNormal2D();
     SetActorLocationAndRotation(Ground - FVector(0, 0, 5), Toward.IsNearlyZero() ? FRotator::ZeroRotator : Toward.Rotation());
     if (!Glow) Glow = Membrane->CreateAndSetMaterialInstanceDynamic(0);
-    const FLinearColor Color = bExit ? ExitPurple : SoulBlue;
+    const FLinearColor Color = bExit ? PortalExitPurple : PortalSoulBlue;
     if (Glow)
     {
         Glow->SetVectorParameterValue(TEXT("Color"), Color);

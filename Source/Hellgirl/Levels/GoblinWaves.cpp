@@ -18,22 +18,22 @@
 // so a loaded save picks the script up where it was.
 namespace
 {
-enum class EStep : uint8 { Wave, Story, Portal, Boss, Exit };
-struct FStep
+enum class EScriptStep : uint8 { Wave, Story, Portal, Boss, Exit };
+struct FScriptStep
 {
-    EStep Kind = EStep::Wave;
+    EScriptStep Kind = EScriptStep::Wave;
     TArray<int32> Sites;   // Wave / Boss: spawn sites (a wave can come from several at once)
     FName Id;              // Story: conversation; Portal: the id recorded when the player continues
     FName Intro;           // Portal: a conversation shown when it first opens
     FVector Spot = FVector::ZeroVector;
     int32 Gate = -1;       // Portal: the castle gate that opens once the player continues
 };
-FStep Wave(TArray<int32> Sites) { FStep S; S.Kind = EStep::Wave; S.Sites = MoveTemp(Sites); return S; }
-FStep Story(const TCHAR* Id) { FStep S; S.Kind = EStep::Story; S.Id = Id; return S; }
-FStep Portal(const TCHAR* Id, FVector Spot, int32 Gate = -1, const TCHAR* Intro = nullptr)
-{ FStep S; S.Kind = EStep::Portal; S.Id = Id; S.Spot = Spot; S.Gate = Gate; if (Intro) S.Intro = Intro; return S; }
-FStep Boss(int32 Site) { FStep S; S.Kind = EStep::Boss; S.Sites = {Site}; return S; }
-FStep Exit() { FStep S; S.Kind = EStep::Exit; return S; }
+FScriptStep StepWave(TArray<int32> Sites) { FScriptStep S; S.Kind = EScriptStep::Wave; S.Sites = MoveTemp(Sites); return S; }
+FScriptStep StepStory(const TCHAR* Id) { FScriptStep S; S.Kind = EScriptStep::Story; S.Id = Id; return S; }
+FScriptStep StepPortal(const TCHAR* Id, FVector Spot, int32 Gate = -1, const TCHAR* Intro = nullptr)
+{ FScriptStep S; S.Kind = EScriptStep::Portal; S.Id = Id; S.Spot = Spot; S.Gate = Gate; if (Intro) S.Intro = Intro; return S; }
+FScriptStep StepBoss(int32 Site) { FScriptStep S; S.Kind = EScriptStep::Boss; S.Sites = {Site}; return S; }
+FScriptStep StepExit() { FScriptStep S; S.Kind = EScriptStep::Exit; return S; }
 
 struct FWaveSite { FVector Position; int32 Count; };
 // Stage 2 stays in the walled middle of the ruins. Waves 1-6 come from around the centre;
@@ -50,32 +50,32 @@ const FWaveSite StageThreeSites[] = {
     {FVector(2300,-400,10),9}, {FVector(2600,700,10),10}};
 const FVector QueenThrone(4100,0,10);
 
-const TArray<FStep>& ScriptFor(int32 Level)
+const TArray<FScriptStep>& ScriptFor(int32 Level)
 {
-    static const TArray<FStep> Two = {
-        Story(TEXT("L2_Start")),
-        Wave({0}), Wave({1}), Wave({2}),
-        Portal(TEXT("L2_Portal1"), FVector(0,-650,0), -1, TEXT("L2_PortalHelp")),
-        Wave({3}), Wave({4}), Wave({5}),
-        Portal(TEXT("L2_Portal2"), FVector(0,650,0)),
-        Story(TEXT("L2_Army")),
-        Wave({6,7}),
-        Exit()};
-    static const TArray<FStep> Three = {
-        Wave({0}), Wave({1}),
-        Story(TEXT("L3_Goblins")),
-        Wave({2}), Wave({3}),
-        Portal(TEXT("L3_Portal1"), FVector(-3950,0,0), 0),
-        Wave({4}), Wave({5}),
-        Story(TEXT("L3_TalkToMe")),
-        Wave({6}), Wave({7}), Wave({8}), Wave({9}),
-        Story(TEXT("L3_Subjects")),
-        Portal(TEXT("L3_Portal2"), FVector(-200,0,0)),
-        Story(TEXT("L3_SubjectsReply")),
-        Wave({10}), Wave({11}), Wave({12}), Wave({13}),
-        Portal(TEXT("L3_Portal3"), FVector(2850,0,0), 1),
-        Boss(14),
-        Exit()};
+    static const TArray<FScriptStep> Two = {
+        StepStory(TEXT("L2_Start")),
+        StepWave({0}), StepWave({1}), StepWave({2}),
+        StepPortal(TEXT("L2_Portal1"), FVector(0,-650,0), -1, TEXT("L2_PortalHelp")),
+        StepWave({3}), StepWave({4}), StepWave({5}),
+        StepPortal(TEXT("L2_Portal2"), FVector(0,650,0)),
+        StepStory(TEXT("L2_Army")),
+        StepWave({6,7}),
+        StepExit()};
+    static const TArray<FScriptStep> Three = {
+        StepWave({0}), StepWave({1}),
+        StepStory(TEXT("L3_Goblins")),
+        StepWave({2}), StepWave({3}),
+        StepPortal(TEXT("L3_Portal1"), FVector(-3950,0,0), 0),
+        StepWave({4}), StepWave({5}),
+        StepStory(TEXT("L3_TalkToMe")),
+        StepWave({6}), StepWave({7}), StepWave({8}), StepWave({9}),
+        StepStory(TEXT("L3_Subjects")),
+        StepPortal(TEXT("L3_Portal2"), FVector(-200,0,0)),
+        StepStory(TEXT("L3_SubjectsReply")),
+        StepWave({10}), StepWave({11}), StepWave({12}), StepWave({13}),
+        StepPortal(TEXT("L3_Portal3"), FVector(2850,0,0), 1),
+        StepBoss(14),
+        StepExit()};
     return Level == 3 ? Three : Two;
 }
 // The castle's three sections, split by the two gated walls.
@@ -178,17 +178,17 @@ void AArenaGameMode::TickGoblinWaves(float Dt)
     if (bEndless) { if (!RunEndlessCheck()) TickEndless(Dt); return; }
     auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
     if (!Hero || !Hero->IsAlive()) return;
-    const TArray<FStep>& Script = ScriptFor(CampaignLevel);
+    const TArray<FScriptStep>& Script = ScriptFor(CampaignLevel);
     ActivatedSites = ClearedSites = EnemiesRemaining = 0;
     for (auto S : SpawnSites) { ActivatedSites += S->bActivated; ClearedSites += S->bCleared; EnemiesRemaining += S->LivingEnemies(); }
-    auto Done = [&](const FStep& S)
+    auto Done = [&](const FScriptStep& S)
     {
         switch (S.Kind)
         {
-        case EStep::Wave: { bool All = true; for (int32 I : S.Sites) All &= SpawnSites.IsValidIndex(I) && SpawnSites[I]->bCleared; return All; }
-        case EStep::Story: return !bStoryEnabled || PlayedStory.Contains(S.Id);
-        case EStep::Portal: return PlayedStory.Contains(S.Id);
-        case EStep::Boss: return SpawnSites.IsValidIndex(S.Sites[0]) && SpawnSites[S.Sites[0]]->bCleared && !SurrenderedQueen.IsValid()
+        case EScriptStep::Wave: { bool All = true; for (int32 I : S.Sites) All &= SpawnSites.IsValidIndex(I) && SpawnSites[I]->bCleared; return All; }
+        case EScriptStep::Story: return !bStoryEnabled || PlayedStory.Contains(S.Id);
+        case EScriptStep::Portal: return PlayedStory.Contains(S.Id);
+        case EScriptStep::Boss: return SpawnSites.IsValidIndex(S.Sites[0]) && SpawnSites[S.Sites[0]]->bCleared && !SurrenderedQueen.IsValid()
             && (!bStoryEnabled || PlayedStory.Contains(TEXT("L3_Escaped")));
         default: return false;
         }
@@ -199,20 +199,20 @@ void AArenaGameMode::TickGoblinWaves(float Dt)
     for (int32 G = 0; G < SectionGates.Num(); ++G)
     {
         bool Open = false;
-        for (const FStep& S : Script) if (S.Kind == EStep::Portal && S.Gate == G) Open |= PlayedStory.Contains(S.Id);
+        for (const FScriptStep& S : Script) if (S.Kind == EScriptStep::Portal && S.Gate == G) Open |= PlayedStory.Contains(S.Id);
         SectionGates[G]->SetActorHiddenInGame(Open); SectionGates[G]->SetActorEnableCollision(!Open); SectionBarriers[G]->SetActorEnableCollision(!Open);
     }
     int32 WaveNumber = 0, TotalWaves = 0;
-    for (int32 I = 0; I < Script.Num(); ++I) if (Script[I].Kind == EStep::Wave) { ++TotalWaves; if (I <= Step) ++WaveNumber; }
+    for (int32 I = 0; I < Script.Num(); ++I) if (Script[I].Kind == EScriptStep::Wave) { ++TotalWaves; if (I <= Step) ++WaveNumber; }
     if (Step != ScriptStep) { ScriptStep = Step; WaveCountdown = WaveNumber <= 1 ? 2.f : FMath::Max(WaveCountdown, EnemyTuning::WaveBreak(3.f)); }
-    const FStep& S = Script[Step];
-    if (S.Kind != EStep::Portal && SoulPortal && SoulPortal->IsOpen()) { SoulPortal->Close(); OpenPortalId = OpenPortalIntro = NAME_None; }
-    ShowExitPortal(S.Kind == EStep::Exit);
+    const FScriptStep& S = Script[Step];
+    if (S.Kind != EScriptStep::Portal && SoulPortal && SoulPortal->IsOpen()) { SoulPortal->Close(); OpenPortalId = OpenPortalIntro = NAME_None; }
+    ShowExitPortal(S.Kind == EScriptStep::Exit);
     Prompt.Empty();
     const float X = static_cast<float>(Hero->GetActorLocation().X);
     switch (S.Kind)
     {
-    case EStep::Wave:
+    case EScriptStep::Wave:
     {
         const bool Army = S.Sites.Num() > 1;
         if (HeroSection(X) < SectionOf(static_cast<float>(SpawnSites[S.Sites[0]]->GetActorLocation().X)))
@@ -228,10 +228,10 @@ void AArenaGameMode::TickGoblinWaves(float Dt)
             !Started ? TEXT("Incoming") : Army ? TEXT("The goblin army charges!") : TEXT("Defeat the goblins"));
         break;
     }
-    case EStep::Story:
+    case EScriptStep::Story:
         QueueStory(S.Id);
         break;
-    case EStep::Portal:
+    case EScriptStep::Portal:
         if (SoulPortal && OpenPortalId != S.Id)
         {
             SoulPortal->Open(S.Spot, Hero->GetActorLocation(), false);
@@ -240,7 +240,7 @@ void AArenaGameMode::TickGoblinWaves(float Dt)
         if (!S.Intro.IsNone()) QueueStory(S.Intro);
         Objective = TEXT("A soul portal has opened / Step inside");
         break;
-    case EStep::Boss:
+    case EScriptStep::Boss:
     {
         auto* Throne = SpawnSites[S.Sites[0]].Get();
         if (!Throne->bActivated)
@@ -256,7 +256,7 @@ void AArenaGameMode::TickGoblinWaves(float Dt)
         }
         break;
     }
-    case EStep::Exit:
+    case EScriptStep::Exit:
         CompleteLevel();
         Objective = TEXT("LEVEL COMPLETE / Enter the portal to return to camp");
         break;
