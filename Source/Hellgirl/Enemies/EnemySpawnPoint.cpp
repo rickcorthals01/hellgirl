@@ -27,6 +27,7 @@ AEnemySpawnPoint::AEnemySpawnPoint()
     Portal->SetStaticMesh(Rift.Object);
     Portal->SetRelativeLocation(FVector(0.f, 0.f, 2.f));
     Portal->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Portal->SetVisibility(false);
     Fire = CreateDefaultSubobject<UNiagaraComponent>(TEXT("RiftFire"));
     Fire->SetupAttachment(RootComponent);
     static ConstructorHelpers::FObjectFinder<UNiagaraSystem> Flames(TEXT("/Game/Stylish_Fire_VFX/Niagara/NS_Stylish_Fire_2.NS_Stylish_Fire_2"));
@@ -52,6 +53,7 @@ AEnemySpawnPoint::AEnemySpawnPoint()
 void AEnemySpawnPoint::UseBurrow()
 {
     bBurrow = true;
+    Portal->SetVisibility(true);
     if (auto* Burrow = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/Environment/ForestKit/SM_Burrow.SM_Burrow"))) Portal->SetStaticMesh(Burrow);
     Fire->SetAsset(nullptr);
     Glow->SetLightColor(FLinearColor(1.f, .45f, .15f));
@@ -157,8 +159,11 @@ void AEnemySpawnPoint::Tick(float Dt)
         if (Spawned >= WaveTotal() && LivingEnemies() == 0) bCleared = true;
     }
     // Burning while enemies come through, smouldering before, cold once cleared.
-    const bool Burning = bActivated && !bCleared;
+    const bool Burning = bActivated && !bCleared && bShowRift;
+    Portal->SetVisibility(bShowRift || bBurrow);
     if (Burning != Fire->IsActive()) { if (Burning) Fire->Activate(true); else Fire->Deactivate(); }
     const float Flicker = 1.f + .15f * FMath::Sin(GetWorld()->GetTimeSeconds() * 13.f) + .08f * FMath::Sin(GetWorld()->GetTimeSeconds() * 29.f);
-    Glow->SetIntensity(bCleared ? 0.f : (Burning ? (bBurrow ? 4000.f : 9000.f) * Flicker : 1800.f));
+    // Without a visible rift or burrow there is nothing to glow.
+    const bool Marked = bShowRift || bBurrow;
+    Glow->SetIntensity(!Marked || bCleared ? 0.f : (bActivated ? (bBurrow ? 4000.f : 9000.f) * Flicker : 1800.f));
 }

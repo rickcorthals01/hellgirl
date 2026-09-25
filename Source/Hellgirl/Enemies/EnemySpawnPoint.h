@@ -36,8 +36,10 @@ public:
     int32 WaveTotal() const;
     int32 WaveFlyers() const;
     bool RegisterReinforcement(AArenaFighter* Enemy);
-    // Goblins come out of a dirt burrow instead of a burning hell rift.
+    // Goblins come out of a dirt burrow (forest run).
     void UseBurrow();
+    // The burning hell rift marker is switched off (too much clutter); the mesh and fire are kept for later use.
+    bool bShowRift = false;
 private:
     void SpawnOne();
     UPROPERTY() TObjectPtr<UStaticMeshComponent> Portal;

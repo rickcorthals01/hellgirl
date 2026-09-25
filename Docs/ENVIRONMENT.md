@@ -36,7 +36,7 @@ That (re)creates the materials (`Tools/Materials/create_forest_materials.py`), r
 - `Levels/ForestRun.cpp`: the forest room's gameplay pieces (cover, thorns, burrows, gateway).
 - `Levels/ForestHub.cpp`: the camp (campfire, road braziers, merchant stall, gateway).
 - `Levels/ImpArenaScenery.cpp`: World II's Inferno dressing, on top of the cavern in `MapVisuals.cpp`.
-- `Enemies/EnemySpawnPoint.cpp`: every enemy spawn is a hell rift that burns while its wave comes through, or a goblin burrow in the forest (`UseBurrow`). Enemies arrive with a puff of smoke, and the old floating labels and debug circles are gone.
+- `Enemies/EnemySpawnPoint.cpp`: enemy spawns show no marker by default. The hell rift and its fire are kept for later behind `bShowRift`. The forest uses goblin burrows (`UseBurrow`). Enemies arrive with a puff of smoke, and the old floating labels and debug circles are gone.
 
 ## Hit feedback and HUD
 
