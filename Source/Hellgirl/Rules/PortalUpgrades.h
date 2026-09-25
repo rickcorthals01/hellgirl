@@ -2,7 +2,7 @@
 #include "CoreMinimal.h"
 #include "Math/RandomStream.h"
 
-// Soul portal upgrades: each portal offers three at random, each buyable once with carried souls. A price is about
+// Soul portal upgrades: each portal offers five at random, each buyable once with carried souls. A price is about
 // what one portal's worth of kills drops (a Stage 2 portal: ~40 souls, later ones 60-120), so saving up buys several
 // at once. They last for the rest of the level (or endless run) and stack; every level owned makes the next one
 // 40% dearer.
@@ -10,7 +10,7 @@ namespace HellgirlUpgrades
 {
 enum class EUpgrade : uint8 { Fury, IronSkin, Vitality, Swiftness, SoulHunger, SecondWind, Bloodthirst, Greed, Count };
 constexpr int32 Count = static_cast<int32>(EUpgrade::Count);
-constexpr int32 OffersPerPortal = 3;
+constexpr int32 OffersPerPortal = 5;
 
 struct FInfo { const TCHAR* Name; const TCHAR* Detail; int32 BaseCost; };
 inline const FInfo& Info(int32 Upgrade)
@@ -49,7 +49,7 @@ inline FStats Stats(const TArray<int32>& Owned)
     S.BonusSouls = N(EUpgrade::Greed);
     return S;
 }
-// Three different upgrades.
+// Five different upgrades.
 inline TArray<int32> Roll(FRandomStream& Random)
 {
     TArray<int32> Pool;

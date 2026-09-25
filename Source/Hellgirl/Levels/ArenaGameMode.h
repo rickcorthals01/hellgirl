@@ -76,7 +76,7 @@ public:
     // Soul portal menu choices: continue to the next wave, stock carried souls, or (endless / exit) leave for camp.
     enum class EPortalChoice : uint8 { Continue, Stock, Leave, Stay };
     void ChoosePortal(EPortalChoice Choice);
-    // Soul portal upgrades (Rules/PortalUpgrades.h): three offers per portal, each can be bought once with carried souls;
+    // Soul portal upgrades (Rules/PortalUpgrades.h): five offers per portal, each can be bought once with carried souls;
     // they last for the rest of the level.
     const TArray<int32>& GetPortalOffers() const { return PortalOffers; }
     bool IsOfferSold(int32 Offer) const { return OfferSold.IsValidIndex(Offer) && OfferSold[Offer]; }

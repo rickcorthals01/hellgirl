@@ -5,7 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "HAL/PlatformTime.h"
 
-// Soul portal upgrades: each blue portal rolls three offers; Hellgirl can buy any of them (each once) with carried
+// Soul portal upgrades: each blue portal rolls five offers; Hellgirl can buy any of them (each once) with carried
 // souls. Prices are about one portal's worth of souls, so saving up buys several at once.
 // What she buys lasts for the rest of the level (a new level starts with none).
 

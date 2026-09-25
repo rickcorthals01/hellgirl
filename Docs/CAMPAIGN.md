@@ -73,7 +73,7 @@ Built from the scripts in `Developer idea folder lol\Dialog and Story` (01 to 03
 - A forest run carries them from room to room and banks them when the run is won. Camp pickups go straight to the bank.
 
 **Portals:**
-- **Soul portal:** Continue / Stock souls / three upgrade offers (see below). In endless mode there is also a Leave option.
+- **Soul portal:** Continue / Stock souls / five upgrade offers (see below). In endless mode there is also a Leave option.
 - **Exit portal:** "Leave the map and go back to camp?" YES / NO.
 - Walking in opens the menu. After closing it, E / Y reopens it.
 - Both use the kit's rune gateway (`AWavePortal`): blue for the soul portal, purple for the exit.
@@ -99,7 +99,7 @@ Built from the scripts in `Developer idea folder lol\Dialog and Story` (01 to 03
 - **`NaturalWaves` check:** runs Stage 2, Stage 3 and endless for real. Hellgirl stands still and only goblins that reach her die. It fails on a stall, or if a goblin appears beyond its wave's gate.
 
 **Soul portal upgrades (2026-09-25):**
-- Each blue portal rolls **3 random offers** from a pool of 8. They are paid with **carried** souls, so every portal is a choice: spend them on power now, stock them to keep them, or risk carrying them.
+- Each blue portal rolls **5 random offers** from a pool of 8. They are paid with **carried** souls, so every portal is a choice: spend them on power now, stock them to keep them, or risk carrying them.
 - Each offer can be bought once per portal. There is no limit on how many you buy, so saving up lets you buy several at once.
 - **Prices:** set to about one portal's worth of souls. A Stage 2 portal drops about 40 souls and later portals 60–120. Each level you already own makes the next one 40% dearer.
 

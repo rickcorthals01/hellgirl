@@ -66,7 +66,7 @@ public:
                     const auto* W=Wallet();
                     return FText::FromString(W && W->Carried>0 ? FString::Printf(TEXT("STOCK SOULS  /  %lld"),W->Carried) : TEXT("SOULS STOCKED")); },
                 [Wallet]() { const auto* W=Wallet(); return W && W->Carried>0 && !W->bLoadFailed; },AArenaGameMode::EPortalChoice::Stock,false)];
-            // Three upgrades for the rest of this level; one may be bought, with carried souls.
+            // Five upgrades for the rest of this level, each buyable once with carried souls.
             Items->AddSlot().AutoHeight().Padding(0,16,0,4)[SNew(STextBlock).Justification(ETextJustify::Center).Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).ColorAndOpacity(OfferGold)
                 .Text_Lambda([this]() {
                     const auto* Mode=Owner.IsValid()?Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get())):nullptr;
