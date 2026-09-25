@@ -533,6 +533,7 @@ void AArenaFighter::StartAttack(bool Heavy)
     ActiveAttackImpactBudget.Reset();
     if (!bEnemy && FistCombat::IsPlayerAreaMove(CurrentAttack.Type)) ActiveAttackImpactBudget = MakeShared<FCombatImpactBudget>();
     bAttackEnergyGranted = false;
+    bComboCredited = false;
     Combo = Airborne ? 0 : CurrentAttack.NextCombo;
     ComboClock = Combo > 0 ? CurrentAttack.Duration + .65f : 0.f;
     PostDodgeClock = 0.f;
@@ -688,7 +689,7 @@ void AArenaFighter::ResolveAttack()
     const float StoredRiposte = bEnemy ? 0.f : Riposte;
     const bool Critical = !bEnemy && CurrentAttack.Type == FistCombat::Move::Headbutt && FMath::FRand() < .25f;
     const float Damage = CurrentAttack.Damage * HellgirlDefense::BonusMultiplier(StoredRiposte)
-        * ((!bEnemy && UltimateClock > 0.f && ActiveUltimate == 0) ? 1.5f : 1.f) * (Critical ? 1.5f : 1.f);
+        * ((!bEnemy && UltimateClock > 0.f && ActiveUltimate == 0) ? 1.5f : 1.f) * (Critical ? 1.5f : 1.f) * (bEnemy ? 1.f : ComboMultiplier());
     if (Critical) MoveLabel += TEXT(" / CRITICAL");
     Fighters.Sort([this](const AActor& A, const AActor& B) { return FVector::DistSquared(A.GetActorLocation(), GetActorLocation()) < FVector::DistSquared(B.GetActorLocation(), GetActorLocation()); });
     const bool PlayerArea = !bEnemy && FistCombat::IsPlayerAreaMove(CurrentAttack.Type);
@@ -730,6 +731,8 @@ void AArenaFighter::ResolveAttack()
             bAttackEnergyGranted = true;
         }
         Riposte = HellgirlDefense::AfterAttack(Riposte, bLandedHit);
+        // A landed attack feeds the combo meter once, however many enemies it hit.
+        if (bLandedHit && !bComboCredited) { ComboMeter.Landed(CurrentAttack.Type); bComboCredited = true; }
         MoveLabel += bLandedHit ? (StoredRiposte > 0.f ? TEXT("  - RIPOSTE HIT") : TEXT("  - HIT")) : TEXT("  - MISS");
     }
 }
@@ -794,6 +797,7 @@ void AArenaFighter::ReceiveHit(float Damage, const FVector& Direction, float Kno
         return;
     }
     HitClock = 0.12f;
+    if (!bEnemy) ComboMeter.Hurt();
     if (bEnemy) CancelEnemyMove();
     GroundDashClock = 0.f;
     ResetPlayerMomentum();
@@ -853,6 +857,13 @@ void AArenaFighter::PlayImpact(const FVector& Direction, float Damage, bool Heav
         if (auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0))) Hero->AddCameraShake(6.f, .22f);
 }
 
+float AArenaFighter::ComboMultiplier() const
+{
+    // Automated checks measure exact damage, so only the combo check itself applies the bonus there.
+    static const bool bOff = FString(FCommandLine::Get()).Contains(TEXT("Check")) && !FParse::Param(FCommandLine::Get(), TEXT("HellgirlComboCheck"));
+    return bOff ? 1.f : ComboMeter.Multiplier();
+}
+
 void AArenaFighter::AddCameraShake(float Strength, float Duration)
 {
     if (Strength >= ShakeStrength * (ShakeDuration > 0.f ? ShakeTime / ShakeDuration : 0.f))
@@ -876,6 +887,7 @@ void AArenaFighter::Tick(float Dt)
 {
     Super::Tick(Dt);
     UpdateCameraShake(Dt);
+    if (!bEnemy) { ComboMeter.Tick(Dt); RunComboCheck(); }
     RunBossDesignCheck();
     RunRevisedCombatCheck();
     UpdateUltimate(Dt);

@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Rules/FistCombatRules.h"
+#include "Rules/ComboRules.h"
 #include "Enemies/EnemyTypes.h"
 #include "Enemies/EnemyMovesetState.h"
 #include "ArenaFighter.generated.h"
@@ -67,6 +68,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat") float ShortAirDashRange = 350.f;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat") float MediumAirDashRange = 600.f;
     void ReceiveHit(float Damage, const FVector& Direction, float Knockback = 160.f, float Knockdown = 0.f, TSharedPtr<FCombatImpactBudget> ImpactBudget = nullptr);
+    const HellgirlCombo::FMeter& GetComboMeter() const { return ComboMeter; }
+    // Previews only: start the meter at a given number of points.
+    void SetComboPointsForPreview(float Points) { ComboMeter.Points = Points; ComboMeter.SinceHit = 0.f; }
     bool IsBossAttackArmored() const;
     bool bBossEncounter = false;
     bool bStorySurrendered = false;
@@ -145,6 +149,11 @@ private:
     // Hit feedback: sparks (and dust on heavy hits) at the contact point, a flash, a split-second hit-stop,
     // and a short camera shake for the player. Hit-stop and shake stay off during automated checks.
     void PlayImpact(const FVector& Direction, float Damage, bool Heavy, bool Blocked);
+    // Style combo meter (Rules/ComboRules.h): varied landed hits raise a 1.1x-2.0x damage bonus.
+    HellgirlCombo::FMeter ComboMeter;
+    bool bComboCredited = false;
+    float ComboMultiplier() const;
+    void RunComboCheck();
     void AddCameraShake(float Strength, float Duration);
     void UpdateCameraShake(float Dt);
     float ShakeTime = 0.f, ShakeDuration = 0.f, ShakeStrength = 0.f;

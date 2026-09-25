@@ -12,4 +12,7 @@ private:
     // Move callouts ("RIGHT PUNCH - HIT", "THORNS!") pop up when they change and fade out.
     FString ShownLabel;
     double LabelShownAt = -100.0;
+    // The combo multiplier pops when it goes up a tier.
+    int32 ShownComboTier = 0;
+    double ComboTierAt = -100.0;
 };

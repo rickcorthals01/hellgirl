@@ -52,14 +52,7 @@ void AArenaGameMode::BuildForestHub()
     auto* Bedroll=Prop(FVector(150,-560,12),FVector(2.4f,1.1f,.2f),FLinearColor(.21f,.14f,.18f));
     Bedroll->SetActorRotation(FRotator(0,-8,0));
     Prop(FVector(255,-565,24),FVector(.45f,1.05f,.28f),FLinearColor(.3f,.24f,.26f))->SetActorRotation(FRotator(0,-8,0));
-    // The forest road: braziers light the way to a rune gateway, where the level menu opens.
-    for (int32 Side : {-1,1})
-    {
-        const FVector P(620.f,Side*330.f,0.f);
-        ForestArt::Solid(World,ForestArt::Inferno(TEXT("Props/SM_Brazier_002")),FTransform(FRotator(0,Side*30.f,0),P,FVector(.8f)),true);
-        ForestArt::Fire(World,P+FVector(0,0,128),.45f,TEXT("NS_Stylish_Fire_3"));
-        ForestArt::PointGlow(World,P+FVector(0,0,200),FLinearColor(1.f,.43f,.16f),5200.f,720.f);
-    }
+    // The forest road leads to a rune gateway, where the level menu opens.
     ForestArt::Solid(World,ForestArt::Kit(TEXT("SM_Gateway")),FTransform(FRotator::ZeroRotator,FVector(1240,0,-5),FVector(1.2f)),true);
     Prop(FVector(1650,0,440),FVector(.5f,6,9),FLinearColor(.008f,.014f,.012f));
     // A friendly display actor, never an enemy fighter, so attacks and targeting cannot hurt him.

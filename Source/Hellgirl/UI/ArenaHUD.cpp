@@ -3,6 +3,7 @@
 #include "Bosses/BossBehavior.h"
 #include "Levels/ArenaGameMode.h"
 #include "Rules/CombatEnergyRules.h"
+#include "Rules/ComboRules.h"
 #include "Progress/HellgirlWallet.h"
 #include "Rules/StageOneLayout.h"
 #include "Enemies/EnemySpawnPoint.h"
@@ -160,6 +161,27 @@ void AArenaHUD::DrawHUD()
     else if (Player->HasUltimate() && EnergyAmount >= EnergyCapacity)
         Say(TEXT("ULTIMATE READY  ·  Q / RIGHT STICK"), FLinearColor(.85f, .6f, 1.f), VX, VY - 28.f, 1.05f, .75f + .25f * FMath::Sin(Now * 5.0));
     if (Player->GetWeaponMenuTime() > 0.f) Centered(TEXT("UP / 1  FISTS          RIGHT / 2  SWORD"), Ember, H * .3f, 1.1f);
+
+    // ---- Right: the combo multiplier, with a bar filling toward the next tier. ----
+    const HellgirlCombo::FMeter& Combo = Player->GetComboMeter();
+    const int32 Tier = Combo.Tier();
+    if (Tier != ShownComboTier) { if (Tier > ShownComboTier) ComboTierAt = Now; ShownComboTier = Tier; }
+    if (Combo.Points > 0.f)
+    {
+        const float CX = W - 210.f, CY = MapY + MapSize + 62.f;
+        // Parchment at 1.1x, through gold and ember, to a pulsing blood red at 2.0x.
+        const float Heat = Tier / static_cast<float>(HellgirlCombo::MaxTier);
+        FLinearColor Hot = Heat < .5f ? FMath::Lerp(Parchment, Gold, Heat * 2.f) : FMath::Lerp(Ember, FLinearColor(1.f, .16f, .1f), (Heat - .5f) * 2.f);
+        if (Tier == HellgirlCombo::MaxTier) Hot = Hot * (.85f + .15f * FMath::Sin(Now * 8.0));
+        const float Pop = 1.f + .35f * FMath::Max(0.f, 1.f - static_cast<float>(Now - ComboTierAt) / .25f);
+        Say(TEXT("COMBO"), Ash, CX, CY, .9f);
+        if (Tier > 0) Say(FString::Printf(TEXT("%.1fx"), Combo.Multiplier()), Hot, CX + 64.f, CY - 16.f * Pop, 2.4f * Pop);
+        Bar(CX, CY + 24.f, 180.f, 6.f, Combo.Fill(), Tier > 0 ? Hot : Ash);
+        // Fading as the grace period runs out tells you the meter is about to drain.
+        if (Combo.SinceHit > HellgirlCombo::GraceSeconds * .6f && Combo.SinceHit < HellgirlCombo::GraceSeconds)
+            Say(TEXT("keep hitting"), Ash, CX, CY + 36.f, .8f, .8f);
+        else if (Combo.IsSpamming()) Say(TEXT("VARY YOUR MOVES"), Ember, CX, CY + 36.f, .85f, .75f + .25f * FMath::Sin(Now * 7.0));
+    }
 
     // ---- Centre: move callouts pop up and fade. ----
     if (Player->MoveLabel != ShownLabel) { ShownLabel = Player->MoveLabel; LabelShownAt = Now; }

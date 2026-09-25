@@ -59,3 +59,13 @@ The existing generic scaffold lacks heavy attacks, jumping bindings, controller 
 A combat state system should distinguish grounded normal combo position, heavy branch, dodge and post-dodge window, aerial state, hit reaction, knockdown, and death. Animation events should eventually determine contact timing. Coordinated throws require suitable attacker and victim animations; a capsule knockback effect alone does not implement the described move.
 
 Suggested build order: first obtain a successful baseline compilation; then implement the input and unarmed combat states with labeled placeholders; then add animations, move-specific hit detection, special meter, and the keyboard settings menu. This is an implementation proposal, not additional confirmed game design.
+
+## Style combo meter (2026-09-25)
+
+Landing hits fills a combo meter. Each full bar adds 0.1 to a damage multiplier, from **1.1x** up to **2.0x**, and every hit you land gets that bonus.
+- **Variety counts:** moves are grouped into families: light punches, heavy kicks, air lights, air slams and crash kicks, dodge counters, the charged strike, and sword. A family you haven't used in your last three hits gives a full fill. Going back to one used a moment ago gives 75%. Repeating the same family gives less each time: ×0.55 per repeat.
+- **Numbers:** a varied fight reaches 2.0x in about 25 hits. Mashing one button stays under 1.1x, and the HUD shows "VARY YOUR MOVES".
+- **Losing it:** after 3 s without landing a hit, the meter drains, and the HUD warns "keep hitting" as the 3 s run out. Taking a hit costs two tiers.
+- **Details:** each attack counts once, however many enemies it hits. The bonus uses the meter as it was before the hit.
+
+All numbers are in `Source/Hellgirl/Rules/ComboRules.h`. `-HellgirlComboCheck` tests the rules and a 1.5x punch. The bonus stays off in other automated checks, so they keep measuring exact damage. The HUD shows the multiplier under the minimap: parchment at low tiers, then gold and ember, then red. It pops when it goes up.

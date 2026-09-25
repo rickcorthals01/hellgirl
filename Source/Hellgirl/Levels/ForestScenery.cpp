@@ -374,9 +374,8 @@ void AArenaGameMode::BuildForestHubDetails()
 {
     UWorld* World = GetWorld();
     FRandomStream Random(4291);
-    // Ground: forest grass, a ring of old mossy flagstones around the fire and stepping stones to the road.
+    // Ground: forest grass everywhere, with stepping stones to the road.
     Ground(World, 3600.f, 320.f, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Pack_Bonus/Materials/M_Pack_Bonus_Grass_1.M_Pack_Bonus_Grass_1")));
-    Disc(World, FVector(0, 0, .6f), 470.f, 260.f, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Pack_Bonus/Materials/M_Pack_Bonus_Stone_3.M_Pack_Bonus_Stone_3")));
     auto* Steps = Batch(World, Boulder(5), false, -1.f);
     for (float X = 520.f; X < 1500.f; X += Random.FRandRange(140.f, 190.f))
         Steps->AddInstance(FTransform(FRotator(0, Random.FRandRange(0.f, 360.f), 0), FVector(X, Random.FRandRange(-50.f, 50.f), -2.f),

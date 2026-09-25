@@ -90,6 +90,10 @@ void AArenaGameMode::RunMapShot(float Dt)
         }
         return;
     }
+    // -MapShotCombo=Points holds the combo meter at that value, to see how it looks on the HUD.
+    float ComboPoints = -1.f;
+    if (FParse::Value(FCommandLine::Get(), TEXT("MapShotCombo="), ComboPoints))
+        if (auto* Hero = Cast<AArenaFighter>(PC->GetPawn())) Hero->SetComboPointsForPreview(ComboPoints);
     if (Shot == 0 && Clock > 4.f)
     {
         FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/MapShot/%s_0.png"), *Name), false, false);
