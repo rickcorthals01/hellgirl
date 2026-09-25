@@ -23,6 +23,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Progress/CampaignProgress.h"
 
 void AArenaGameMode::TravelToHub()
 {
@@ -112,6 +113,20 @@ void AArenaGameMode::TickForestHub(float Dt)
 {
     HubTime+=Dt;
     if (CampfireLight) CampfireLight->PointLightComponent->SetIntensity(14000.f+1500.f*FMath::Sin(HubTime*11.f)+700.f*FMath::Sin(HubTime*19.f));
+    // One-time camp moments, in story order: setting up camp after Stage 1 (on a black screen), the endless
+    // mode notice after Stage 2, and the goblin who followed her home after Stage 3.
+    if (!HellgirlProgress::IsAutomated() || FParse::Param(FCommandLine::Get(),TEXT("HellgirlStoryCheck")))
+        if (auto* PC=Cast<AHellgirlPlayerController>(UGameplayStatics::GetPlayerController(this,0)); PC && !PC->IsPauseMenuOpen())
+        {
+            const int32 Unlocked=GetUnlockedLevel();
+            const TCHAR* Flag=nullptr; const TCHAR* Moment=nullptr;
+            if (Unlocked>=2 && !HellgirlProgress::Flag(TEXT("CampSetUp"))) { Flag=TEXT("CampSetUp"); Moment=TEXT("C_SetUpCamp"); }
+            else if (Unlocked>=3 && !HellgirlProgress::Flag(TEXT("EndlessGoblins"))) { Flag=TEXT("EndlessGoblins"); Moment=TEXT("C_EndlessUnlocked"); }
+            else if (Unlocked>=4 && !HellgirlProgress::Flag(TEXT("GoblinFollowed"))) { Flag=TEXT("GoblinFollowed"); Moment=TEXT("C_GoblinFollowed"); }
+            if (Flag && PC->ShowConversation(Moment)) HellgirlProgress::SetFlag(Flag);
+            else if (Flag) HellgirlProgress::SetFlag(Flag); // a missing conversation must not block camp
+            if (Flag) return;
+        }
     const int32 Interaction=GetHubInteraction();
     if (Interaction != 1) bHubLevelMenuTriggered = false;
     else if (!bHubLevelMenuTriggered)

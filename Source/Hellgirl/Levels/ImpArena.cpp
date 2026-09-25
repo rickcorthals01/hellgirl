@@ -62,6 +62,7 @@ void AArenaGameMode::TickImpArena(float Dt)
     else
     {
         Objective=TEXT("IMP COMMANDER DEFEATED / Return to camp");
+        CompleteLevel(); // banks the carried souls
         if (GetUnlockedLevel()<5 && !FParse::Param(FCommandLine::Get(),TEXT("HellgirlImpArenaCheck")))
         {
             GConfig->SetInt(TEXT("HellgirlCampaign"),TEXT("UnlockedLevel"),5,GGameUserSettingsIni);

@@ -13,6 +13,7 @@ public:
     AArenaGameMode();
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaSeconds) override;
+    virtual void EndPlay(const EEndPlayReason::Type Reason) override;
     int32 ActivatedSites = 0, ClearedSites = 0, TotalSites = 0, EnemiesRemaining = 0, Kills = 0;
     int32 MapNumber = 1; // Layout identity; legacy layouts 2/3 are retained.
     int32 CampaignLevel = 1;
@@ -60,6 +61,28 @@ public:
     void ShowForestExit(bool Open);
     void RunMapShot(float Dt);
     void RunForestRunCheck();
+    // World I Stages 2 and 3 and the endless mode follow the scripts in Levels/GoblinWaves.cpp:
+    // waves, conversations and soul portals in order, then the exit portal.
+    bool bEndless = false;
+    int32 EndlessWave = 0;
+    void BuildGoblinWaves();
+    void TickGoblinWaves(float Dt);
+    void TickEndless(float Dt);
+    bool RunEndlessCheck();
+    void StartEndless();
+    // Soul portal menu choices: continue to the next wave, stock carried souls, or (endless / exit) leave for camp.
+    enum class EPortalChoice : uint8 { Continue, Stock, Leave, Stay };
+    void ChoosePortal(EPortalChoice Choice);
+    bool IsSoulPortalOpen() const;
+    bool IsPortalIntroPending() const;
+    FVector GetSoulPortalLocation() const;
+    bool IsExitOpen() const;
+    void ShowExitPortal(bool Open);
+    // The level is won: carried souls are banked and the next stage unlocks.
+    void CompleteLevel();
+    // A short on-screen tip (e.g. how to use the ultimate), drawn by the HUD until TipUntil (real time).
+    FString Tip;
+    double TipUntil = 0.0;
     bool bWon = false;
     FString MapTitle, Objective, Prompt;
     TArray<FVector4> MapPlatforms;
@@ -103,6 +126,17 @@ private:
     TWeakObjectPtr<class AArenaFighter> SurrenderedQueen;
     float QueenFleeClock=0.f;
     FVector WokeAt = FVector::ZeroVector;
+    UPROPERTY() TObjectPtr<class AWavePortal> SoulPortal;
+    UPROPERTY() TObjectPtr<class AWavePortal> ExitGate;
+    FName OpenPortalId;          // the soul portal step now standing (its id is added to PlayedStory on Continue)
+    FName OpenPortalIntro;       // its help text, which plays before the portal can be used
+    bool bPortalMenuDeclined = false;
+    bool bLevelCompleted = false;
+    bool bPlayerDeathHandled = false;
+    bool bKeepCarriedSouls = false; // set when moving on to the next forest room
+    int32 ScriptStep = -1;
+    int32 EndlessWaveStart = 0; // first spawn site of the current endless wave
+    void TickPortalMenus(class AArenaFighter* Hero);
     TArray<FVector4> ForestThorns; // X, Y, radius
     UPROPERTY() TObjectPtr<AStaticMeshActor> ForestExitMarker;
     UPROPERTY() TObjectPtr<class APointLight> ForestExitLight;

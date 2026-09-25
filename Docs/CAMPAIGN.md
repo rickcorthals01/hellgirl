@@ -34,3 +34,61 @@ Balance update (2026-09-25): ordinary enemies have 35% less health and every non
 Currency (2026-09-25): the currency is now **souls** instead of coins. Defeated enemies drop glowing blue soul wisps that drift to Hellgirl, with the same drop rules as before. The HUD, shop, merchant and save slots all say souls. Internally the code still calls them Coins (UHellgirlWallet::Coins, ACoinPickup), so existing saves keep their balance. Docs/History describes the older coin version.
 
 Pacing (2026-09-25): the breaks between waves are a third of their authored length (`EnemyTuning::WaveBreakScale`). The forest's 3 s becomes about 1 s, and the castle, Imp arena and goblin stage go from 3–4 s to about 1–1.4 s. Each level's opening delay is unchanged. Enemies in a trickling wave arrive every 0.3 s instead of every 0.55 s (`EnemyTuning::SpawnInterval`).
+
+## World I story flow (2026-09-25)
+
+Built from the scripts in `Developer idea folder lol\Dialog and Story` (01 to 03.5). Stages 2 and 3 are scripts of steps taken in order: waves, conversations, soul portals, the Queen and the exit. The scripts are in `Source/Hellgirl/Levels/GoblinWaves.cpp`. A step is finished once its sites are cleared, or once its conversation or portal id is in `PlayedStory`, so a loaded save resumes where it left off.
+
+- **Stage 1:** unchanged, but it now leaves through the new exit portal.
+- **Camp after Stage 1:** "This place looks safe.. I'll set up camp here" plays on a black screen, then camp fades in.
+- **Stage 2 (the goblin army):** Hellgirl starts in the walled middle of the ruins.
+  1. "..." plays, then waves 1–3.
+  2. A soul portal opens, with its help text. Continue closes it.
+  3. Waves 4–6, then a second portal.
+  4. The Queen: "Face the might of my entire brood…". Hellgirl answers "...!".
+  5. Wave 7: two huge packs charge in from both ends of the map.
+  6. The exit portal opens.
+- **Camp after Stage 2:** "Endless mode has been unlocked for Goblins." appears in a box over camp.
+- **Stage 3 (the Queen):** 14 waves across the castle's three sections.
+  1. Waves 1–2, then "GOBLIIIINSSSSS!" and "Kill her!".
+  2. Waves 3–4, then a portal. Continuing opens gate 1.
+  3. Waves 5–6, then "Talk to me!".
+  4. Waves 7–10, then "Subjects are not supposed to fight back!".
+  5. A portal. After continuing, Hellgirl says "Subjects?".
+  6. Waves 11–14, then a portal. Continuing opens gate 2, the boss room.
+  7. The Queen speaks once she appears: "You've been unruly enough!".
+  8. At 30% health: "You're … strong!?" and "I'll show you!". This unlocks **ultimates**: the energy bar fills and an on-screen tip names the ultimate key, taken from the input settings.
+  9. At the end she begs (the full "first circle of Hel" conversation) and runs off. A narration box follows ("Hellgirl seems distracted…"), then "Huh, wait!", and the exit portal opens.
+- **Camp after Stage 3:** "A goblin has followed Hellgirl to her camp." Talking to him the first time plays his lines and unlocks the shop, which then opens.
+
+**One-time unlocks:** `Source/Hellgirl/Progress/CampaignProgress.h` holds these flags: `CampSetUp`, `EndlessGoblins`, `UltimatesUnlocked`, `GoblinFollowed`, `ShopUnlocked`.
+- They are stored in `[HellgirlCampaign]` and copied into save slots. A new game clears them.
+- Players who had already beaten the Queen (unlocked level ≥ 4) keep their ultimates.
+- Automated runs (`-Hellgirl…`) keep the flags in memory only. Every check except the story check has ultimates unlocked.
+- Until they unlock, the ultimate key says "YOUR POWER IS STILL SEALED" and the controls hint leaves the ultimate out.
+
+**Souls:**
+- Souls picked up in a level are **carried**, and shown under your stocked total ("+N carried").
+- They are banked when you **win** the level or **stock** them at a soul portal.
+- **Falling loses every carried soul.** Leaving any other way (camp from the pause menu, restart) forfeits them too.
+- A forest run carries them from room to room and banks them when the run is won. Camp pickups go straight to the bank.
+
+**Portals:**
+- **Soul portal:** Continue / Stock souls / Upgrades (coming soon). In endless mode there is also a Leave option.
+- **Exit portal:** "Leave the map and go back to camp?" YES / NO.
+- Walking in opens the menu. After closing it, E / Y reopens it.
+- Both use the kit's rune gateway (`AWavePortal`): blue for the soul portal, purple for the exit.
+
+**Endless (goblins):**
+- Unlocked by beating Stage 2. It is on the World I level select, with your best wave.
+- It uses the Stage 2 arena (`CampaignLevel=2?Endless=1`). Waves grow, the goblins get tougher every 4 waves, and every 5th wave is an army charging from both ends.
+- A soul portal opens after every 3rd wave.
+- Falling ends the run and loses the carried souls. Leaving at a portal banks them.
+- The best wave is saved as `EndlessGoblinsBest`.
+
+**Checks:**
+- `GoblinStage` walks both scripts: wave order, portals and gates.
+- `Story23` plays Stage 2, then Stage 3: every conversation in order, the 30% unlock and the Queen's escape.
+- `Endless` runs ten waves, then a death.
+- `-HellgirlStoryCheck -StoryCamp` at camp checks the three camp moments and the shop unlock.
+- `-StoryShots` photographs every page, portal and menu.

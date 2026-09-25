@@ -60,7 +60,7 @@ class SGothicDialogue : public SCompoundWidget
 {
 public:
     SLATE_BEGIN_ARGS(SGothicDialogue) {} SLATE_ARGUMENT(TWeakObjectPtr<AHellgirlPlayerController>,Owner)
-        SLATE_ARGUMENT(UTexture2D*,Frame) SLATE_ARGUMENT(UTexture2D*,Portrait) SLATE_ARGUMENT(bool,PortraitLeft) SLATE_ARGUMENT(bool,Narration)
+        SLATE_ARGUMENT(UTexture2D*,Frame) SLATE_ARGUMENT(UTexture2D*,Portrait) SLATE_ARGUMENT(bool,PortraitLeft) SLATE_ARGUMENT(bool,Narration) SLATE_ARGUMENT(bool,Backdrop)
         SLATE_ARGUMENT(FText,Speaker) SLATE_ARGUMENT(FText,Line) SLATE_END_ARGS()
     TSharedPtr<SButton> ContinueButton;
     void Construct(const FArguments& Args)
@@ -82,7 +82,10 @@ public:
         }
         const bool HasPortrait=Args._Portrait!=nullptr, HasName=!Args._Speaker.IsEmpty();
         const EHorizontalAlignment Side=Args._PortraitLeft?HAlign_Left:HAlign_Right;
-        ChildSlot.HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(FMargin(24,0,24,20))
+        // Style=Black: the ordinary box and portrait, over a black screen.
+        ChildSlot[SNew(SOverlay)
+          + SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor::Black).Visibility(Args._Backdrop?EVisibility::HitTestInvisible:EVisibility::Collapsed)]
+          + SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(FMargin(24,0,24,20))
         [SNew(SScaleBox).Stretch(EStretch::ScaleToFit).StretchDirection(EStretchDirection::DownOnly)
           [SNew(SBox).WidthOverride(1500).HeightOverride(560)
             [SNew(SOverlay)
@@ -103,7 +106,7 @@ public:
                         + SVerticalBox::Slot().FillHeight(1)
                           [SNew(SScrollBox)
                             + SScrollBox::Slot()[SNew(STextBlock).Text(Args._Line).WrapTextAt(1220).Font(FCoreStyle::GetDefaultFontStyle("Regular",24)).ColorAndOpacity(Ink)]]
-                        + SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Right).Padding(0,6,0,0)[Continue]]]]]]];
+                        + SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Right).Padding(0,6,0,0)[Continue]]]]]]]];
     }
     virtual FReply OnPreviewKeyDown(const FGeometry&,const FKeyEvent& Event) override
     {
@@ -125,13 +128,13 @@ void AHellgirlPlayerController::ShowDialogue(FText Speaker,FText Line,UTexture2D
     if (auto* Fighter=Cast<AArenaFighter>(GetPawn())) Fighter->PrepareForPause();
     FlushPressedKeys(); EnsureGothicFrame();
     bMenuOpen=bDialogueOpen=true; DialoguePortrait=Portrait; DialogueNextHubMenu=-1;
-    ConversationPortraits.Reset(); ConversationLeft.Reset(); ConversationNarration.Reset();
+    ConversationPortraits.Reset(); ConversationLeft.Reset(); ConversationNarration.Reset(); ConversationBlack.Reset();
     PresentDialoguePage(Speaker,Line,Portrait);
 }
-void AHellgirlPlayerController::PresentDialoguePage(FText Speaker,FText Line,UTexture2D* Portrait,bool bPortraitLeft,bool bNarration)
+void AHellgirlPlayerController::PresentDialoguePage(FText Speaker,FText Line,UTexture2D* Portrait,bool bPortraitLeft,bool bNarration,bool bBlack)
 {
     if (PauseWidget.IsValid()) GetWorld()->GetGameViewport()->RemoveViewportWidgetContent(PauseWidget.ToSharedRef());
-    auto Widget=SNew(SGothicDialogue).Owner(this).Frame(FrameTexture).Portrait(Portrait).PortraitLeft(bPortraitLeft).Narration(bNarration).Speaker(Speaker).Line(Line);
+    auto Widget=SNew(SGothicDialogue).Owner(this).Frame(FrameTexture).Portrait(Portrait).PortraitLeft(bPortraitLeft).Narration(bNarration).Backdrop(bBlack).Speaker(Speaker).Line(Line);
     PauseWidget=Widget; GetWorld()->GetGameViewport()->AddViewportWidgetContent(Widget,110);
     DialoguePageShownAt=FPlatformTime::Seconds();
     // Game-and-UI, so the controller's fallback keys still work if the box loses focus.
@@ -161,7 +164,7 @@ void AHellgirlPlayerController::ContinueDialogue()
     {
         ++ConversationPage;
         PresentDialoguePage(ConversationSpeakers[ConversationPage],ConversationLines[ConversationPage],ConversationPortraits[ConversationPage],
-            ConversationLeft[ConversationPage],ConversationNarration[ConversationPage]);
+            ConversationLeft[ConversationPage],ConversationNarration[ConversationPage],ConversationBlack[ConversationPage]);
         return;
     }
     const FName Finished=ConversationId;
@@ -263,7 +266,7 @@ bool AHellgirlPlayerController::ShowConversation(FName Id)
     Script.Read(FPaths::ProjectContentDir()/TEXT("Dialogue/LevelOne.ini"));
     TArray<FText> Speakers,Lines;
     TArray<TObjectPtr<UTexture2D>> Portraits;
-    TArray<bool> Left,Narration;
+    TArray<bool> Left,Narration,Black;
     for (int32 I=0;;++I)
     {
         FString Speaker,Line,Mood,Style;
@@ -274,13 +277,13 @@ bool AHellgirlPlayerController::ShowConversation(FName Id)
         const bool IsNarration=Style.Equals(TEXT("Narration"),ESearchCase::IgnoreCase);
         Speakers.Add(FText::FromString(Speaker)); Lines.Add(FText::FromString(Line));
         Portraits.Add(IsNarration?nullptr:FindPortrait(Speaker,Mood));
-        Left.Add(Speaker.Equals(TEXT("Hellgirl"),ESearchCase::IgnoreCase)); Narration.Add(IsNarration);
+        Left.Add(Speaker.Equals(TEXT("Hellgirl"),ESearchCase::IgnoreCase)); Narration.Add(IsNarration); Black.Add(Style.Equals(TEXT("Black"),ESearchCase::IgnoreCase));
     }
     if (Lines.IsEmpty()) return false;
     ShowDialogue(Speakers[0],Lines[0]);
     if (!bDialogueOpen) return false;
     ConversationId=Id; ConversationPage=0; ConversationSpeakers=MoveTemp(Speakers); ConversationLines=MoveTemp(Lines);
-    ConversationPortraits=MoveTemp(Portraits); ConversationLeft=MoveTemp(Left); ConversationNarration=MoveTemp(Narration);
-    PresentDialoguePage(ConversationSpeakers[0],ConversationLines[0],ConversationPortraits[0],ConversationLeft[0],ConversationNarration[0]);
+    ConversationPortraits=MoveTemp(Portraits); ConversationLeft=MoveTemp(Left); ConversationNarration=MoveTemp(Narration); ConversationBlack=MoveTemp(Black);
+    PresentDialoguePage(ConversationSpeakers[0],ConversationLines[0],ConversationPortraits[0],ConversationLeft[0],ConversationNarration[0],ConversationBlack[0]);
     return true;
 }

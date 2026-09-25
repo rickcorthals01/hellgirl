@@ -83,7 +83,7 @@ bool UGoblinQueenBehavior::TickPhases(float Dt)
                 Queen->SetActorLocation(Floor.ImpactPoint+FVector(0,0,Queen->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()+10));
             bHidden=false; Queen->SetActorHiddenInGame(false); Queen->SetActorEnableCollision(true); Queen->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
             Queen->EnemyMoveCooldown=1.f;
-            if (Phase==3) if (auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Queen))) GM->QueueStory(TEXT("QueenReturn"));
+
         }
     }
     return bHidden;

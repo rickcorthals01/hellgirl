@@ -27,6 +27,7 @@ void AArenaFighter::Special()
     if (auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(this)); GM && GM->bForestHub) return;
     if (bEnemy || !IsAlive() || UltimateClock > 0.f || HitClock > 0.f || KnockdownClock > 0.f
         || AttackClock > 0.f || DodgeClock > 0.f || bGroundImpactPending) return;
+    if (!HellgirlProgress::UltimatesUnlocked()) { MoveLabel = TEXT("YOUR POWER IS STILL SEALED"); MoveLabelClock = 2.f; return; }
     if (!HasUltimate()) { MoveLabel = TEXT("THIS OUTFIT'S ULTIMATE IS NOT AVAILABLE YET"); MoveLabelClock = 2.f; return; }
     if (Energy < MaxEnergy) { MoveLabel = TEXT("ULTIMATE NEEDS ALL FOUR TUBES FULL"); MoveLabelClock = 2.f; return; }
     CancelCharge(); BufferClock = 0.f;

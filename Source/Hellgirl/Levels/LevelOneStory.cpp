@@ -7,12 +7,16 @@
 #include "Engine/World.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Progress/CampaignProgress.h"
+#include "GameFramework/InputSettings.h"
+#include "HAL/PlatformTime.h"
 
 // Stage 1 (Goblins, level 1) follows "Dialog START GAME - Goblins Stage 1.txt":
 //   darkness ("... Wake, subject.") -> fade in, Hellgirl on the floor ("Ugh... Where am I?") -> she gets up and walks,
 //   no enemies -> a voice ("Prove you're worthy.") -> waves 1-2 -> the Goblin Queen's outburst -> waves 3-5
 //   -> "I gotta get out of here." -> at the portal "Let's find a save spot and rest.." -> camp.
-// Stage 3 (the Goblin Queen) keeps its own conversations (Opening, AfterFirstWave, BossEntrance, Queen phases).
+// Stages 2 and 3 queue their conversations from their wave scripts (Levels/GoblinWaves.cpp). The Queen adds three:
+//   QueenLowHealth at 30% (ultimates unlock here), QueenDefeat when she begs, then L3_Escaped once she has fled.
 namespace
 {
 constexpr float VoiceDistance = 450.f; // how far she walks from where she woke before the voice speaks
@@ -32,7 +36,8 @@ void AArenaGameMode::UseExitPortal()
 {
     // Stage 1: one last line before leaving for camp.
     if (bStoryEnabled && CampaignLevel==1 && !PlayedStory.Contains(TEXT("L1_Portal"))) { QueueStory(TEXT("L1_Portal")); return; }
-    AnswerPrompt(true);
+    CompleteLevel();
+    if (!FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl"))) TravelToHub();
 }
 void AArenaGameMode::StoryFinished(FName Moment)
 {
@@ -44,7 +49,20 @@ void AArenaGameMode::StoryFinished(FName Moment)
         QueueStory(TEXT("L1_Wake"));
     }
     else if (Moment==TEXT("L1_Wake") && Player) Player->ReleaseWakeUp();
-    else if (Moment==TEXT("L1_Portal") && !FParse::Param(FCommandLine::Get(),TEXT("HellgirlStoryCheck"))) TravelToHub();
+    // 01.5: the camp line is spoken on black; camp fades in after it.
+    else if (Moment==TEXT("C_SetUpCamp") && PC) PC->FadeFromBlack(1.5f);
+    else if (Moment==TEXT("L1_Portal") && !FParse::Param(FCommandLine::Get(),TEXT("HellgirlStoryCheck"))) { CompleteLevel(); TravelToHub(); }
+    else if (Moment==TEXT("QueenLowHealth") && CampaignLevel==3)
+    {
+        // "I'll show you!": her ultimate awakens, with the energy bar already full.
+        HellgirlProgress::SetFlag(TEXT("UltimatesUnlocked"));
+        if (Player) Player->Energy=Player->MaxEnergy;
+        FString Keys;
+        for (const FInputActionKeyMapping& Mapping : GetDefault<UInputSettings>()->GetActionMappings())
+            if (Mapping.ActionName==TEXT("Special")) Keys+=(Keys.IsEmpty()?TEXT(""):TEXT(" / "))+Mapping.Key.GetDisplayName().ToString();
+        Tip=FString::Printf(TEXT("ULTIMATE UNLOCKED  ·  Press %s to unleash your ultimate after filling up the energy bar"),Keys.IsEmpty()?TEXT("Q"):*Keys);
+        TipUntil=FPlatformTime::Seconds()+10.0;
+    }
     if (Moment==TEXT("QueenDefeat") && SurrenderedQueen.IsValid())
     {
         QueenFleeClock=2.5f;
@@ -69,6 +87,7 @@ bool AArenaGameMode::TickStory(float Dt)
         {
             if (!FParse::Param(FCommandLine::Get(),TEXT("HellgirlStoryCheck"))) EnemyDefeated(Queen->GetActorLocation());
             Queen->Health=0.f; Queen->Destroy(); SurrenderedQueen.Reset();
+            QueueStory(TEXT("L3_Escaped"));
         }
     }
     if (PC->IsPauseMenuOpen()) return true;
@@ -88,14 +107,6 @@ bool AArenaGameMode::TickStory(float Dt)
             if (SpawnSites[1]->bCleared) QueueStory(TEXT("L1_AfterWave2"));
             if (SpawnSites[4]->bCleared) QueueStory(TEXT("L1_AfterWave5"));
         }
-    }
-    else
-    {
-        QueueStory(TEXT("Opening"));
-        if (!SpawnSites.IsEmpty() && SpawnSites[0]->bCleared) QueueStory(TEXT("AfterFirstWave"));
-        bool AllWavesDone=SpawnSites.Num()>1;
-        for (int32 I=0;I<SpawnSites.Num()-1;++I) AllWavesDone &= SpawnSites[I]->bCleared;
-        if (CampaignLevel==3 && AllWavesDone && Player->GetActorLocation().X>3500.f) QueueStory(TEXT("BossEntrance"));
     }
     if (!PendingStory.IsEmpty())
     {

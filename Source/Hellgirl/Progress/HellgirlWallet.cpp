@@ -3,6 +3,7 @@
 #include "HAL/PlatformTime.h"
 #include "UI/HellgirlPlayerController.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Progress/CampaignProgress.h"
 
 namespace { const FString WalletSlot = TEXT("HellgirlWallet_v1"); }
 
@@ -20,12 +21,30 @@ void UHellgirlWallet::Init()
 bool UHellgirlWallet::Collect(int32 Amount)
 {
     // Do not overwrite an unreadable save or consume a pickup that cannot be stored.
-    if (bLoadFailed || Amount <= 0 || Coins > MAX_int64 - Amount) return false;
-    Coins += Amount;
+    if (bLoadFailed || Amount <= 0 || Coins + Carried > MAX_int64 - Amount) return false;
     LastPickup = Amount;
     PickupTime = FPlatformTime::Seconds();
+    if (bCarrying) { Carried += Amount; return true; }
+    Coins += Amount;
     SaveWallet();
     return true;
+}
+
+bool UHellgirlWallet::BankCarried()
+{
+    if (bLoadFailed || Carried <= 0) return false;
+    Coins += Carried;
+    if (!SaveWallet()) { Coins -= Carried; return false; }
+    LastBanked = Carried; BankedTime = FPlatformTime::Seconds();
+    Carried = 0;
+    return true;
+}
+
+void UHellgirlWallet::ForfeitCarried()
+{
+    if (Carried <= 0) return;
+    LastLost = Carried; LostTime = FPlatformTime::Seconds();
+    Carried = 0;
 }
 
 bool UHellgirlWallet::BuyGoblinQueen()
@@ -42,7 +61,9 @@ bool UHellgirlWallet::StartNewGame()
     // Write the fresh wallet first. A failed write leaves current progress intact.
     auto* Fresh=Cast<UHellgirlWalletSave>(UGameplayStatics::CreateSaveGameObject(UHellgirlWalletSave::StaticClass()));
     if (!Fresh || !UGameplayStatics::SaveGameToSlot(Fresh,WalletSlot,0)) return false;
-    Coins=0; bGoblinQueenOwned=false; bSaveFailed=bLoadFailed=false;
+    Coins=0; Carried=0; bGoblinQueenOwned=false; bSaveFailed=bLoadFailed=false;
+    for (const FString& Flag : HellgirlProgress::AllFlags()) GConfig->SetBool(HellgirlProgress::Section,*Flag,false,GGameUserSettingsIni);
+    GConfig->SetInt(HellgirlProgress::Section,TEXT("EndlessGoblinsBest"),0,GGameUserSettingsIni);
     LastPickup=0; PickupTime=-10.0; PendingLoad=nullptr;
     GConfig->SetInt(TEXT("HellgirlCampaign"),TEXT("UnlockedLevel"),1,GGameUserSettingsIni);
     GConfig->SetInt(TEXT("HellgirlCampaign"),TEXT("ProgressVersion"),2,GGameUserSettingsIni);

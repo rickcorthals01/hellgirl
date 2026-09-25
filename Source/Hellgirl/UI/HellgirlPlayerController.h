@@ -15,6 +15,8 @@ public:
     void TogglePauseMenu();
     void InteractWithHub();
     void OpenHubMenu(int32 Kind);
+    // The soul portal between waves (continue / stock souls / upgrades) or the exit portal (leave for camp?).
+    void OpenPortalMenu(bool bExit);
     void OpenSaveMenu();
     void ShowMainMenu();
     void PlayFromMainMenu();
@@ -45,9 +47,9 @@ private:
     int32 ConversationPage=0;
     TArray<FText> ConversationSpeakers, ConversationLines;
     UPROPERTY() TArray<TObjectPtr<UTexture2D>> ConversationPortraits;
-    TArray<bool> ConversationLeft, ConversationNarration;
+    TArray<bool> ConversationLeft, ConversationNarration, ConversationBlack;
     // Portrait on the left for Hellgirl, on the right for everyone else; narration is centred text on black.
-    void PresentDialoguePage(FText Speaker,FText Line,UTexture2D* Portrait,bool bPortraitLeft=false,bool bNarration=false);
+    void PresentDialoguePage(FText Speaker,FText Line,UTexture2D* Portrait,bool bPortraitLeft=false,bool bNarration=false,bool bBlack=false);
     UTexture2D* FindPortrait(const FString& Speaker,const FString& Mood) const;
     TSharedPtr<SWidget> FadeWidget;
     void ContinueDialogueFromGame();

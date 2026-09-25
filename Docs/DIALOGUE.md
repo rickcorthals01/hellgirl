@@ -24,8 +24,8 @@ Line1=STOOOPPPPP!!!
 |---|---|
 | `SpeakerN` | Who talks. Empty gives a box without a name. |
 | `LineN` | What they say |
-| `MoodN` | Which portrait: `Neutral` (default), `Angry`, `Surprised`, `Headache`, `Quiet`, `Smirk`, `EvilSmirk`, `Laugh`, `Hurt`, `HurtAngry`, `HurtDetermined`, `HurtNeutral`. `none` hides it. |
-| `StyleN` | `Narration` for centred text on black |
+| `MoodN` | Which portrait: `Neutral` (default), `Angry`, `Surprised`, `Headache`, `Quiet`, `Smirk`, `EvilSmirk`, `Laugh`, `Hurt`, `HurtAngry`, `HurtDetermined`, `HurtNeutral`. The Goblin Queen's script also uses `Talk`, `Beg`, `Grin`, `Confused` and `Yell` (her portraits are still to come; a missing mood falls back to `Neutral`, then to none). `none` hides it. |
+| `StyleN` | `Narration` for centred text on black; `Black` for the ordinary box and portrait over a black screen (the camp line after Stage 1) |
 
 ## Portraits
 
@@ -65,3 +65,7 @@ Stage 3 (the Goblin Queen fight) keeps its conversations: `Opening`, `AfterFirst
   - no wave before the voice.
 - Add `-StoryShots` in a window to photograph every page to `Saved/Screenshots/Story`.
 - On the Stage 3 URL, the same flag checks the Queen story.
+
+## World I moments (2026-09-25)
+
+All in `Content/Dialogue/LevelOne.ini`. Stage 1: `L1_*`. Camp: `C_SetUpCamp` (Style=Black), `C_EndlessUnlocked`, `C_GoblinFollowed`, `C_MeetGoblin` (his first talk, then the shop opens). Stage 2: `L2_Start`, `L2_PortalHelp` (shown as the first soul portal opens), `L2_Army`. Stage 3: `L3_Goblins`, `L3_TalkToMe`, `L3_Subjects`, `L3_SubjectsReply`, `L3_BossStart`, `QueenLowHealth` (30%: ultimates unlock when it ends), `QueenDefeat`, `L3_Escaped`. When each plays is described in CAMPAIGN.md.

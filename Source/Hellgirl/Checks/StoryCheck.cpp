@@ -12,26 +12,30 @@
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Progress/CampaignProgress.h"
+#include "Progress/HellgirlWallet.h"
 void AHellgirlPlayerController::RunStoryCheck()
 {
 #if WITH_DEV_AUTOMATION_TESTS
     if (!FParse::Param(FCommandLine::Get(),TEXT("HellgirlStoryCheck"))) return;
-    struct FState { int32 Phase=0,Wave=0,Pages=0,Portraits=0,LastPage=-1; FName LastId; double PageAt=0; bool bShot=false,bPressed=false; TArray<FName> Seen; TWeakObjectPtr<AArenaFighter> Queen; double Start=FPlatformTime::Seconds(); };
+    struct FState { int32 Phase=0,Wave=0,Pages=0,Portraits=0,Portals=0,LastPage=-1; FName LastId; double PageAt=0; bool bShot=false,bPressed=false; int32 PortalStage=0,CampPhase=0; double PortalAt=0,CampAt=0; TArray<FName> Seen; TWeakObjectPtr<AArenaFighter> Queen; double Start=FPlatformTime::Seconds(); };
     auto State=MakeShared<FState>(); TWeakObjectPtr<AHellgirlPlayerController> Weak(this);
     FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([Weak,State](float) {
         if (!Weak.IsValid()) return false;
         auto* PC=Weak.Get(); auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(PC)); auto* Hero=Cast<AArenaFighter>(PC->GetPawn());
         if (!GM || !Hero) return true;
         auto Fail=[](const TCHAR* Why) { UE_LOG(LogTemp,Error,TEXT("STORY CHECK FAILED: %s"),Why); FPlatformMisc::RequestExitWithStatus(false,1); };
-        if (FPlatformTime::Seconds()-State->Start>60) { Fail(TEXT("Story test timed out")); return false; }
+        // Stage 3 alone clears fourteen waves.
+        if (FPlatformTime::Seconds()-State->Start>(GM->CampaignLevel==1?60:240)) { Fail(TEXT("Story test timed out")); return false; }
         Hero->Health=Hero->MaxHealth=100000.f;
         // -StoryFromHub: start at camp and travel into Stage 1 the normal way (the check restarts in the new level).
-        if (GM->bForestHub)
+        const bool Camp=FParse::Param(FCommandLine::Get(),TEXT("StoryCamp"));
+        if (GM->bForestHub && !Camp)
         {
             if (FParse::Param(FCommandLine::Get(),TEXT("StoryFromHub")) && FPlatformTime::Seconds()-State->Start>2.0) { GM->TravelToCampaign(1); return false; }
             return true;
         }
-        if (GM->CampaignLevel==1)
+        if (GM->CampaignLevel==1 && !GM->bForestHub)
         {
             // Stage 1: darkness, waking, the voice, two waves, the Queen's outburst, three waves, leaving.
             const auto& Sites=GM->GetSpawnSites();
@@ -101,47 +105,144 @@ void AHellgirlPlayerController::RunStoryCheck()
             if (GM->HasPlayedStory(TEXT("L1_AfterWave5"))) { Hero->SetActorLocation(GM->ExitPosition+FVector(0,0,115)); GM->UseExitPortal(); }
             return true;
         }
+        // Stages 2 and 3 follow their wave scripts (Levels/GoblinWaves.cpp): every conversation in order, the soul
+        // portals (continued at once), the gates, and in Stage 3 the Queen: ultimates unlock at 30%, she begs, flees.
         if (PC->IsDialogueOpen())
         {
             const FName Id=PC->GetConversation();
-            if (State->Seen.IsEmpty() || State->Seen.Last()!=Id) State->Seen.Add(Id);
-            if (Id==TEXT("Opening") && GM->GetSpawnSites()[0]->bActivated) { Fail(TEXT("Wave started during introduction")); return false; }
-            ++State->Pages; PC->ContinueDialogue(); return true;
+            const int32 Page=PC->GetConversationPage();
+            const double Now=FPlatformTime::Seconds();
+            if (Id!=State->LastId || Page!=State->LastPage)
+            {
+                State->LastId=Id; State->LastPage=Page; State->PageAt=Now; State->bShot=false;
+                if (State->Seen.IsEmpty() || State->Seen.Last()!=Id) State->Seen.Add(Id);
+                ++State->Pages;
+                if (Id==TEXT("L2_PortalHelp") && !GM->IsSoulPortalOpen()) { Fail(TEXT("The portal help showed without its portal")); return false; }
+                if (Id==TEXT("L3_SubjectsReply") && GM->IsSoulPortalOpen()) { Fail(TEXT("Subjects? before continuing through the portal")); return false; }
+                if (Id==TEXT("QueenLowHealth") && HellgirlProgress::UltimatesUnlocked()) { Fail(TEXT("Ultimates were unlocked before the Queen's 30% moment")); return false; }
+                if (Id==TEXT("QueenDefeat") && Page==0 && (!HellgirlProgress::UltimatesUnlocked() || GM->Tip.IsEmpty() || Hero->Energy<Hero->MaxEnergy))
+                { Fail(TEXT("Ultimate unlock, full energy or tip missing after 30%")); return false; }
+            }
+            if (FParse::Param(FCommandLine::Get(),TEXT("StoryShots")))
+            {
+                if (Now-State->PageAt<.5) return true;
+                if (!State->bShot)
+                {
+                    FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Story/L%d_%02d_%s_%d.png"),GM->CampaignLevel,State->Pages-1,*Id.ToString(),Page),true,false);
+                    State->bShot=true; return true;
+                }
+                if (Now-State->PageAt<.9) return true;
+            }
+            PC->ContinueDialogue(); return true;
         }
-        const auto& Sites=GM->GetSpawnSites(); if (Sites.Num()!=4) { Fail(TEXT("Level 1 must have three waves plus boss")); return false; }
-        if (State->Wave<3)
+        // -StoryCamp (at camp, progress as after Stage 3): the three one-time camp moments in order, the goblin's
+        // first talk unlocking his shop, then the level select with the endless card.
+        if (GM->bForestHub)
         {
-            auto* Site=Sites[State->Wave].Get();
-            Hero->SetActorLocation(Site->GetActorLocation()+FVector(0,0,115));
-            if (Site->bCleared) { ++State->Wave; return true; }
-            // Clear the wave as its enemies arrive (waves are scaled up, see Rules/EnemyTuning.h).
-            if (Site->LivingEnemies()==0) return true;
-            for (TActorIterator<AArenaFighter> It(PC->GetWorld());It;++It) if (It->bEnemy && It->EncounterSite==Site) It->Health=0;
+            const double Now=FPlatformTime::Seconds();
+            auto Shot=[&](const TCHAR* Name) { if (FParse::Param(FCommandLine::Get(),TEXT("StoryShots"))) FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Story/Camp_%s.png"),Name),true,false); };
+            if (State->CampPhase==0)
+            {
+                if (!HellgirlProgress::Flag(TEXT("GoblinFollowed")) || Now-State->PageAt<1.0) return true;
+                const TArray<FName> Expected={TEXT("C_SetUpCamp"),TEXT("C_EndlessUnlocked"),TEXT("C_GoblinFollowed")};
+                if (State->Seen!=Expected || State->Pages!=3) { Fail(TEXT("Camp moments out of order")); return false; }
+                Hero->SetActorLocation(FVector(-100,440,110)); PC->SetControlRotation(FRotator(-12,90,0));
+                PC->InteractWithHub(); State->CampPhase=1; return true;
+            }
+            if (State->CampPhase==1)
+            {
+                // The shop opens after the talk.
+                if (!PC->IsPauseMenuOpen()) { Fail(TEXT("The shop did not open after the goblin's first talk")); return false; }
+                if (!HellgirlProgress::Flag(TEXT("ShopUnlocked")) || State->Seen.Last()!=TEXT("C_MeetGoblin") || State->Pages!=7) { Fail(TEXT("Goblin talk or shop unlock missing")); return false; }
+                State->CampAt=Now; State->CampPhase=2; return true;
+            }
+            if (State->CampPhase==2 && Now-State->CampAt>.6) { Shot(TEXT("Shop")); State->CampPhase=3; return true; }
+            if (State->CampPhase==3 && Now-State->CampAt>1.2) { PC->ResumeGame(); PC->OpenHubMenu(1); State->CampPhase=4; return true; }
+            if (State->CampPhase==4 && Now-State->CampAt>2.0) { Shot(TEXT("LevelSelect")); State->CampPhase=5; return true; }
+            if (State->CampPhase==5 && Now-State->CampAt>2.6)
+            {
+                UE_LOG(LogTemp,Display,TEXT("STORY CHECK PASSED: camp moments after Stages 1-3 in order (black-screen line, endless unlock, the goblin), his first talk unlocking the shop"));
+                FPlatformMisc::RequestExitWithStatus(false,0); return false;
+            }
             return true;
         }
-        Hero->SetActorLocation(FVector(4050,0,115));
-        if (!State->Queen.IsValid())
-            for (TActorIterator<AArenaFighter> It(PC->GetWorld());It;++It)
-                if (It->bEnemy && It->EnemyType==EHellgirlEnemyType::GoblinQueen) { State->Queen=*It; break; }
-        if (State->Queen.IsValid())
+        const auto& Sites=GM->GetSpawnSites();
+        if (Sites.Num()!=(GM->CampaignLevel==2?8:15)) { Fail(TEXT("Stage 2 needs 8 wave sites, Stage 3 15")); return false; }
+        // -StoryShots: photograph a portal from a few steps away, then walk in and photograph its menu.
+        // Returns true while the photographs are still being taken.
+        auto PortalShots=[&](const FVector& Where,const TCHAR* Name)
         {
-            auto* Queen=State->Queen.Get();
-            if (!Queen->bStorySurrendered)
+            if (!FParse::Param(FCommandLine::Get(),TEXT("StoryShots"))) return false;
+            const double Now=FPlatformTime::Seconds();
+            auto Shot=[&](const TCHAR* Suffix) { FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Story/L%d_%s%s.png"),GM->CampaignLevel,Name,Suffix),true,false); };
+            switch (State->PortalStage)
             {
-                // Exercise real phase triggers while bypassing attack timing only.
-                if (!Queen->IsBossHidden()) Queen->ApplyPhysicsDamage(100000.f,FVector::ZeroVector);
-                for (TActorIterator<AArenaFighter> It(PC->GetWorld());It;++It)
-                    if (It->bEnemy && *It!=Queen) It->Health=0;
+            case 0:
+                // Some carried souls (in memory only) so the HUD and menu show them.
+                if (auto* Wallet=Cast<UHellgirlWallet>(PC->GetGameInstance()); Wallet && Wallet->Carried==0) Wallet->Carried=42;
+                Hero->SetActorLocation(Where+FVector(-750,-250,115)); PC->SetControlRotation(FRotator(-10,18,0)); State->PortalAt=Now; State->PortalStage=1; return true;
+            case 1: if (Now-State->PortalAt>.8) { Shot(TEXT("")); State->PortalStage=2; } return true;
+            case 2: if (Now-State->PortalAt>1.3) { Hero->SetActorLocation(Where+FVector(-120,0,115)); State->PortalStage=3; } return true;
+            case 3: if (Now-State->PortalAt>2.1) { Shot(TEXT("Menu")); State->PortalStage=4; } return true;
+            case 4: if (Now-State->PortalAt>2.6) { PC->ResumeGame(); State->PortalStage=5; return false; } return true;
+            default: return false;
             }
-        }
-        if (Sites.Last()->bCleared)
+        };
+        if (GM->IsSoulPortalOpen())
         {
-            const TArray<FName> Expected={TEXT("Opening"),TEXT("AfterFirstWave"),TEXT("BossEntrance"),TEXT("QueenLowHealth"),TEXT("QueenReturn"),TEXT("QueenDefeat")};
-            if (State->Seen!=Expected || State->Pages!=24) { Fail(TEXT("Wrong dialogue order or page count")); return false; }
+            if (GM->IsPortalIntroPending()) return true; // its help text comes first
+            if (PortalShots(GM->GetSoulPortalLocation(),TEXT("Portal"))) return true;
+            ++State->Portals; State->PortalStage=0; GM->ChoosePortal(AArenaGameMode::EPortalChoice::Continue); return true;
+        }
+        if (GM->IsExitOpen() && PortalShots(GM->ExitPosition,TEXT("Exit"))) return true;
+        if (PC->IsPauseMenuOpen()) { PC->ResumeGame(); return true; }
+        if (GM->IsExitOpen())
+        {
+            const TArray<FName> Expected=GM->CampaignLevel==2
+                ? TArray<FName>{TEXT("L2_Start"),TEXT("L2_PortalHelp"),TEXT("L2_Army")}
+                : TArray<FName>{TEXT("L3_Goblins"),TEXT("L3_TalkToMe"),TEXT("L3_Subjects"),TEXT("L3_SubjectsReply"),TEXT("L3_BossStart"),TEXT("QueenLowHealth"),TEXT("QueenDefeat"),TEXT("L3_Escaped")};
+            const int32 Pages=GM->CampaignLevel==2?4:28, Portals=GM->CampaignLevel==2?2:3;
+            if (State->Seen!=Expected || State->Pages!=Pages || State->Portals!=Portals)
+            {
+                FString Got; for (FName N:State->Seen) Got+=N.ToString()+TEXT(" ");
+                UE_LOG(LogTemp,Error,TEXT("Seen: %s(%d pages, %d portals)"),*Got,State->Pages,State->Portals);
+                Fail(TEXT("Wrong conversation order, page count or portal count")); return false;
+            }
+            for (auto Site:Sites) if (!Site->bCleared) { Fail(TEXT("Exit opened with waves left")); return false; }
+            if (GM->CampaignLevel==2)
+            {
+                UE_LOG(LogTemp,Display,TEXT("STORY CHECK: Stage 2 passed (7 waves, 2 soul portals, 4 pages); on to Stage 3"));
+                GM->TravelToCampaign(3); return false;
+            }
             if (State->Queen.IsValid()) { Fail(TEXT("Queen did not flee")); return false; }
-            UE_LOG(LogTemp,Display,TEXT("STORY CHECK PASSED: 24 pages in order, three waves, queen phases, surrender and escape"));
+            UE_LOG(LogTemp,Display,TEXT("STORY CHECK PASSED: Stages 2 and 3 in script order, soul portals and gates, 14 waves, ultimate unlock at 30%%, the Queen's surrender and escape, exit portal"));
             FPlatformMisc::RequestExitWithStatus(false,0); return false;
         }
+        const AEnemySpawnPoint* Throne=GM->CampaignLevel==3?Sites.Last().Get():nullptr;
+        if (Throne && Throne->bActivated)
+        {
+            Hero->SetActorLocation(FVector(4050,0,115));
+            if (!State->Queen.IsValid())
+                for (TActorIterator<AArenaFighter> It(PC->GetWorld());It;++It)
+                    if (It->bEnemy && It->EnemyType==EHellgirlEnemyType::GoblinQueen) { State->Queen=*It; break; }
+            if (State->Queen.IsValid() && !State->Queen->bStorySurrendered && GM->HasPlayedStory(TEXT("L3_BossStart")))
+            {
+                auto* Queen=State->Queen.Get();
+                // Exercise the real phase triggers, bypassing only attack timing.
+                if (!Queen->IsBossHidden()) Queen->ApplyPhysicsDamage(100000.f,FVector::ZeroVector);
+                for (TActorIterator<AArenaFighter> It(PC->GetWorld());It;++It) if (It->bEnemy && *It!=Queen) It->Health=0;
+            }
+            return true;
+        }
+        // Stand in the running wave and clear it as its goblins arrive; otherwise walk to the next one.
+        for (auto Site:Sites)
+            if (Site->bActivated && !Site->bCleared)
+            {
+                Hero->SetActorLocation(Site->GetActorLocation()+FVector(0,0,115));
+                for (TActorIterator<AArenaFighter> It(PC->GetWorld());It;++It) if (It->bEnemy && It->EncounterSite==Site) It->Health=0;
+                return true;
+            }
+        for (auto Site:Sites) if (!Site->bActivated) { Hero->SetActorLocation(Site->GetActorLocation()+FVector(0,0,115)); break; }
         return true;
     }));
 #endif

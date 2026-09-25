@@ -36,6 +36,9 @@ public:
     UPROPERTY(SaveGame) FString Date;
     UPROPERTY(SaveGame) TArray<FVector> PickupLocations;
     UPROPERTY(SaveGame) TArray<int32> PickupAmounts;
+    // Souls picked up in the level but not yet banked, and the story unlocks (Progress/CampaignProgress.h).
+    UPROPERTY(SaveGame) int64 Carried=0;
+    UPROPERTY(SaveGame) TArray<FString> Flags;
 };
 
 UCLASS()
@@ -51,6 +54,14 @@ public:
     int32 LastPickup = 0;
     double PickupTime = -10.0;
     bool Collect(int32 Amount);
+    // Souls picked up in a level are carried: banked when the level is won or stocked at a portal, all lost on death.
+    // Outside a level (camp) pickups go straight to the bank.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Wallet") int64 Carried = 0;
+    bool bCarrying = false;
+    int64 LastLost = 0, LastBanked = 0;
+    double LostTime = -10.0, BankedTime = -10.0;
+    bool BankCarried();
+    void ForfeitCarried();
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Wallet") bool bGoblinQueenOwned = false;
     bool BuyGoblinQueen();
     bool StartNewGame();

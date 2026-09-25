@@ -3,6 +3,7 @@
 #include "GameFramework/Character.h"
 #include "Rules/FistCombatRules.h"
 #include "Rules/ComboRules.h"
+#include "Progress/CampaignProgress.h"
 #include "Enemies/EnemyTypes.h"
 #include "Enemies/EnemyMovesetState.h"
 #include "ArenaFighter.generated.h"
@@ -32,7 +33,8 @@ public:
     int32 GetWeapon() const { return SelectedWeapon; }
     float GetWeaponMenuTime() const { return WeaponMenuClock; }
     float GetUltimateTime() const { return UltimateClock; }
-    bool HasUltimate() const { return SelectedOutfit == 0 || SelectedOutfit == 1 || SelectedOutfit == 4; }
+    // Ultimates awaken in Stage 3, when the Goblin Queen is down to 30% (Progress/CampaignProgress.h).
+    bool HasUltimate() const { return HellgirlProgress::UltimatesUnlocked() && (SelectedOutfit == 0 || SelectedOutfit == 1 || SelectedOutfit == 4); }
     float GetSpeedMultiplier() const { return UltimateClock > 0.f ? (ActiveUltimate == 0 ? 2.f : ActiveUltimate == 1 ? 1.5f : 1.f) : 1.f; }
     float GetDashMultiplier() const { return UltimateClock > 0.f && ActiveUltimate == 0 ? 6.f : 1.f; }
     virtual void BeginPlay() override;

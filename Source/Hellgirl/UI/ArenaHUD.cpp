@@ -6,6 +6,7 @@
 #include "Rules/ComboRules.h"
 #include "UI/HellgirlPlayerController.h"
 #include "Progress/HellgirlWallet.h"
+#include "Progress/CampaignProgress.h"
 #include "Rules/StageOneLayout.h"
 #include "Enemies/EnemySpawnPoint.h"
 #include "HAL/PlatformTime.h"
@@ -119,12 +120,26 @@ void AArenaHUD::DrawHUD()
         float TW, TH;
         GetTextSize(Coins, TW, TH);
         Say(Coins, SoulBlue, MapX + MapSize - TW, MapY + MapSize + 8.f);
-        if (FPlatformTime::Seconds() - Wallet->PickupTime < 2.5)
+        // Carried souls (not yet safe) sit under the stocked total, brighter; banking and losing them flash briefly.
+        float LineY = MapY + MapSize + 28.f;
+        const double Clock = FPlatformTime::Seconds();
+        if (Wallet->Carried > 0)
         {
-            const FString Gain = FString::Printf(TEXT("+%d"), Wallet->LastPickup);
-            GetTextSize(Gain, TW, TH);
-            Say(Gain, SoulBlue, MapX + MapSize - TW, MapY + MapSize + 28.f, 1.f, 1.f - static_cast<float>((FPlatformTime::Seconds() - Wallet->PickupTime) / 2.5));
+            const FString Carried = FString::Printf(TEXT("+%lld carried"), static_cast<long long>(Wallet->Carried));
+            GetTextSize(Carried, TW, TH);
+            Say(Carried, FLinearColor(.75f, .93f, 1.f), MapX + MapSize - TW, LineY);
+            LineY += 20.f;
         }
+        auto Flash = [&](const FString& Text, FLinearColor Color, double Since, double Length)
+        {
+            if (Clock - Since >= Length) return;
+            GetTextSize(Text, TW, TH);
+            Say(Text, Color, MapX + MapSize - TW, LineY, 1.f, 1.f - static_cast<float>((Clock - Since) / Length));
+            LineY += 20.f;
+        };
+        Flash(FString::Printf(TEXT("+%d"), Wallet->LastPickup), SoulBlue, Wallet->PickupTime, 2.5);
+        Flash(FString::Printf(TEXT("%lld souls stocked"), static_cast<long long>(Wallet->LastBanked)), Gold, Wallet->BankedTime, 3.5);
+        Flash(FString::Printf(TEXT("%lld souls lost"), static_cast<long long>(Wallet->LastLost)), FLinearColor(.9f, .2f, .15f), Wallet->LostTime, 4.5);
     }
 
     // ---- Top centre: the boss. ----
@@ -196,18 +211,32 @@ void AArenaHUD::DrawHUD()
         Centered(ShownLabel, Loud ? Ember : Parchment, H * .68f - FMath::Min(LabelAge, .3f) * 30.f, Loud ? 1.3f : 1.05f, Fade);
     }
 
+    // ---- A story tip (e.g. the ultimate unlocking), in a band across the upper screen. ----
+    if (FPlatformTime::Seconds() < GM->TipUntil && !GM->Tip.IsEmpty())
+    {
+        const float Left = static_cast<float>(GM->TipUntil - FPlatformTime::Seconds());
+        const float Fade = FMath::Clamp(Left / 1.f, 0.f, 1.f);
+        DrawRect(FLinearColor(0.f, 0.f, 0.f, .5f * Fade), 0.f, H * .22f, W, 46.f);
+        Centered(GM->Tip, FLinearColor(.85f, .6f, 1.f), H * .22f + 12.f, 1.15f, Fade);
+    }
+
     // ---- Controls: shown at the start of a level, then they fade away. ----
     const float Age = GetWorld()->GetTimeSeconds();
     if (Age < 12.f)
     {
         const float Fade = Age < 10.f ? .85f : .85f * (1.f - (Age - 10.f) / 2.f);
-        Centered(TEXT("WASD move  ·  LMB light  ·  RMB heavy (hold to charge)  ·  Shift dodge  ·  Space jump  ·  Q ultimate"), Parchment, H - 58.f, .95f, Fade);
-        Centered(TEXT("Pad: X light  ·  Y heavy  ·  B dodge  ·  A jump  ·  Right stick ultimate  ·  Start pause"), Ash, H - 36.f, .9f, Fade);
+        Centered(HellgirlProgress::UltimatesUnlocked() ? TEXT("WASD move  ·  LMB light  ·  RMB heavy (hold to charge)  ·  Shift dodge  ·  Space jump  ·  Q ultimate")
+            : TEXT("WASD move  ·  LMB light  ·  RMB heavy (hold to charge)  ·  Shift dodge  ·  Space jump"), Parchment, H - 58.f, .95f, Fade);
+        Centered(HellgirlProgress::UltimatesUnlocked() ? TEXT("Pad: X light  ·  Y heavy  ·  B dodge  ·  A jump  ·  Right stick ultimate  ·  Start pause")
+            : TEXT("Pad: X light  ·  Y heavy  ·  B dodge  ·  A jump  ·  Start pause"), Ash, H - 36.f, .9f, Fade);
     }
 
     // ---- Death and victory. ----
     FString Message;
-    if (!Player->IsAlive()) Message = GM->bForestRun ? TEXT("YOU FELL  ·  the run is over  ·  press R") : TEXT("YOU FELL  ·  press R to try again");
+    if (!Player->IsAlive())
+        Message = GM->bForestRun ? TEXT("YOU FELL  ·  the run is over  ·  press R")
+            : GM->bEndless ? FString::Printf(TEXT("THE HORDE WINS  ·  wave %d  ·  best %d  ·  press R"), GM->EndlessWave, HellgirlProgress::EndlessBest())
+            : TEXT("YOU FELL  ·  press R to try again");
     else if (GM->bWon) Message = TEXT("LEVEL COMPLETE");
     if (!Message.IsEmpty())
     {

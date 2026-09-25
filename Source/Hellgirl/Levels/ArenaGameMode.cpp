@@ -1,5 +1,5 @@
-#include "Rules/EnemyTuning.h"
 #include "Levels/ArenaGameMode.h"
+#include "Rules/EnemyTuning.h"
 #include "Progress/HellgirlWallet.h"
 #include "Fighter/ArenaFighter.h"
 #include "UI/ArenaHUD.h"
@@ -9,6 +9,8 @@
 #include "Enemies/EnemySpawnPoint.h"
 #include "Levels/StageOneTerrain.h"
 #include "Levels/CastleTerrainLayout.h"
+#include "Levels/WavePortal.h"
+#include "Progress/CampaignProgress.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/SkyLight.h"
@@ -47,8 +49,11 @@ void AArenaGameMode::BeginPlay()
     bForestRun = !bSuccubusCourt && UGameplayStatics::GetIntOption(OptionsString,TEXT("ForestRun"),0)==1;
     bForestHub = !bSuccubusCourt && !bForestRun && (UGameplayStatics::GetIntOption(OptionsString,TEXT("ForestHub"),0)==1
         || (GetUnlockedLevel()>=2 && !UGameplayStatics::HasOption(OptionsString,TEXT("StageMap")) && !UGameplayStatics::HasOption(OptionsString,TEXT("CampaignLevel"))));
-    bStoryEnabled=!bForestHub && !bLegacyMap && !bSuccubusCourt && !bForestRun && (CampaignLevel==1 || CampaignLevel==3)
+    bEndless = !bForestHub && !bLegacyMap && !bSuccubusCourt && !bForestRun && CampaignLevel==2 && UGameplayStatics::GetIntOption(OptionsString,TEXT("Endless"),0)==1;
+    bStoryEnabled=!bForestHub && !bLegacyMap && !bSuccubusCourt && !bForestRun && !bEndless && CampaignLevel<=3
         && (!FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl")) || FParse::Param(FCommandLine::Get(),TEXT("HellgirlStoryCheck")));
+    // Souls picked up in a level are carried until it is won or they are stocked at a soul portal.
+    if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance())) Wallet->bCarrying=!bForestHub;
     if (bForestHub) BuildForestHub(); else BuildArena();
     LastSafePosition = bForestHub ? FVector(-550.f,0.f,110.f) : bSuccubusCourt ? FVector(-2600.f,0.f,115.f) : bForestRun ? FVector(-2150.f,0.f,115.f)
         : ((CampaignLevel==2 && !bLegacyMap) || IsImpArena() ? FVector(0.f,0.f,115.f) : FVector(-5000.f,0.f,115.f));
@@ -153,24 +158,16 @@ void AArenaGameMode::BuildArena()
                     }
                 }
         }
-        if (CampaignLevel==2)
-        {
-            for (int32 I=0;I<5;++I)
-                Site(FVector(I%2 ? 1100 : -1100, I%2 ? 800 : -800,10),FString::Printf(TEXT("SURVIVAL / WAVE %d"),I+1),4+I*2,0,false);
-        }
+        if (bEndless) MapTitle = TEXT("ENDLESS / GOBLIN WAVES");
+        // Stages 2 and 3 are scripted wave sequences (Levels/GoblinWaves.cpp).
+        if (CampaignLevel==2 || CampaignLevel==3) BuildGoblinWaves();
         else
         {
             Site(FVector(-4500,0,10),TEXT("SECTION 1 / WAVE 1"),4,0,false);
-            if (CampaignLevel==4) Site(FVector(-4400,100,10),TEXT("SECTION 1 / WAVE 2"),6,1,false);
             Site(FVector(-1400,0,10),TEXT("SECTION 2 / WAVE 1"),5,1,false);
-            if (CampaignLevel==4) Site(FVector(0,-500,10),TEXT("SECTION 2 / WAVE 2"),7,2,false);
             Site(FVector(1000,0,10),TEXT("SECTION 2 / FINAL WAVE"),8,3,false);
-            if (CampaignLevel==1)
-            {
-                Site(FVector(4100,-500,10),TEXT("SECTION 3 / WAVE 1"),10,0,false);
-                Site(FVector(4500,500,10),TEXT("SECTION 3 / WAVE 2"),12,0,false);
-            }
-            else Site(FVector(4100,0,10),CampaignLevel==3?TEXT("SECTION 3 / GOBLIN QUEEN"):TEXT("SECTION 3 / IMP COMMANDER"),1,0,false,true);
+            Site(FVector(4100,-500,10),TEXT("SECTION 3 / WAVE 1"),10,0,false);
+            Site(FVector(4500,500,10),TEXT("SECTION 3 / WAVE 2"),12,0,false);
         }
         for (float X : {-3400.f, 3300.f})
         {
@@ -230,6 +227,8 @@ void AArenaGameMode::BuildArena()
     ExitPortal = Prop(ExitPosition + FVector(0,0,200), FVector(.4f,2.8f,4.f), FLinearColor(.55f,.025f,.9f), true);
     ExitPortal->GetStaticMeshComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     ExitPortal->SetActorHiddenInGame(true);
+    // World I leaves through a real gateway instead of the old glowing ellipsoid.
+    if (MapNumber == 1 && !bLegacyMap && CampaignLevel <= 3) ExitGate = GetWorld()->SpawnActor<AWavePortal>();
     TotalSites = SpawnSites.Num();
     if (MapNumber == 2 && !IsImpArena()) GetWorld()->SpawnActor<ASkyAtmosphere>();
     if (auto* Sun = GetWorld()->SpawnActor<ADirectionalLight>(FVector(0,0,4000), FRotator(-50,-35,0)))
@@ -272,10 +271,13 @@ void AArenaGameMode::RestartMap()
 {
     // A forest run ends at camp, whether Hellgirl died or finished it (a new run gets a new seed).
     if (bForestRun) { if (GetUnlockedLevel()>=2) TravelToHub(); else StartForestRun(); return; }
+    // An endless run is over once Hellgirl falls (or restarts): back to camp.
+    if (bEndless) { TravelToHub(); return; }
     if (bForestHub) { TravelToHub(); return; } if (bSuccubusCourt) { TravelToSuccubusCourt(); return; } if (bLegacyMap) Travel(MapNumber); else TravelToCampaign(CampaignLevel); }
 int32 AArenaGameMode::GetUnlockedLevel() const
 {
     if (const auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance()); Wallet && Wallet->PendingLoad) return Wallet->PendingLoad->Unlocked;
+    if (FParse::Param(FCommandLine::Get(),TEXT("StoryCamp"))) return 4;
     if (FParse::Param(FCommandLine::Get(),TEXT("HellgirlHubCheck")) || FParse::Param(FCommandLine::Get(),TEXT("HellgirlHubPreview"))
         || FParse::Param(FCommandLine::Get(),TEXT("HellgirlLevelSelectPreview"))) return 4;
     if (FParse::Param(FCommandLine::Get(),TEXT("HellgirlLevelSelectStagePreview"))) return 2;
@@ -328,6 +330,12 @@ void AArenaGameMode::Tick(float Dt)
         return;
     }
     RunMapShot(Dt);
+    // Falling loses every carried soul; only stocked or won souls are safe.
+    if (const auto* Hero=Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this,0)); Hero && !Hero->IsAlive() && !bPlayerDeathHandled && !bForestHub)
+    {
+        bPlayerDeathHandled=true;
+        if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance())) Wallet->ForfeitCarried();
+    }
     if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance()); Wallet && Wallet->PendingLoad) Wallet->RestorePending();
     if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance()); Wallet && Wallet->RunSaveCheck()) return;
     if (bStoryEnabled && TickStory(Dt)) return;
@@ -336,7 +344,8 @@ void AArenaGameMode::Tick(float Dt)
     if (bSuccubusCourt) { TickSuccubusCourt(Dt); return; }
     if (bForestRun) { RunForestRunCheck(); TickForestRun(Dt); return; }
     RunGoblinStageCheck();
-    if (!bLegacyMap && CampaignLevel<=2) { TickGoblinPrelude(Dt); return; }
+    if (!bLegacyMap && CampaignLevel==1) { TickGoblinPrelude(Dt); return; }
+    if (!bLegacyMap && CampaignLevel<=3) { RunCampaignCheck(Dt); RunMapVisualCheck(Dt); RunTerrainCheck(Dt); RunMapCheck(Dt); TickGoblinWaves(Dt); return; }
     RunCampaignCheck(Dt);
     if (IsImpArena()) { RunImpArenaCheck(); TickImpArena(Dt); return; }
     RunMapVisualCheck(Dt);
@@ -464,3 +473,13 @@ void AArenaGameMode::Tick(float Dt)
     RunMapCheck(Dt);
 }
 
+void AArenaGameMode::EndPlay(const EEndPlayReason::Type Reason)
+{
+    // Leaving a level any way but winning it (or walking on to the next forest room) loses the souls still carried.
+    if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance()))
+    {
+        if (!bForestHub && !bKeepCarriedSouls) Wallet->ForfeitCarried();
+        Wallet->bCarrying=false;
+    }
+    Super::EndPlay(Reason);
+}

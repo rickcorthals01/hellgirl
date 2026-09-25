@@ -14,7 +14,6 @@ void AArenaGameMode::TickGoblinPrelude(float Dt)
 {
     auto* Hero=Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this,0));
     if (!Hero || !Hero->IsAlive() || SpawnSites.Num()!=5) return;
-    auto* PC=Cast<APlayerController>(Hero->GetController());
     ActivatedSites=ClearedSites=EnemiesRemaining=0;
     for (auto Site:SpawnSites) { ActivatedSites+=Site->bActivated; ClearedSites+=Site->bCleared; EnemiesRemaining+=Site->LivingEnemies(); }
     int32 Next=0; while (Next<5 && SpawnSites[Next]->bCleared) ++Next;
@@ -40,21 +39,13 @@ void AArenaGameMode::TickGoblinPrelude(float Dt)
     }
     else
     {
-        Objective=TEXT("LEVEL COMPLETE / Enter the purple portal to return to camp");
-        if (GetUnlockedLevel()<CampaignLevel+1 && !FParse::Param(FCommandLine::Get(),TEXT("HellgirlGoblinStageCheck")))
-        { GConfig->SetInt(TEXT("HellgirlCampaign"),TEXT("UnlockedLevel"),CampaignLevel+1,GGameUserSettingsIni); GConfig->Flush(false,GGameUserSettingsIni); }
+        Objective=TEXT("LEVEL COMPLETE / Enter the portal to return to camp");
+        CompleteLevel();
     }
-    ExitPortal->SetActorHiddenInGame(Next<5);
+    ShowExitPortal(Next>=5);
     if (BossOrb) BossOrb->SetActorHiddenInGame(true);
-    const bool NearExit=Next==5 && FVector::Dist2D(Hero->GetActorLocation(),ExitPosition)<350.f;
     Prompt.Empty(); PromptAction=0;
-    if (!NearExit) bDeclined=false;
-    if (NearExit && !bDeclined)
-    {
-        PromptAction=4; Prompt=TEXT("Return to camp? E / D-pad Up: YES   N / D-pad Down: NO");
-        if (PC && (PC->WasInputKeyJustPressed(EKeys::N)||PC->WasInputKeyJustPressed(EKeys::Gamepad_DPad_Down))) AnswerPrompt(false);
-        else if (PC && (PC->WasInputKeyJustPressed(EKeys::E)||PC->WasInputKeyJustPressed(EKeys::Gamepad_DPad_Up))) UseExitPortal();
-    }
+    TickPortalMenus(Hero);
 }
 
 void AArenaGameMode::RunGoblinStageCheck()
@@ -66,7 +57,8 @@ void AArenaGameMode::RunGoblinStageCheck()
     static int32 CheckedLevel=0;
     if (CheckedLevel==CampaignLevel) return;
     CheckedLevel=CampaignLevel;
-    bool Passed=SpawnSites.Num()==(CampaignLevel<=2?5:CampaignLevel==3?4:6);
+    // Stage 1: five waves; Stage 2: six waves and the two-pack army; Stage 3: fourteen waves and the Queen.
+    bool Passed=SpawnSites.Num()==(CampaignLevel==1?5:CampaignLevel==2?8:CampaignLevel==3?15:6);
     if (CampaignLevel==2) Passed &= FMath::Abs(Hero->GetActorLocation().X)<100.f;
     for (int32 I=0;I<SpawnSites.Num();++I)
     {
@@ -74,11 +66,10 @@ void AArenaGameMode::RunGoblinStageCheck()
         const bool Boss=CampaignLevel>=3 && I==SpawnSites.Num()-1;
         Passed &= Site->bBoss==Boss;
         Passed &= Site->GroundType==(CampaignLevel<=3?(Boss?EHellgirlEnemyType::GoblinQueen:EHellgirlEnemyType::Goblins):(Boss?EHellgirlEnemyType::ImpCommander:EHellgirlEnemyType::Imps));
-        if (CampaignLevel==2) Passed &= Site->EnemyCount==4+I*2;
     }
-    if (CampaignLevel<=2)
+    if (CampaignLevel==1)
     {
-        Hero->SetActorLocation(FVector(CampaignLevel==1?4500.f:0.f,0,115));
+        Hero->SetActorLocation(FVector(4500.f,0,115));
         for (int32 I=0;I<5;++I)
         {
             TickGoblinPrelude(10.f);
@@ -87,11 +78,31 @@ void AArenaGameMode::RunGoblinStageCheck()
             SpawnSites[I]->bCleared=true;
         }
         TickGoblinPrelude(0.f);
-        Passed &= !ExitPortal->IsHidden() && ClearedSites==5;
+        Passed &= IsExitOpen() && ClearedSites==5;
+    }
+    else if (CampaignLevel<=3)
+    {
+        // Walk the script: one wave at a time (the army's two packs together), a soul portal where the script
+        // puts one, and each gate only once its portal has been passed.
+        int32 Waves=0,Portals=0;
+        for (int32 Guard=0;Guard<80 && !IsExitOpen();++Guard)
+        {
+            TickGoblinWaves(10.f);
+            if (IsSoulPortalOpen()) { ++Portals; ChoosePortal(EPortalChoice::Continue); continue; }
+            int32 Started=0;
+            for (auto Site:SpawnSites) if (Site->bActivated && !Site->bCleared) { Site->bCleared=true; ++Started; }
+            Waves+=Started>0;
+            Passed &= Started<=(CampaignLevel==2 && Waves==7 ? 2 : 1);
+            // Nothing started: go to where the next wave waits (through the gate that just opened).
+            if (!Started) for (auto Site:SpawnSites) if (!Site->bActivated) { Hero->SetActorLocation(Site->GetActorLocation()+FVector(0,0,115)); break; }
+        }
+        TickGoblinWaves(0.f);
+        Passed &= IsExitOpen() && ClearedSites==SpawnSites.Num() && Waves==(CampaignLevel==2?7:15) && Portals==(CampaignLevel==2?2:3);
+        if (!Passed) UE_LOG(LogTemp,Error,TEXT("Stage %d script: %d waves, %d portals, exit %d"),CampaignLevel,Waves,Portals,IsExitOpen());
     }
     if (!Passed) { UE_LOG(LogTemp,Error,TEXT("GOBLIN STAGE CHECK FAILED at %d"),CampaignLevel); FPlatformMisc::RequestExitWithStatus(false,1); return; }
     if (CampaignLevel<4) { TravelToCampaign(CampaignLevel+1); return; }
-    UE_LOG(LogTemp,Display,TEXT("GOBLIN STAGE CHECK PASSED: all four destinations, factions, boss placement, survival counts and center spawn"));
+    UE_LOG(LogTemp,Display,TEXT("GOBLIN STAGE CHECK PASSED: all four destinations, factions, boss placement, Stage 2/3 wave scripts with soul portals and gates, centre spawn"));
     FPlatformMisc::RequestExitWithStatus(false,0);
 #endif
 }

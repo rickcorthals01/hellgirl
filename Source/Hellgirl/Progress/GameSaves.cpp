@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Progress/CampaignProgress.h"
 #include "EngineUtils.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -28,7 +29,9 @@ bool ValidSave(UHellgirlGameSave* Save)
         && !Save->Facing.ContainsNaN() && !Save->Camera.ContainsNaN() && FMath::IsFinite(Save->Health) && Save->Health>0.f
         && FMath::IsFinite(Save->Energy) && FMath::IsFinite(Save->Stamina)
         && Save->PickupLocations.Num()==Save->PickupAmounts.Num()
-        && (Save->bHub ? Save->Cleared.IsEmpty() : Save->Cleared.Num()==(Save->Level<=2?5:Save->Level==3?4:6));
+        && Save->Carried>=0
+        // Stages 2 and 3 were rebuilt as scripted waves; older saves there restore whatever still matches.
+        && (Save->bHub ? Save->Cleared.IsEmpty() : Save->Level==1 ? Save->Cleared.Num()==5 : Save->Level==4 ? Save->Cleared.Num()==6 : Save->Cleared.Num()<=32);
 }
 }
 
@@ -38,12 +41,14 @@ FString UHellgirlWallet::SaveSlot(int32 Slot)
     auto* Hero=Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this,0));
     auto* PC=Cast<AHellgirlPlayerController>(UGameplayStatics::GetPlayerController(this,0));
     if (Slot<1 || Slot>3 || !GM || !Hero || !Hero->IsAlive() || bLoadFailed || GM->bLegacyMap) return TEXT("Cannot save here.");
+    if (GM->bEndless || GM->bForestRun) return TEXT("Runs cannot be saved.");
     if (Hero->GetUltimateTime()>0.f || !Hero->GetCharacterMovement()->IsMovingOnGround() || (PC && PC->IsDialogueOpen())
         || GM->SurrenderedQueen.IsValid() || !GM->PendingStory.IsEmpty()) return TEXT("Finish the current action before saving.");
     for (auto Site:GM->GetSpawnSites()) if (Site->bActivated && !Site->bCleared) return TEXT("Finish this wave before saving.");
     auto* Save=Cast<UHellgirlGameSave>(UGameplayStatics::CreateSaveGameObject(UHellgirlGameSave::StaticClass()));
     if (!Save) return TEXT("Could not create save.");
-    Save->Coins=Coins; Save->bGoblinQueenOwned=bGoblinQueenOwned;
+    Save->Coins=Coins; Save->Carried=Carried; Save->bGoblinQueenOwned=bGoblinQueenOwned;
+    for (const FString& Flag : HellgirlProgress::AllFlags()) if (HellgirlProgress::Flag(*Flag)) Save->Flags.Add(Flag);
     Save->Level=GM->CampaignLevel; Save->Unlocked=GM->GetUnlockedLevel(); Save->bHub=GM->bForestHub;
     Save->ImpArenaLayoutVersion=GM->CampaignLevel==4 && !GM->bForestHub ? 1 : 0;
     Save->ForestHubLayoutVersion=GM->bForestHub ? 1 : 0;
@@ -83,13 +88,14 @@ void UHellgirlWallet::RestorePending()
     auto* Hero=Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this,0));
     if (!PendingLoad || !GM || !Hero) return;
     const auto* Save=PendingLoad.Get();
-    Coins=Save->Coins; bGoblinQueenOwned=Save->bGoblinQueenOwned; bLoadFailed=false;
+    Coins=Save->Coins; Carried=Save->Carried; bGoblinQueenOwned=Save->bGoblinQueenOwned; bLoadFailed=false;
     if (!IsSaveCheck())
     {
     SaveWallet();
     GConfig->SetInt(TEXT("HellgirlCampaign"),TEXT("UnlockedLevel"),Save->Unlocked,GGameUserSettingsIni);
     GConfig->SetInt(TEXT("HellgirlCampaign"),TEXT("ProgressVersion"),2,GGameUserSettingsIni);
     GConfig->SetInt(TEXT("HellgirlAppearance"),TEXT("Outfit"),Save->Outfit,GGameUserSettingsIni);
+    for (const FString& Flag : HellgirlProgress::AllFlags()) GConfig->SetBool(HellgirlProgress::Section,*Flag,Save->Flags.Contains(Flag),GGameUserSettingsIni);
     GConfig->Flush(false,GGameUserSettingsIni);
     }
     Hero->SetOutfit(Save->Outfit==4 && !bGoblinQueenOwned?0:Save->Outfit);

@@ -47,6 +47,8 @@ void AArenaGameMode::TravelToForestRoom(int32 Seed, int32 Room)
 {
     FString Options = FString::Printf(TEXT("ForestRun=1?Seed=%d?Room=%d"), Seed, Room);
     // Moving on to the next room keeps Hellgirl's health and energy; a new run starts fresh.
+    // Carried souls come along to the next room of the same run.
+    bKeepCarriedSouls = bForestRun && Room > ForestRoomNumber;
     if (bForestRun && Room > ForestRoomNumber)
         if (const auto* Player = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0)); Player && Player->IsAlive())
             Options += FString::Printf(TEXT("?RunHealth=%.1f?CombatEnergy=%.3f"), Player->Health, Player->Energy);
@@ -191,6 +193,7 @@ void AArenaGameMode::TickForestRun(float Dt)
     else if (Boss)
     {
         Objective = TEXT("THE QUEEN IS DEFEATED / Run complete");
+        CompleteLevel(); // the run is won: its souls are banked
         PromptAction = 4;
         Prompt = TEXT("Return to camp? E / D-pad Up: YES");
         if (PC && (PC->WasInputKeyJustPressed(EKeys::E) || PC->WasInputKeyJustPressed(EKeys::Gamepad_DPad_Up))) { RestartMap(); return; }

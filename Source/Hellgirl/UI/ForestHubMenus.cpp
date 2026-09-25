@@ -21,6 +21,7 @@
 #include "Containers/Ticker.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Progress/CampaignProgress.h"
 
 class SLevelSelectMenu : public SCompoundWidget
 {
@@ -51,9 +52,12 @@ public:
         if (Unlocked>=4)
             AddWorld(3,TEXT("WORLD III  /  SUCCUBUS COURT"),TEXT("Map preview · no enemies yet"),true);
         AddStage(GoblinStages,1,TEXT("STAGE I  /  FIRST RAID"),TEXT("Survive the first Goblin waves"),Unlocked>=1);
-        if (Unlocked>=1) AddStage(GoblinStages,2,TEXT("STAGE II  /  SURVIVAL"),TEXT("Five growing waves"),Unlocked>=2);
-        if (Unlocked>=2) AddStage(GoblinStages,3,TEXT("STAGE III  /  THE QUEEN"),TEXT("Cross the ruins and defeat the Goblin Queen"),Unlocked>=3);
-        AddStage(GoblinStages,ForestRun,TEXT("FOREST RUN  /  RANDOM ROOMS"),TEXT("Three random clearings, then the Goblin Queen · dying ends the run"),true);
+        if (Unlocked>=1) AddStage(GoblinStages,2,TEXT("STAGE II  /  THE GOBLIN ARMY"),TEXT("Seven waves · soul portals"),Unlocked>=2);
+        if (Unlocked>=2) AddStage(GoblinStages,3,TEXT("STAGE III  /  THE QUEEN"),TEXT("Fourteen waves across the ruins, then the Goblin Queen"),Unlocked>=3);
+        // Unlocked by beating Stage 2.
+        if (Unlocked>=3) AddStage(GoblinStages,Endless,TEXT("ENDLESS  /  GOBLIN WAVES"),
+            *FString::Printf(TEXT("Waves that never stop · best wave %d"),HellgirlProgress::EndlessBest()),true);
+        AddStage(GoblinStages,ForestRun,TEXT("FOREST RUN  /  RANDOM ROOMS"),TEXT("Three random clearings, then the Queen · dying ends the run"),true);
         AddStage(ImpStages,4,TEXT("STAGE I  /  TORTURE ARENA"),TEXT("Five Imp waves · Imp Commander"),Unlocked>=4);
         AddStage(ImpStages,5,TEXT("STAGE II  /  COMING LATER"),TEXT("Next stage preview"),false);
         AddStage(CourtStages,CourtPreview,TEXT("THE COURT  /  MAP PREVIEW"),TEXT("Walk the court · no enemies yet"),true);
@@ -65,7 +69,7 @@ public:
             + SOverlay::Slot().Padding(14)[SNew(SImage).Image(&Frame).ColorAndOpacity(FLinearColor(.92f,.85f,.74f,.78f)).Visibility(EVisibility::HitTestInvisible)]
             + SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(44)
               [SNew(SScaleBox).Stretch(EStretch::ScaleToFit).StretchDirection(EStretchDirection::DownOnly)
-                [SNew(SBox).WidthOverride(820).HeightOverride(620)
+                [SNew(SBox).WidthOverride(820).HeightOverride(700)
                   [SNew(SBorder).Padding(FMargin(38,30)).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
                     .BorderBackgroundColor(FLinearColor(.025f,.017f,.032f,.92f))
                     [SNew(SVerticalBox)
@@ -165,7 +169,7 @@ private:
         if (Available)
         {
             TSharedPtr<SButton> Button;
-            Panel->AddSlot().AutoHeight().Padding(0,7)[SAssignNew(Button,SButton).ContentPadding(FMargin(18,14))
+            Panel->AddSlot().AutoHeight().Padding(0,4)[SAssignNew(Button,SButton).ContentPadding(FMargin(18,9))
                 .ButtonColorAndOpacity(FLinearColor(.16f,.08f,.11f,.95f))
                 .OnClicked_Lambda([this,Level]() {
                     if (Owner.IsValid() && Level==CourtPreview)
@@ -178,6 +182,11 @@ private:
                         auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get()));
                         Owner->ResumeGame(); if (GM) GM->StartForestRun();
                     }
+                    else if (Owner.IsValid() && Level==Endless)
+                    {
+                        auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get()));
+                        Owner->ResumeGame(); if (GM) GM->StartEndless();
+                    }
                     else if (Owner.IsValid() && Level<=Unlocked && Level<=4)
                     {
                         auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get()));
@@ -188,7 +197,7 @@ private:
             if (Level==4) ImpFirstButton=Button;
             if (Level==CourtPreview) CourtFirstButton=Button;
         }
-        else Panel->AddSlot().AutoHeight().Padding(0,7)[SNew(SBorder).Padding(FMargin(18,14))
+        else Panel->AddSlot().AutoHeight().Padding(0,4)[SNew(SBorder).Padding(FMargin(18,9))
             .BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(.07f,.07f,.08f,.8f))[Card]];
     }
     TWeakObjectPtr<AHellgirlPlayerController> Owner;
@@ -201,6 +210,8 @@ private:
     static constexpr int32 CourtPreview=100;
     // The forest run is a chain of random rooms, also outside the campaign level numbers.
     static constexpr int32 ForestRun=101;
+    // Endless goblin waves in the Stage 2 arena.
+    static constexpr int32 Endless=102;
     TSharedPtr<SButton> BackButton,GoblinFirstButton,ImpFirstButton,ImpWorldButton,CourtWorldButton,CourtFirstButton;
 };
 
@@ -271,7 +282,13 @@ void AHellgirlPlayerController::InteractWithHub()
     auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(this));
     if (!GM || !GM->bForestHub || bMenuOpen) return;
     const int32 Kind=GM->GetHubInteraction();
-    if (Kind==2)
+    // 03.5: the first talk with the goblin who followed her unlocks his shop.
+    if (Kind==2 && !HellgirlProgress::Flag(TEXT("ShopUnlocked")) && !HellgirlProgress::IsCheckRun() && ShowConversation(TEXT("C_MeetGoblin")))
+    {
+        HellgirlProgress::SetFlag(TEXT("ShopUnlocked"));
+        DialogueNextHubMenu=2;
+    }
+    else if (Kind==2)
     {
         ShowDialogue(FText::FromString(TEXT("Goblin Merchant")),FText::FromString(TEXT("Take a look. The Goblin Queen outfit is yours for 200 souls.")));
         if (bDialogueOpen) DialogueNextHubMenu=2;
