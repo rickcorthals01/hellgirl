@@ -65,12 +65,15 @@ void AArenaHUD::DrawHUD()
             DrawRect(FLinearColor(Shade.R, Shade.G, Shade.B, Shade.A * (1.f - I / 6.f)), X + WW * I / 6.f, Y, WW / 6.f, WH);
     };
 
-    // ---- Camp: title, souls, and the prompt of whatever you stand next to. ----
+    // ---- Camp: title, Soul Coins, the last level's deposit, and the prompt of whatever you stand next to. ----
     if (GM->bForestHub)
     {
         Wash(0.f, 16.f, 360.f, 66.f);
         Say(TEXT("FOREST CAMP"), Gold, 28.f, 22.f, 1.5f);
-        if (Wallet) Say(FString::Printf(TEXT("%lld souls"), Wallet->Coins), SoulBlue, 28.f, 54.f);
+        if (Wallet) Say(FString::Printf(TEXT("%lld Soul Coins"), Wallet->Coins), SoulBlue, 28.f, 54.f);
+        if (Wallet && FPlatformTime::Seconds() - Wallet->RewardTime < 25.0 && Wallet->LastReward.Total > 0)
+            Centered(FString::Printf(TEXT("+%lld Soul Coins from your last level"), static_cast<long long>(Wallet->LastReward.Total)), Gold, H * .2f, 1.3f,
+                FMath::Clamp(static_cast<float>(25.0 - (FPlatformTime::Seconds() - Wallet->RewardTime)) / 3.f, 0.f, 1.f));
         const FString Prompt = !GM->Prompt.IsEmpty() ? GM->Prompt : GM->HasMerchant() ? TEXT("Campfire: outfits  ·  Goblin: shop  ·  Forest road: levels") : TEXT("Campfire: outfits  ·  Forest road: levels");
         Centered(Prompt, GM->Prompt.IsEmpty() ? Ash : Gold, H - 92.f, GM->Prompt.IsEmpty() ? 1.f : 1.25f);
         Centered(TEXT("E / Y  interact     Esc / Start  pause"), Ash, H - 58.f);
@@ -115,21 +118,20 @@ void AArenaHUD::DrawHUD()
     DrawRect(Teal, PlayerDot.X - 3.f, PlayerDot.Y - 3.f, 6.f, 6.f);
     if (Wallet)
     {
-        FString Coins = FString::Printf(TEXT("%lld souls"), static_cast<long long>(Wallet->Coins));
-        if (Wallet->bLoadFailed) Coins = TEXT("souls not loaded");
-        else if (Wallet->bSaveFailed) Coins += TEXT("  (not saved)");
+        // The level's Souls (to spend), what the level has earned so far, and flashes for pickups, stocking and losses.
+        FString Souls = FString::Printf(TEXT("%lld Souls"), static_cast<long long>(Wallet->LevelSouls.Souls));
+        if (Wallet->bLoadFailed) Souls = TEXT("Soul Coins not loaded");
         float TW, TH;
-        GetTextSize(Coins, TW, TH);
-        Say(Coins, SoulBlue, MapX + MapSize - TW, MapY + MapSize + 8.f);
-        // Carried souls (not yet safe) sit under the stocked total, brighter; banking and losing them flash briefly.
+        GetTextSize(Souls, TW, TH);
+        Say(Souls, SoulBlue, MapX + MapSize - TW, MapY + MapSize + 8.f);
         float LineY = MapY + MapSize + 28.f;
         const double Clock = FPlatformTime::Seconds();
-        if (Wallet->Carried > 0)
+        if (Wallet->LevelSouls.Earned > Wallet->LevelSouls.Souls)
         {
-            const FString Carried = FString::Printf(TEXT("+%lld carried"), static_cast<long long>(Wallet->Carried));
-            GetTextSize(Carried, TW, TH);
-            Say(Carried, FLinearColor(.75f, .93f, 1.f), MapX + MapSize - TW, LineY);
-            LineY += 20.f;
+            const FString Earned = FString::Printf(TEXT("%lld earned this level"), static_cast<long long>(Wallet->LevelSouls.Earned));
+            GetTextSize(Earned, TW, TH, nullptr, .85f);
+            Say(Earned, Ash, MapX + MapSize - TW * 1.f, LineY, .85f);
+            LineY += 18.f;
         }
         auto Flash = [&](const FString& Text, FLinearColor Color, double Since, double Length)
         {
@@ -139,8 +141,12 @@ void AArenaHUD::DrawHUD()
             LineY += 20.f;
         };
         Flash(FString::Printf(TEXT("+%d"), Wallet->LastPickup), SoulBlue, Wallet->PickupTime, 2.5);
-        Flash(FString::Printf(TEXT("%lld souls stocked"), static_cast<long long>(Wallet->LastBanked)), Gold, Wallet->BankedTime, 3.5);
-        Flash(FString::Printf(TEXT("%lld souls lost"), static_cast<long long>(Wallet->LastLost)), FLinearColor(.9f, .2f, .15f), Wallet->LostTime, 4.5);
+        Flash(FString::Printf(TEXT("+%lld Soul Coins sent to camp"), static_cast<long long>(Wallet->LastStocked)), Gold, Wallet->StockTime, 3.5);
+        Flash(FString::Printf(TEXT("%lld Souls lost"), static_cast<long long>(Wallet->LastLost)), FLinearColor(.9f, .2f, .15f), Wallet->LostTime, 4.5);
+        // The level is won: what it sends to camp.
+        if (Clock - Wallet->RewardTime < 6.0)
+            Centered(FString::Printf(TEXT("LEVEL COMPLETE  ·  +%lld SOUL COINS"), static_cast<long long>(Wallet->LastReward.Total)), Gold, H * .3f, 1.5f,
+                FMath::Clamp(static_cast<float>(6.0 - (Clock - Wallet->RewardTime)), 0.f, 1.f));
     }
 
     // ---- Top centre: the boss. ----

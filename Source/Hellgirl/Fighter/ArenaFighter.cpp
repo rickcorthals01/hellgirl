@@ -521,6 +521,7 @@ void AArenaFighter::StartAttack(bool Heavy)
         }
         // Pay once on commitment, before animation, launch or target movement.
         // Holding/queuing is free; a whiff or dodge cancel does not refund it.
+        NoteEnergySpent(FMath::Min(Energy, Cost));
         Energy = FMath::Clamp(Energy - Cost, 0.f, MaxEnergy);
     }
     CurrentAttack = RequestedAttack;

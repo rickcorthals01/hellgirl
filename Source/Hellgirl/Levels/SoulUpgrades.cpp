@@ -4,9 +4,11 @@
 #include "Progress/HellgirlWallet.h"
 #include "Kismet/GameplayStatics.h"
 #include "HAL/PlatformTime.h"
+#include "EngineUtils.h"
+#include "Engine/World.h"
 
-// Soul portal upgrades: each blue portal rolls five offers; Hellgirl can buy any of them (each once) with carried
-// souls. Prices are about one portal's worth of souls, so saving up buys several at once.
+// Soul portal upgrades: each blue portal rolls five offers; Hellgirl can buy any of them (each once) with the
+// level's Souls. Prices are a little under one portal's worth of Souls, so saving up buys several at once.
 // What she buys lasts for the rest of the level (a new level starts with none).
 
 void AArenaGameMode::RollPortalOffers()
@@ -34,8 +36,8 @@ bool AArenaGameMode::BuyUpgrade(int32 Offer)
     if (!Hero || !Wallet || !IsSoulPortalOpen() || !PortalOffers.IsValidIndex(Offer) || IsOfferSold(Offer)) return false;
     const int32 Upgrade = PortalOffers[Offer];
     const int32 Price = GetUpgradeCost(Upgrade);
-    if (Wallet->Carried < Price) return false;
-    Wallet->Carried -= Price;
+    if (Wallet->LevelSouls.Souls < Price) return false;
+    Wallet->LevelSouls.Souls -= Price; // spending does not lower what the level deposits when won
     OfferSold[Offer] = true;
     if (UpgradeLevels.Num() != HellgirlUpgrades::Count) UpgradeLevels.Init(0, HellgirlUpgrades::Count);
     using HellgirlUpgrades::EUpgrade;
@@ -54,4 +56,20 @@ void AArenaGameMode::RestoreUpgrades(const TArray<int32>& Levels)
     ApplyUpgrades();
     if (auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0)))
         Hero->MaxHealth += HellgirlUpgrades::Stats(UpgradeLevels).BonusMaxHealth;
+}
+
+// Bonus measures for Soul Coins (Rules/SoulRewards.h): unpaused time until the level is won, time with enemies
+// alive, and how much of that Hellgirl kept a combo multiplier going. (Energy spent is noted by the fighter.)
+void AArenaGameMode::TrackLevelSouls(float Dt)
+{
+    auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
+    auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance());
+    if (bForestHub || bLevelCompleted || !Hero || !Hero->IsAlive() || !Wallet || !Wallet->bInLevel) return;
+    FHellgirlLevelSouls& Level = Wallet->LevelSouls;
+    Level.Time += Dt;
+    bool bFighting = false;
+    for (TActorIterator<AArenaFighter> It(GetWorld()); It && !bFighting; ++It) bFighting = It->bEnemy && It->IsAlive();
+    if (!bFighting) return;
+    Level.CombatTime += Dt;
+    if (Hero->GetComboMeter().Tier() > 0) Level.ComboTime += Dt;
 }

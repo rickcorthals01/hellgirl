@@ -125,3 +125,21 @@ Built from the scripts in `Developer idea folder lol\Dialog and Story` (01 to 03
 - **Dagger slash:** 1.3 s, 13 damage at difficulty 1, can be countered with a perfect dodge.
 - **Quick slash:** 0.5 s, about 5 damage. A perfect dodge can't counter it, it shows no counter flash, and a normal dodge still avoids it. Each goblin uses it at most once every 6 s and opens with it when it reaches Hellgirl.
 - The `QuickSlash` check (at camp) covers it. Tuning is in `Rules/EnemyTuning.h`.
+
+## Souls and Soul Coins (2026-09-25)
+
+Replaces the carried-souls rules above.
+
+- **Souls** are picked up inside a level. Each level starts with 0; a forest run counts as one level across its rooms. Souls buy soul portal upgrades.
+- **Stocking** at a soul portal sends your current Souls to camp right away as **Soul Coins**. They're safe if you fall, but can no longer be spent on upgrades. This is the safer option in long endless runs.
+- **Winning** the level deposits every Soul earned there, minus what was already stocked, plus three bonuses:
+  - **Speed:** up to +30% of the Souls earned when you finish within par. It falls to 0 at twice par. Par is 45 s plus 2.5 s per kill, counting unpaused time only.
+  - **Combo uptime:** up to +30%, times the share of fighting time spent with a combo multiplier going.
+  - **Energy spent:** +1 per 10 energy spent on charges, slams and ultimates.
+- Spending Souls on upgrades never lowers the deposit.
+- **Falling** deposits nothing more. Leaving mid-level through the pause menu forfeits the level too.
+- **Endless:** leaving at a portal counts as a win.
+- **Where you see it:** the exit portal shows the breakdown. The in-level HUD shows your Souls, the level's running total, stock and loss flashes, and a LEVEL COMPLETE banner. Camp shows your Soul Coins and the last deposit.
+- **Soul Coins** are the camp wallet. The camp HUD, shop, merchant and save slots all use Soul Coins.
+- **Code:** the rules are in `Rules/SoulRewards.h`. The wallet keeps `LevelSouls` (Souls, Earned, Stocked, time, combat time, combo time, energy spent, kills), and save slots keep it too.
+- Upgrade prices were cut 15%: Fury 43, Iron Skin 38, Vitality 30, Swiftness 26, Soul Hunger 30, Second Wind 21, Bloodthirst 38, Greed 34.

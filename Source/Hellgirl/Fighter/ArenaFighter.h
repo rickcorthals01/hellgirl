@@ -90,6 +90,8 @@ public:
     float FilterEnemyDamage(float Damage);
     void UpdateGoblinTactics(float Dt, AArenaFighter* Player);
     EEnemyMove GetEnemyMove() const { return EnemyMove; }
+    // Energy Hellgirl spends counts toward the level's Soul Coin bonus (Rules/SoulRewards.h).
+    void NoteEnergySpent(float Amount);
     // Checks only: whether a perfect dodge right now would counter Enemy.
     bool CouldCounter(const AArenaFighter* Enemy) const { return CanCounter(Enemy); }
     void RunBossDesignCheck();

@@ -3,6 +3,7 @@
 #include "Fighter/ArenaFighter.h"
 #include "Progress/HellgirlWallet.h"
 #include "Rules/PortalUpgrades.h"
+#include "Rules/SoulRewards.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
@@ -16,9 +17,10 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Containers/Ticker.h"
 
-// The soul portal between waves: continue to the next wave, stock the carried souls (safe from death),
-// or buy upgrades (coming soon). In endless mode it can also take Hellgirl back to camp.
-// The exit portal only asks whether to leave for camp; NO closes it, and walking back in (or E / Y) reopens it.
+// The soul portal between waves: continue to the next wave, stock the level's Souls (sent to camp now as Soul Coins),
+// or buy upgrades with them. In endless mode it can also take Hellgirl back to camp.
+// The exit portal shows what the won level sends to camp and asks whether to leave; NO closes it, and walking back in
+// (or E / Y) reopens it.
 class SPortalMenu : public SCompoundWidget
 {
 public:
@@ -52,6 +54,25 @@ public:
         if (Args._Exit)
         {
             Items->AddSlot().AutoHeight().Padding(0,0,0,10)[Text(TEXT("THE WAY BACK"),26,Ink)];
+            // What the won level deposited in camp: its Souls (minus any already stocked) and the bonuses.
+            if (const auto* W=Wallet(); W && W->RewardTime>0.0)
+            {
+                const HellgirlSouls::FReward& R=W->LastReward;
+                auto Row=[&](const FString& Label,const FString& Value,FLinearColor Color)
+                {
+                    Items->AddSlot().AutoHeight().Padding(0,2)[SNew(SHorizontalBox)
+                        + SHorizontalBox::Slot().FillWidth(1)[SNew(STextBlock).Text(FText::FromString(Label)).Font(FCoreStyle::GetDefaultFontStyle("Regular",14)).ColorAndOpacity(Faint)]
+                        + SHorizontalBox::Slot().AutoWidth()[SNew(STextBlock).Text(FText::FromString(Value)).Font(FCoreStyle::GetDefaultFontStyle("Regular",14)).ColorAndOpacity(Color)]];
+                };
+                Row(TEXT("Souls earned"),FString::Printf(TEXT("%lld"),R.Earned),Soul);
+                if (R.Stocked>0) Row(TEXT("Already stocked"),FString::Printf(TEXT("-%lld"),R.Stocked),Faint);
+                Row(FString::Printf(TEXT("Speed  %s  (par %s)"),*HellgirlSouls::Clock(R.Time),*HellgirlSouls::Clock(R.Par)),FString::Printf(TEXT("+%lld"),R.Speed),OfferGold);
+                Row(FString::Printf(TEXT("Combo uptime  %d%%"),FMath::RoundToInt(R.Uptime*100.f)),FString::Printf(TEXT("+%lld"),R.Combo),OfferGold);
+                Row(FString::Printf(TEXT("Energy spent  %d"),FMath::RoundToInt(R.EnergySpent)),FString::Printf(TEXT("+%lld"),R.Energy),OfferGold);
+                Items->AddSlot().AutoHeight().Padding(0,8,0,18)[SNew(SHorizontalBox)
+                    + SHorizontalBox::Slot().FillWidth(1)[SNew(STextBlock).Text(FText::FromString(TEXT("SOUL COINS TO CAMP"))).Font(FCoreStyle::GetDefaultFontStyle("Bold",16)).ColorAndOpacity(Ink)]
+                    + SHorizontalBox::Slot().AutoWidth()[SNew(STextBlock).Text(FText::FromString(FString::Printf(TEXT("+%lld"),R.Total))).Font(FCoreStyle::GetDefaultFontStyle("Bold",16)).ColorAndOpacity(OfferGold)]];
+            }
             Items->AddSlot().AutoHeight().Padding(0,0,0,24)[Text(TEXT("Leave the map and go back to camp?"),16,Faint)];
             Items->AddSlot().AutoHeight().Padding(0,5)[Choice(FirstButton,[]() { return FText::FromString(TEXT("YES")); },[]() { return true; },AArenaGameMode::EPortalChoice::Leave,true)];
             Items->AddSlot().AutoHeight().Padding(0,5)[Choice(Button,[]() { return FText::FromString(TEXT("NO")); },[]() { return true; },AArenaGameMode::EPortalChoice::Stay,true)];
@@ -60,17 +81,17 @@ public:
         {
             Items->AddSlot().AutoHeight().Padding(0,0,0,8)[Text(TEXT("SOUL PORTAL"),26,Ink)];
             Items->AddSlot().AutoHeight().Padding(0,0,0,20)[SNew(STextBlock).Justification(ETextJustify::Center).Font(FCoreStyle::GetDefaultFontStyle("Regular",15)).ColorAndOpacity(Soul)
-                .Text_Lambda([Wallet]() { const auto* W=Wallet(); return FText::FromString(FString::Printf(TEXT("Carried: %lld souls   ·   Stocked: %lld"),W?W->Carried:0,W?W->Coins:0)); })];
+                .Text_Lambda([Wallet]() { const auto* W=Wallet(); return FText::FromString(FString::Printf(TEXT("Souls: %lld   ·   Soul Coins in camp: %lld"),W?W->LevelSouls.Souls:0,W?W->Coins:0)); })];
             Items->AddSlot().AutoHeight().Padding(0,5)[Choice(FirstButton,[]() { return FText::FromString(TEXT("CONTINUE  /  NEXT WAVE")); },[]() { return true; },AArenaGameMode::EPortalChoice::Continue,true)];
             Items->AddSlot().AutoHeight().Padding(0,5)[Choice(Button,[Wallet]() {
                     const auto* W=Wallet();
-                    return FText::FromString(W && W->Carried>0 ? FString::Printf(TEXT("STOCK SOULS  /  %lld"),W->Carried) : TEXT("SOULS STOCKED")); },
-                [Wallet]() { const auto* W=Wallet(); return W && W->Carried>0 && !W->bLoadFailed; },AArenaGameMode::EPortalChoice::Stock,false)];
-            // Five upgrades for the rest of this level, each buyable once with carried souls.
+                    return FText::FromString(W && W->LevelSouls.Souls>0 ? FString::Printf(TEXT("STOCK %lld SOULS  /  TO CAMP"),W->LevelSouls.Souls) : TEXT("NO SOULS TO STOCK")); },
+                [Wallet]() { const auto* W=Wallet(); return W && W->LevelSouls.Souls>0 && !W->bLoadFailed; },AArenaGameMode::EPortalChoice::Stock,false)];
+            // Five upgrades for the rest of this level, each buyable once with Souls.
             Items->AddSlot().AutoHeight().Padding(0,16,0,4)[SNew(STextBlock).Justification(ETextJustify::Center).Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).ColorAndOpacity(OfferGold)
                 .Text_Lambda([this]() {
                     const auto* Mode=Owner.IsValid()?Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get())):nullptr;
-                    return FText::FromString(TEXT("UPGRADES FOR THIS LEVEL  ·  paid with carried souls")); })];
+                    return FText::FromString(TEXT("UPGRADES FOR THIS LEVEL  ·  paid with Souls")); })];
             if (GM)
                 for (int32 Offer=0; Offer<GM->GetPortalOffers().Num(); ++Offer)
                 {
@@ -81,7 +102,7 @@ public:
                     [SNew(SButton).ContentPadding(FMargin(16,8)).ButtonColorAndOpacity(FLinearColor(.07f,.1f,.2f,.95f))
                         .IsEnabled_Lambda([Mode,Wallet,Offer,Upgrade]() {
                             const auto* M=Mode(); const auto* W=Wallet();
-                            return M && W && !M->IsOfferSold(Offer) && W->Carried>=M->GetUpgradeCost(Upgrade); })
+                            return M && W && !M->IsOfferSold(Offer) && W->LevelSouls.Souls>=M->GetUpgradeCost(Upgrade); })
                         .OnClicked_Lambda([Mode,Offer]() { if (auto* M=Mode()) M->BuyUpgrade(Offer); return FReply::Handled(); })
                         [SNew(SHorizontalBox)
                           + SHorizontalBox::Slot().FillWidth(1).VAlign(VAlign_Center)
@@ -99,11 +120,11 @@ public:
                               .Text_Lambda([Mode,Offer,Upgrade]() {
                                   const auto* M=Mode();
                                   if (M && M->IsOfferSold(Offer)) return FText::FromString(TEXT("BOUGHT"));
-                                  return FText::FromString(FString::Printf(TEXT("%d souls"),M?M->GetUpgradeCost(Upgrade):0)); })]]];
+                                  return FText::FromString(FString::Printf(TEXT("%d Souls"),M?M->GetUpgradeCost(Upgrade):0)); })]]];
                 }
             if (Endless)
-                Items->AddSlot().AutoHeight().Padding(0,5)[Choice(Button,[]() { return FText::FromString(TEXT("LEAVE FOR CAMP  /  KEEP YOUR SOULS")); },[]() { return true; },AArenaGameMode::EPortalChoice::Leave,true)];
-            Items->AddSlot().AutoHeight().Padding(0,14,0,0)[Text(TEXT("Carried souls pay for upgrades and are lost if you fall. Stocked souls are safe."),12,Faint)];
+                Items->AddSlot().AutoHeight().Padding(0,5)[Choice(Button,[]() { return FText::FromString(TEXT("LEAVE FOR CAMP  /  WIN THE RUN'S SOUL COINS")); },[]() { return true; },AArenaGameMode::EPortalChoice::Leave,true)];
+            Items->AddSlot().AutoHeight().Padding(0,14,0,0)[Text(TEXT("Souls buy upgrades. Stocked Souls go to camp now as Soul Coins and are safe if you fall. Win the level and every Soul you earned (minus those stocked) becomes Soul Coins, plus bonuses."),12,Faint)];
         }
         Items->AddSlot().AutoHeight().Padding(0,14,0,0)[Text(TEXT("ESC / B  ·  CLOSE"),10,Faint)];
         ChildSlot.HAlign(HAlign_Center).VAlign(VAlign_Center)

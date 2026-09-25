@@ -2,7 +2,23 @@
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
 #include "GameFramework/SaveGame.h"
+#include "Rules/SoulRewards.h"
 #include "HellgirlWallet.generated.h"
+
+// One level's Souls (Rules/SoulRewards.h): what is left to spend, everything picked up, and the bonus measures.
+USTRUCT()
+struct FHellgirlLevelSouls
+{
+    GENERATED_BODY()
+    UPROPERTY(SaveGame) int64 Souls = 0;        // spendable on soul portal upgrades
+    UPROPERTY(SaveGame) int64 Earned = 0;       // every Soul picked up this level; spending does not lower it
+    UPROPERTY(SaveGame) int64 Stocked = 0;      // ...of which already sent to camp as Soul Coins at a soul portal
+    UPROPERTY(SaveGame) float Time = 0.f;       // unpaused time until the level was won
+    UPROPERTY(SaveGame) float CombatTime = 0.f; // time with enemies alive
+    UPROPERTY(SaveGame) float ComboTime = 0.f;  // ...of which with a combo multiplier going
+    UPROPERTY(SaveGame) float EnergySpent = 0.f;
+    UPROPERTY(SaveGame) int32 Kills = 0;
+};
 
 UCLASS()
 class HELLGIRL_API UHellgirlWalletSave : public USaveGame
@@ -36,8 +52,8 @@ public:
     UPROPERTY(SaveGame) FString Date;
     UPROPERTY(SaveGame) TArray<FVector> PickupLocations;
     UPROPERTY(SaveGame) TArray<int32> PickupAmounts;
-    // Souls picked up in the level but not yet banked, and the story unlocks (Progress/CampaignProgress.h).
-    UPROPERTY(SaveGame) int64 Carried=0;
+    // The level's Souls so far, and the story unlocks (Progress/CampaignProgress.h).
+    UPROPERTY(SaveGame) FHellgirlLevelSouls LevelSouls;
     UPROPERTY(SaveGame) TArray<FString> Flags;
     UPROPERTY(SaveGame) TArray<int32> Upgrades; // soul portal upgrade levels bought in this level
 };
@@ -55,14 +71,24 @@ public:
     int32 LastPickup = 0;
     double PickupTime = -10.0;
     bool Collect(int32 Amount);
-    // Souls picked up in a level are carried: banked when the level is won or stocked at a portal, all lost on death.
-    // Outside a level (camp) pickups go straight to the bank.
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Wallet") int64 Carried = 0;
-    bool bCarrying = false;
-    int64 LastLost = 0, LastBanked = 0;
-    double LostTime = -10.0, BankedTime = -10.0;
-    bool BankCarried();
-    void ForfeitCarried();
+    // Coins are the camp's Soul Coins. Inside a level, pickups are Souls (LevelSouls): spent on portal upgrades, and all
+    // of them (spent or not) plus bonuses become Soul Coins when the level is won. Each level starts with none.
+    UPROPERTY() FHellgirlLevelSouls LevelSouls;
+    bool bInLevel = false;
+    void ResetLevel();
+    // Winning: Earned plus the speed, combo and energy bonuses (kept in LastReward); deposited unless bDeposit is off.
+    HellgirlSouls::FReward FinishLevel(bool bDeposit);
+    // At a soul portal: send the spendable Souls to camp now as Soul Coins (safe if she falls; no longer spendable).
+    // bWrite off keeps it in memory only (automated checks).
+    bool StockSouls(bool bWrite);
+    int64 LastStocked = 0;
+    double StockTime = -10.0;
+    // Falling: nothing more is deposited (stocked Soul Coins stay).
+    void LoseLevel();
+    HellgirlSouls::FReward LastReward;
+    double RewardTime = -100.0;
+    int64 LastLost = 0;
+    double LostTime = -10.0;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Wallet") bool bGoblinQueenOwned = false;
     bool BuyGoblinQueen();
     bool StartNewGame();

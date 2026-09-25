@@ -6,6 +6,7 @@
 #include "Progress/HellgirlWallet.h"
 #include "Progress/CampaignProgress.h"
 #include "Rules/PortalUpgrades.h"
+#include "Rules/SoulRewards.h"
 #include "UI/HellgirlPlayerController.h"
 #include "Engine/StaticMeshActor.h"
 #include "Kismet/GameplayStatics.h"
@@ -124,9 +125,11 @@ void AArenaGameMode::CompleteLevel()
     // Winning Stage 2 unlocks endless goblins; winning Stage 3 brings the goblin (and his shop) to camp.
     if (!bLegacyMap && !bForestRun && !bEndless && (CampaignLevel == 2 || CampaignLevel == 3))
         HellgirlProgress::SetFlag(CampaignLevel == 2 ? TEXT("Stage2Won") : TEXT("Stage3Won"));
-    // Automated checks never touch the player's real wallet or progress.
-    if (FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl"))) return;
-    if (auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance())) Wallet->BankCarried();
+    // Won: every Soul earned in the level plus the speed, combo and energy bonuses become Soul Coins. Automated
+    // checks work the reward out but never touch the player's real wallet or progress.
+    const bool bAutomated = FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl"));
+    if (auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance())) Wallet->FinishLevel(!bAutomated);
+    if (bAutomated) return;
     if (!bForestRun && !bEndless && !bLegacyMap && GetUnlockedLevel() < CampaignLevel + 1)
     {
         GConfig->SetInt(TEXT("HellgirlCampaign"), TEXT("UnlockedLevel"), CampaignLevel + 1, GGameUserSettingsIni);
@@ -136,7 +139,6 @@ void AArenaGameMode::CompleteLevel()
 
 void AArenaGameMode::ChoosePortal(EPortalChoice Choice)
 {
-    auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance());
     switch (Choice)
     {
     case EPortalChoice::Continue:
@@ -149,10 +151,12 @@ void AArenaGameMode::ChoosePortal(EPortalChoice Choice)
         }
         break;
     case EPortalChoice::Stock:
-        if (Wallet) Wallet->BankCarried();
+        // Sent to camp now: safe from a fall, but no longer spendable on upgrades.
+        if (auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance())) Wallet->StockSouls(!FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl")));
         break;
     case EPortalChoice::Leave:
-        if (bEndless) { if (Wallet) Wallet->BankCarried(); TravelToHub(); }
+        // Leaving an endless run at a portal counts as winning it: its Souls become Soul Coins.
+        if (bEndless) { CompleteLevel(); TravelToHub(); }
         else UseExitPortal();
         break;
     case EPortalChoice::Stay:
@@ -353,7 +357,9 @@ bool AArenaGameMode::RunEndlessCheck()
     auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance());
     if (!Hero || !Wallet || GetWorld()->GetTimeSeconds() < 1.f) return true;
     bRunning = true;
-    bool Passed = SpawnSites.IsEmpty() && Wallet->bCarrying;
+    bool Passed = SpawnSites.IsEmpty() && Wallet->bInLevel && Wallet->LevelSouls.Earned == 0;
+    const int64 CoinsBefore = Wallet->Coins;
+    int64 StockedTotal = 0;
     int32 Portals = 0, Armies = 0;
     for (int32 Guard = 0; Guard < 200 && EndlessWave < 10; ++Guard)
     {
@@ -364,20 +370,24 @@ bool AArenaGameMode::RunEndlessCheck()
             // Upgrades: five different offers, a fresh choice each portal, paid from carried souls.
             TSet<int32> Distinct(PortalOffers);
             Passed &= PortalOffers.Num() == HellgirlUpgrades::OffersPerPortal && Distinct.Num() == PortalOffers.Num() && !IsOfferSold(0) && !IsOfferSold(1) && !IsOfferSold(2);
-            Wallet->Carried = 5;
-            Passed &= !BuyUpgrade(0) && Wallet->Carried == 5;
-            Wallet->Carried = 500;
+            Wallet->LevelSouls.Souls = 5;
+            Passed &= !BuyUpgrade(0) && Wallet->LevelSouls.Souls == 5;
+            Wallet->LevelSouls.Souls = 500; Wallet->LevelSouls.Earned += 500;
             const int32 Upgrade = PortalOffers[0], Before = GetUpgradeLevel(Upgrade), Price = GetUpgradeCost(Upgrade);
             // Any offer can be bought (each once): saving up buys several at one portal.
-            Passed &= BuyUpgrade(0) && Wallet->Carried == 500 - Price && !BuyUpgrade(0) && Wallet->Carried == 500 - Price;
+            Passed &= BuyUpgrade(0) && Wallet->LevelSouls.Souls == 500 - Price && !BuyUpgrade(0) && Wallet->LevelSouls.Souls == 500 - Price;
             const int32 SecondPrice = GetUpgradeCost(PortalOffers[1]);
-            Passed &= BuyUpgrade(1) && Wallet->Carried == 500 - Price - SecondPrice && IsOfferSold(0) && IsOfferSold(1) && !IsOfferSold(2);
+            Passed &= BuyUpgrade(1) && Wallet->LevelSouls.Souls == 500 - Price - SecondPrice && Wallet->LevelSouls.Earned >= 500 && IsOfferSold(0) && IsOfferSold(1) && !IsOfferSold(2);
             Passed &= GetUpgradeLevel(Upgrade) == Before + (HellgirlUpgrades::IsInstant(Upgrade) ? 0 : 1);
             const HellgirlUpgrades::FStats Expected = HellgirlUpgrades::Stats(UpgradeLevels);
             Passed &= Hero->Upgrades.Damage == Expected.Damage && Hero->Upgrades.DamageTaken == Expected.DamageTaken && Hero->Upgrades.Speed == Expected.Speed
                 && Hero->Upgrades.BonusSouls == Expected.BonusSouls;
             if (!Passed) UE_LOG(LogTemp, Error, TEXT("Upgrade purchase failed at portal %d (upgrade %d, price %d)"), Portals, Upgrade, Price);
-            Wallet->Carried = 0;
+            // Stocking sends what is left to camp at once and leaves nothing to spend.
+            const int64 Left = Wallet->LevelSouls.Souls, Coins = Wallet->Coins;
+            ChoosePortal(EPortalChoice::Stock);
+            Passed &= Wallet->Coins == Coins + Left && Wallet->LevelSouls.Souls == 0 && Wallet->LevelSouls.Stocked == StockedTotal + Left;
+            StockedTotal += Left;
             ChoosePortal(EPortalChoice::Continue);
             continue;
         }
@@ -388,14 +398,20 @@ bool AArenaGameMode::RunEndlessCheck()
     TickEndless(0.f);
     Passed &= EndlessWave == 10 && Portals == 3 && Armies == 2 && HellgirlProgress::EndlessBest() >= 9
         && SpawnSites.Last()->Difficulty == 3 && SpawnSites[0]->Difficulty == 1;
-    Wallet->Carried = 7;
+    // Falling: nothing more goes to camp (the stocked Soul Coins stay).
+    Wallet->LevelSouls.Souls = 7;
+    const int64 EarnedBefore = Wallet->LevelSouls.Earned, CoinsAtDeath = Wallet->Coins;
     Hero->ApplyPhysicsDamage(1000000.f, FVector::ZeroVector);
     Tick(0.f);
-    Passed &= !Hero->IsAlive() && Wallet->Carried == 0 && Wallet->LastLost == 7;
+    Passed &= !Hero->IsAlive() && Wallet->LevelSouls.Souls == 0 && Wallet->LevelSouls.Earned == 0 && Wallet->LastLost == EarnedBefore && Wallet->Coins == CoinsAtDeath && CoinsAtDeath == CoinsBefore + StockedTotal;
+    // The reward: earned 100 (20 stocked), 100 s against a par of 145 s (40 kills), combo going half the fight,
+    // 105 energy spent: 100 - 20 + 30 speed + 15 combo + 10 energy = 135 Soul Coins.
+    const HellgirlSouls::FReward R = HellgirlSouls::Compute(100, 20, 100.f, 40, 50.f, 100.f, 105.f);
+    Passed &= R.Speed == 30 && R.Combo == 15 && R.Energy == 10 && R.Total == 135 && HellgirlSouls::Compute(100, 0, 290.f, 40, 0.f, 0.f, 0.f).Total == 100;
     // Prices climb 40% per level owned.
-    Passed &= HellgirlUpgrades::Cost(0, 0) == 50 && HellgirlUpgrades::Cost(0, 1) == 70 && HellgirlUpgrades::Cost(0, 2) == 90;
-    if (Passed) { UE_LOG(LogTemp, Display, TEXT("ENDLESS CHECK PASSED: ten waves, armies on 5 and 10, soul portals after 3/6/9 with five fresh upgrade offers, each buyable once, tougher goblins, best wave, carried souls lost on death")); }
-    else { UE_LOG(LogTemp, Error, TEXT("ENDLESS CHECK FAILED: wave %d, %d portals, %d armies, best %d, carried %lld"), EndlessWave, Portals, Armies, HellgirlProgress::EndlessBest(), Wallet->Carried); }
+    Passed &= HellgirlUpgrades::Cost(0, 0) == 43 && HellgirlUpgrades::Cost(0, 1) == 60 && HellgirlUpgrades::Cost(0, 2) == 77;
+    if (Passed) { UE_LOG(LogTemp, Display, TEXT("ENDLESS CHECK PASSED: ten waves, armies on 5 and 10, soul portals after 3/6/9 with five fresh upgrade offers, each buyable once, stocking Souls as Soul Coins, tougher goblins, best wave, a fall depositing nothing more, the Soul Coin reward")); }
+    else { UE_LOG(LogTemp, Error, TEXT("ENDLESS CHECK FAILED: wave %d, %d portals, %d armies, best %d, souls %lld"), EndlessWave, Portals, Armies, HellgirlProgress::EndlessBest(), Wallet->LevelSouls.Souls); }
     FPlatformMisc::RequestExitWithStatus(false, Passed ? 0 : 1);
     return true;
 #else

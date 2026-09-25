@@ -21,30 +21,37 @@ void UHellgirlWallet::Init()
 bool UHellgirlWallet::Collect(int32 Amount)
 {
     // Do not overwrite an unreadable save or consume a pickup that cannot be stored.
-    if (bLoadFailed || Amount <= 0 || Coins + Carried > MAX_int64 - Amount) return false;
+    if (bLoadFailed || Amount <= 0 || LevelSouls.Earned > MAX_int64 / 2 - Amount) return false;
     LastPickup = Amount;
     PickupTime = FPlatformTime::Seconds();
-    if (bCarrying) { Carried += Amount; return true; }
+    if (bInLevel) { LevelSouls.Souls += Amount; LevelSouls.Earned += Amount; return true; }
     Coins += Amount;
     SaveWallet();
     return true;
 }
 
-bool UHellgirlWallet::BankCarried()
+void UHellgirlWallet::ResetLevel()
 {
-    if (bLoadFailed || Carried <= 0) return false;
-    Coins += Carried;
-    if (!SaveWallet()) { Coins -= Carried; return false; }
-    LastBanked = Carried; BankedTime = FPlatformTime::Seconds();
-    Carried = 0;
-    return true;
+    LevelSouls = FHellgirlLevelSouls();
 }
 
-void UHellgirlWallet::ForfeitCarried()
+HellgirlSouls::FReward UHellgirlWallet::FinishLevel(bool bDeposit)
 {
-    if (Carried <= 0) return;
-    LastLost = Carried; LostTime = FPlatformTime::Seconds();
-    Carried = 0;
+    LastReward = HellgirlSouls::Compute(LevelSouls.Earned, LevelSouls.Stocked, LevelSouls.Time, LevelSouls.Kills, LevelSouls.ComboTime, LevelSouls.CombatTime, LevelSouls.EnergySpent);
+    RewardTime = FPlatformTime::Seconds();
+    if (bDeposit && !bLoadFailed && LastReward.Total > 0)
+    {
+        Coins += LastReward.Total;
+        if (!SaveWallet()) Coins -= LastReward.Total;
+    }
+    ResetLevel();
+    return LastReward;
+}
+
+void UHellgirlWallet::LoseLevel()
+{
+    if (LevelSouls.Earned > 0) { LastLost = LevelSouls.Earned; LostTime = FPlatformTime::Seconds(); }
+    ResetLevel();
 }
 
 bool UHellgirlWallet::BuyGoblinQueen()
@@ -61,7 +68,7 @@ bool UHellgirlWallet::StartNewGame()
     // Write the fresh wallet first. A failed write leaves current progress intact.
     auto* Fresh=Cast<UHellgirlWalletSave>(UGameplayStatics::CreateSaveGameObject(UHellgirlWalletSave::StaticClass()));
     if (!Fresh || !UGameplayStatics::SaveGameToSlot(Fresh,WalletSlot,0)) return false;
-    Coins=0; Carried=0; bGoblinQueenOwned=false; bSaveFailed=bLoadFailed=false;
+    Coins=0; ResetLevel(); bGoblinQueenOwned=false; bSaveFailed=bLoadFailed=false;
     for (const FString& Flag : HellgirlProgress::AllFlags()) GConfig->SetBool(HellgirlProgress::Section,*Flag,false,GGameUserSettingsIni);
     GConfig->SetInt(HellgirlProgress::Section,TEXT("EndlessGoblinsBest"),0,GGameUserSettingsIni);
     LastPickup=0; PickupTime=-10.0; PendingLoad=nullptr;
@@ -89,4 +96,16 @@ void UHellgirlWallet::Shutdown()
 {
     if (bSaveFailed) SaveWallet();
     Super::Shutdown();
+}
+
+bool UHellgirlWallet::StockSouls(bool bWrite)
+{
+    const int64 Amount = LevelSouls.Souls;
+    if (bLoadFailed || Amount <= 0) return false;
+    Coins += Amount;
+    if (bWrite && !SaveWallet()) { Coins -= Amount; return false; }
+    LevelSouls.Souls = 0;
+    LevelSouls.Stocked += Amount;
+    LastStocked = Amount; StockTime = FPlatformTime::Seconds();
+    return true;
 }

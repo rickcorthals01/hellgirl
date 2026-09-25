@@ -2,10 +2,10 @@
 #include "CoreMinimal.h"
 #include "Math/RandomStream.h"
 
-// Soul portal upgrades: each portal offers five at random, each buyable once with carried souls. A price is about
-// what one portal's worth of kills drops (a Stage 2 portal: ~40 souls, later ones 60-120), so saving up buys several
-// at once. They last for the rest of the level (or endless run) and stack; every level owned makes the next one
-// 40% dearer.
+// Soul portal upgrades: each portal offers five at random, each buyable once with the level's Souls. Prices (cut 15%
+// on 2026-09-25) sit around one portal's worth of Souls (a Stage 2 portal: ~40, later ones 60-120), so saving up buys
+// several at once. They last for the rest of the level (or endless run) and stack; every level owned makes the next
+// one 40% dearer.
 namespace HellgirlUpgrades
 {
 enum class EUpgrade : uint8 { Fury, IronSkin, Vitality, Swiftness, SoulHunger, SecondWind, Bloodthirst, Greed, Count };
@@ -16,14 +16,14 @@ struct FInfo { const TCHAR* Name; const TCHAR* Detail; int32 BaseCost; };
 inline const FInfo& Info(int32 Upgrade)
 {
     static const FInfo Table[Count] = {
-        {TEXT("FURY"),        TEXT("+15% damage"),              50},
-        {TEXT("IRON SKIN"),   TEXT("-15% damage taken"),        45},
-        {TEXT("VITALITY"),    TEXT("+25 max health, healed"),   35},
-        {TEXT("SWIFTNESS"),   TEXT("+10% move speed"),          30},
-        {TEXT("SOUL HUNGER"), TEXT("+25% energy from hits"),    35},
-        {TEXT("SECOND WIND"), TEXT("Heal half your health"),    25},
-        {TEXT("BLOODTHIRST"), TEXT("Heal 3 per kill"),          45},
-        {TEXT("GREED"),       TEXT("+1 soul from every drop"),  40}};
+        {TEXT("FURY"),        TEXT("+15% damage"),              43},
+        {TEXT("IRON SKIN"),   TEXT("-15% damage taken"),        38},
+        {TEXT("VITALITY"),    TEXT("+25 max health, healed"),   30},
+        {TEXT("SWIFTNESS"),   TEXT("+10% move speed"),          26},
+        {TEXT("SOUL HUNGER"), TEXT("+25% energy from hits"),    30},
+        {TEXT("SECOND WIND"), TEXT("Heal half your health"),    21},
+        {TEXT("BLOODTHIRST"), TEXT("Heal 3 per kill"),          38},
+        {TEXT("GREED"),       TEXT("+1 soul from every drop"),  34}};
     return Table[FMath::Clamp(Upgrade, 0, Count - 1)];
 }
 inline int32 Cost(int32 Upgrade, int32 Owned) { return FMath::RoundToInt(Info(Upgrade).BaseCost * (1.f + .4f * FMath::Max(0, Owned))); }

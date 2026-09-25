@@ -74,7 +74,7 @@ public:
     void RunQuickSlashCheck(float Dt);
     void RescueStragglers(class AArenaFighter* Hero, float Dt);
     void StartEndless();
-    // Soul portal menu choices: continue to the next wave, stock carried souls, or (endless / exit) leave for camp.
+    // Soul portal menu choices: continue to the next wave, stock the Souls as Soul Coins, or (endless / exit) leave.
     enum class EPortalChoice : uint8 { Continue, Stock, Leave, Stay };
     void ChoosePortal(EPortalChoice Choice);
     // Soul portal upgrades (Rules/PortalUpgrades.h): five offers per portal, each can be bought once with carried souls;
@@ -91,7 +91,7 @@ public:
     FVector GetSoulPortalLocation() const;
     bool IsExitOpen() const;
     void ShowExitPortal(bool Open);
-    // The level is won: carried souls are banked and the next stage unlocks.
+    // The level is won: its Souls and bonuses become Soul Coins and the next stage unlocks.
     void CompleteLevel();
     // A short on-screen tip (e.g. how to use the ultimate), drawn by the HUD until TipUntil (real time).
     FString Tip;
@@ -146,7 +146,9 @@ private:
     bool bPortalMenuDeclined = false;
     bool bLevelCompleted = false;
     bool bPlayerDeathHandled = false;
-    bool bKeepCarriedSouls = false; // set when moving on to the next forest room
+    bool bKeepLevelSouls = false; // set when moving on to the next forest room (a run is one level)
+    // Bonus measures for the level being played (Rules/SoulRewards.h).
+    void TrackLevelSouls(float Dt);
     int32 ScriptStep = -1;
     int32 EndlessWaveStart = 0; // first spawn site of the current endless wave
     TArray<int32> UpgradeLevels, PortalOffers;

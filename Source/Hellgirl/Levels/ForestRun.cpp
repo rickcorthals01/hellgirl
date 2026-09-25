@@ -47,8 +47,8 @@ void AArenaGameMode::TravelToForestRoom(int32 Seed, int32 Room)
 {
     FString Options = FString::Printf(TEXT("ForestRun=1?Seed=%d?Room=%d"), Seed, Room);
     // Moving on to the next room keeps Hellgirl's health and energy; a new run starts fresh.
-    // Carried souls come along to the next room of the same run.
-    bKeepCarriedSouls = bForestRun && Room > ForestRoomNumber;
+    // The run is one level: its Souls come along to the next room.
+    bKeepLevelSouls = bForestRun && Room > ForestRoomNumber;
     if (bForestRun && Room > ForestRoomNumber)
         if (const auto* Player = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0)); Player && Player->IsAlive())
             Options += FString::Printf(TEXT("?RunHealth=%.1f?CombatEnergy=%.3f"), Player->Health, Player->Energy);

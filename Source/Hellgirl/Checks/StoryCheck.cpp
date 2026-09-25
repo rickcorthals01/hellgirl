@@ -178,8 +178,8 @@ void AHellgirlPlayerController::RunStoryCheck()
             switch (State->PortalStage)
             {
             case 0:
-                // Some carried souls (in memory only) so the HUD and menu show them.
-                if (auto* Wallet=Cast<UHellgirlWallet>(PC->GetGameInstance()); Wallet && Wallet->Carried==0) Wallet->Carried=42;
+                // Some Souls (in memory only) so the HUD and menu show them.
+                if (auto* Wallet=Cast<UHellgirlWallet>(PC->GetGameInstance()); Wallet && Wallet->LevelSouls.Souls==0) { Wallet->LevelSouls.Souls=42; Wallet->LevelSouls.Earned+=42; }
                 Hero->SetActorLocation(Where+FVector(-750,-250,115)); PC->SetControlRotation(FRotator(-10,18,0)); State->PortalAt=Now; State->PortalStage=1; return true;
             case 1: if (Now-State->PortalAt>.8) { Shot(TEXT("")); State->PortalStage=2; } return true;
             case 2: if (Now-State->PortalAt>1.3) { Hero->SetActorLocation(Where+FVector(-120,0,115)); State->PortalStage=3; } return true;

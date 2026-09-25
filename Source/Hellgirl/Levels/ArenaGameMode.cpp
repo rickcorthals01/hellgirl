@@ -52,8 +52,8 @@ void AArenaGameMode::BeginPlay()
     bEndless = !bForestHub && !bLegacyMap && !bSuccubusCourt && !bForestRun && CampaignLevel==2 && UGameplayStatics::GetIntOption(OptionsString,TEXT("Endless"),0)==1;
     bStoryEnabled=!bForestHub && !bLegacyMap && !bSuccubusCourt && !bForestRun && !bEndless && CampaignLevel<=3
         && (!FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl")) || FParse::Param(FCommandLine::Get(),TEXT("HellgirlStoryCheck")));
-    // Souls picked up in a level are carried until it is won or they are stocked at a soul portal.
-    if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance())) Wallet->bCarrying=!bForestHub;
+    // Souls picked up in a level count toward it (Rules/SoulRewards.h); at camp pickups are Soul Coins.
+    if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance())) Wallet->bInLevel=!bForestHub;
     if (bForestHub) BuildForestHub(); else BuildArena();
     LastSafePosition = bForestHub ? FVector(-550.f,0.f,110.f) : bSuccubusCourt ? FVector(-2600.f,0.f,115.f) : bForestRun ? FVector(-2150.f,0.f,115.f)
         : ((CampaignLevel==2 && !bLegacyMap) || IsImpArena() ? FVector(0.f,0.f,115.f) : FVector(-5000.f,0.f,115.f));
@@ -321,6 +321,7 @@ void AArenaGameMode::EnemyDefeated(const FVector& Location)
         Drop = Hit.ImpactPoint + FVector(0,0,30);
     if (auto* Pickup = GetWorld()->SpawnActor<ACoinPickup>(Drop, FRotator::ZeroRotator)) Pickup->SetAmount(Coins);
     ++Kills;
+    if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance()); Wallet && !bForestHub) ++Wallet->LevelSouls.Kills;
 }
 void AArenaGameMode::Tick(float Dt)
 {
@@ -334,12 +335,13 @@ void AArenaGameMode::Tick(float Dt)
     }
     RunMapShot(Dt);
     RunQuickSlashCheck(Dt);
-    // Falling loses every carried soul; only stocked or won souls are safe.
+    // Falling ends the level: nothing it earned becomes Soul Coins.
     if (const auto* Hero=Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this,0)); Hero && !Hero->IsAlive() && !bPlayerDeathHandled && !bForestHub)
     {
         bPlayerDeathHandled=true;
-        if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance())) Wallet->ForfeitCarried();
+        if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance())) Wallet->LoseLevel();
     }
+    TrackLevelSouls(Dt);
     if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance()); Wallet && Wallet->PendingLoad) Wallet->RestorePending();
     if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance()); Wallet && Wallet->RunSaveCheck()) return;
     if (bStoryEnabled && TickStory(Dt)) return;
@@ -479,11 +481,11 @@ void AArenaGameMode::Tick(float Dt)
 
 void AArenaGameMode::EndPlay(const EEndPlayReason::Type Reason)
 {
-    // Leaving a level any way but winning it (or walking on to the next forest room) loses the souls still carried.
+    // Leaving a level any way but winning it (or walking on to the next forest room) forfeits its Souls.
     if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance()))
     {
-        if (!bForestHub && !bKeepCarriedSouls) Wallet->ForfeitCarried();
-        Wallet->bCarrying=false;
+        if (!bForestHub && !bKeepLevelSouls) Wallet->ResetLevel();
+        Wallet->bInLevel=false;
     }
     Super::EndPlay(Reason);
 }

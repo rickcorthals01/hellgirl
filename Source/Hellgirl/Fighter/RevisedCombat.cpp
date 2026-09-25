@@ -1,5 +1,6 @@
 #include "Fighter/ArenaFighter.h"
 #include "Levels/ArenaGameMode.h"
+#include "Progress/HellgirlWallet.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
@@ -31,6 +32,7 @@ void AArenaFighter::Special()
     if (!HasUltimate()) { MoveLabel = TEXT("THIS OUTFIT'S ULTIMATE IS NOT AVAILABLE YET"); MoveLabelClock = 2.f; return; }
     if (Energy < MaxEnergy) { MoveLabel = TEXT("ULTIMATE NEEDS ALL FOUR TUBES FULL"); MoveLabelClock = 2.f; return; }
     CancelCharge(); BufferClock = 0.f;
+    NoteEnergySpent(Energy);
     Energy = 0.f; ActiveUltimate = SelectedOutfit;
     UltimateClock = ActiveUltimate == 0 ? 8.f : ActiveUltimate == 1 ? 6.f : 6.f;
     UltimatePulseClock = 0.f;
@@ -90,4 +92,10 @@ void AArenaFighter::UpdateUltimate(float Dt)
         while (UltimatePulseClock < 0.f) { UltimatePulse(12.f, 650.f); UltimatePulseClock += 1.f; }
     }
     UltimateClock = FMath::Max(0.f, UltimateClock - Dt);
+}
+
+void AArenaFighter::NoteEnergySpent(float Amount)
+{
+    if (bEnemy || Amount <= 0.f) return;
+    if (auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance()); Wallet && Wallet->bInLevel) Wallet->LevelSouls.EnergySpent += Amount;
 }
