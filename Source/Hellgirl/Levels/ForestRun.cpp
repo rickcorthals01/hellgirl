@@ -124,7 +124,7 @@ void AArenaGameMode::BuildForestRun()
             S->EnemyScale = W.Style == ForestRoom::EWave::Elite ? 1.3f : 1.f;
             S->bInstantGroup = W.Style == ForestRoom::EWave::Ambush;
             S->bGroupGuardsHome = false;
-            S->UseBurrow();
+            // No burrow marker (too much clutter); AEnemySpawnPoint::UseBurrow() is kept for later.
         }
 
     // Rune gateways frame the trail at both ends; a green wisp appears in the exit once the room is clear.
