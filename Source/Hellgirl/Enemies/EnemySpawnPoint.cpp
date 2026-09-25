@@ -89,8 +89,23 @@ bool AEnemySpawnPoint::RegisterReinforcement(AArenaFighter* Enemy)
 
 void AEnemySpawnPoint::SpawnOne()
 {
-    const float Angle = Spawned * 2.39996f;
-    const float Radius = 190.f + 45.f * Spawned;
+    // A spiral around the site, no wider than MaxSpread. A spot that is blocked (inside a rock, or behind a wall or
+    // closed gate from the site) is retried at other angles, then at the site itself; after that the enemy is skipped,
+    // so a wave can always finish spawning.
+    constexpr float MaxSpread = 650.f;
+    constexpr int32 MaxRetries = 10;
+    const bool AtCentre = SpawnRetries >= MaxRetries;
+    const float Angle = Spawned * 2.39996f + SpawnRetries * 1.3f;
+    const float Radius = AtCentre ? 0.f : FMath::Min(190.f + 45.f * Spawned, MaxSpread) * (SpawnRetries % 2 ? .6f : 1.f);
+    auto Retry = [this]()
+    {
+        if (++SpawnRetries > MaxRetries)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("%s: no free spot for enemy %d; skipped"), *SiteName, Spawned + 1);
+            ++Spawned; SpawnRetries = 0;
+        }
+        SpawnDelay = .15f;
+    };
     const float X = static_cast<float>(GetActorLocation().X) + FMath::Cos(Angle) * Radius;
     const float Y = static_cast<float>(GetActorLocation().Y) + FMath::Sin(Angle) * Radius;
     const bool Flying = Spawned >= WaveTotal() - WaveFlyers();
@@ -107,6 +122,13 @@ void AEnemySpawnPoint::SpawnOne()
         FVector(X,Y,GroundZ - 800.f), FloorTypes, FloorQuery) && Floor.ImpactNormal.Z >= WalkableZ)
     {
         GroundZ = Floor.ImpactPoint.Z;
+        // The spot must be reachable from the site: no wall or closed gate in between.
+        FHitResult Wall;
+        FHitResult SiteFloor;
+        const float SiteZ = GetWorld()->LineTraceSingleByObjectType(SiteFloor, GetActorLocation() + FVector(0, 0, 1000.f), GetActorLocation() - FVector(0, 0, 800.f), FloorTypes, FloorQuery)
+            ? static_cast<float>(SiteFloor.ImpactPoint.Z) : GroundZ;
+        const FVector From(GetActorLocation().X, GetActorLocation().Y, SiteZ + 90.f);
+        if (!AtCentre && GetWorld()->LineTraceSingleByObjectType(Wall, From, FVector(X, Y, GroundZ + 90.f), FloorTypes, FloorQuery)) { Retry(); return; }
     }
     else
     {
@@ -117,7 +139,8 @@ void AEnemySpawnPoint::SpawnOne()
     FActorSpawnParameters Params;
     Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
     AArenaFighter* Enemy = GetWorld()->SpawnActor<AArenaFighter>(FVector(X, Y, GroundZ + SpawnOffset), FRotator::ZeroRotator, Params);
-    if (!Enemy) { SpawnDelay = .8f; return; }
+    if (!Enemy) { Retry(); return; }
+    SpawnRetries = 0;
     Enemy->bBossEncounter = bBoss;
     Enemy->MakeEnemy(Difficulty, Flying);
     Enemy->SetEnemyType(Flying ? FlyingType : GroundType);

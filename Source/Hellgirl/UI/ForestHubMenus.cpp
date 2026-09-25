@@ -54,8 +54,8 @@ public:
         AddStage(GoblinStages,1,TEXT("STAGE I  /  FIRST RAID"),TEXT("Survive the first Goblin waves"),Unlocked>=1);
         if (Unlocked>=1) AddStage(GoblinStages,2,TEXT("STAGE II  /  THE GOBLIN ARMY"),TEXT("Seven waves · soul portals"),Unlocked>=2);
         if (Unlocked>=2) AddStage(GoblinStages,3,TEXT("STAGE III  /  THE QUEEN"),TEXT("Fourteen waves across the ruins, then the Goblin Queen"),Unlocked>=3);
-        // Unlocked by beating Stage 2.
-        if (Unlocked>=3) AddStage(GoblinStages,Endless,TEXT("ENDLESS  /  GOBLIN WAVES"),
+        // Unlocked by beating Stage 2 (02.5).
+        if (HellgirlProgress::Flag(TEXT("Stage2Won"))) AddStage(GoblinStages,Endless,TEXT("ENDLESS  /  GOBLIN WAVES"),
             *FString::Printf(TEXT("Waves that never stop · best wave %d"),HellgirlProgress::EndlessBest()),true);
         AddStage(GoblinStages,ForestRun,TEXT("FOREST RUN  /  RANDOM ROOMS"),TEXT("Three random clearings, then the Queen · dying ends the run"),true);
         AddStage(ImpStages,4,TEXT("STAGE I  /  TORTURE ARENA"),TEXT("Five Imp waves · Imp Commander"),Unlocked>=4);

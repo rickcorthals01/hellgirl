@@ -61,9 +61,8 @@ Built from the scripts in `Developer idea folder lol\Dialog and Story` (01 to 03
   9. At the end she begs (the full "first circle of Hel" conversation) and runs off. A narration box follows ("Hellgirl seems distracted…"), then "Huh, wait!", and the exit portal opens.
 - **Camp after Stage 3:** "A goblin has followed Hellgirl to her camp." Talking to him the first time plays his lines and unlocks the shop, which then opens.
 
-**One-time unlocks:** `Source/Hellgirl/Progress/CampaignProgress.h` holds these flags: `CampSetUp`, `EndlessGoblins`, `UltimatesUnlocked`, `GoblinFollowed`, `ShopUnlocked`.
+**One-time unlocks:** `Source/Hellgirl/Progress/CampaignProgress.h` holds these flags: `CampSetUp`, `Stage2Won`, `Stage3Won`, `EndlessGoblins`, `UltimatesUnlocked`, `GoblinFollowed`, `ShopUnlocked`. Unlocks follow the scripts strictly, whatever older progress says: endless needs a Stage 2 win, the goblin and his shop a Stage 3 win, ultimates the Queen's 30% moment.
 - They are stored in `[HellgirlCampaign]` and copied into save slots. A new game clears them.
-- Players who had already beaten the Queen (unlocked level ≥ 4) keep their ultimates.
 - Automated runs (`-Hellgirl…`) keep the flags in memory only. Every check except the story check has ultimates unlocked.
 - Until they unlock, the ultimate key says "YOUR POWER IS STILL SEALED" and the controls hint leaves the ultimate out.
 
@@ -92,3 +91,9 @@ Built from the scripts in `Developer idea folder lol\Dialog and Story` (01 to 03
 - `Endless` runs ten waves, then a death.
 - `-HellgirlStoryCheck -StoryCamp` at camp checks the three camp moments and the shop unlock.
 - `-StoryShots` photographs every page, portal and menu.
+
+**Waves always finish (2026-09-25 fix):**
+- **Spawning:** a wave's spawn spiral is at most 650 units wide. A spot inside a rock, or behind a wall or closed gate from its site, is retried at other angles, then at the site itself, and skipped after that.
+- **Stage 2 army:** its packs now start at X −2400 and 2300. At ±2850 they spawned past the gates, so the wave, and the exit portal after it, never finished.
+- **Stragglers:** once a wave is down to its last four goblins and 12 s pass without a kill, goblins more than 900 units from Hellgirl are brought back near her. Goblins that fell through the floor are brought back too. This covers goblins knocked onto a wall top or stuck on a ledge.
+- **`NaturalWaves` check:** runs Stage 2, Stage 3 and endless for real. Hellgirl stands still and only goblins that reach her die. It fails on a stall, or if a goblin appears beyond its wave's gate.

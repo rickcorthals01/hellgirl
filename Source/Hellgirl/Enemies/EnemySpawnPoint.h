@@ -32,6 +32,7 @@ public:
     float EnemyScale = 1.f;
     bool bCleared = false;
     int32 LivingEnemies() const;
+    int32 GetSpawned() const { return Spawned; }
     // Enemies this site actually spawns: EnemyCount/FlyingCount scaled by Rules/EnemyTuning.h (bosses unscaled).
     int32 WaveTotal() const;
     int32 WaveFlyers() const;
@@ -50,5 +51,6 @@ private:
     bool bBurrow = false;
     TArray<TWeakObjectPtr<AArenaFighter>> Enemies;
     int32 Spawned = 0;
+    int32 SpawnRetries = 0;
     float SpawnDelay = 0.f;
 };

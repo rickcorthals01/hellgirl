@@ -9,6 +9,7 @@
 #include "Engine/StaticMeshActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 
@@ -41,13 +42,13 @@ struct FWaveSite { FVector Position; int32 Count; };
 const FWaveSite StageTwoSites[] = {
     {FVector(-900,-700,10),3}, {FVector(1000,600,10),4}, {FVector(-400,1200,10),5},
     {FVector(1100,-900,10),5}, {FVector(-1200,300,10),6}, {FVector(600,1300,10),7},
-    {FVector(-2850,0,10),9}, {FVector(2750,0,10),9}};
+    {FVector(-2400,0,10),9}, {FVector(2300,0,10),9}};
 // Stage 3 crosses the ruins: waves 1-4 in the first section, 5-14 in the second, the Queen in the third.
 const FWaveSite StageThreeSites[] = {
     {FVector(-4700,-800,10),3}, {FVector(-4300,900,10),4}, {FVector(-5300,700,10),4}, {FVector(-4500,-300,10),5},
     {FVector(-2400,-900,10),5}, {FVector(-2000,1000,10),6}, {FVector(-900,-1200,10),6}, {FVector(-500,900,10),7},
     {FVector(400,-700,10),7}, {FVector(900,1100,10),8}, {FVector(1500,-1000,10),8}, {FVector(1900,800,10),9},
-    {FVector(2300,-400,10),9}, {FVector(2600,700,10),10}};
+    {FVector(2300,-400,10),9}, {FVector(2350,700,10),10}};
 const FVector QueenThrone(4100,0,10);
 
 const TArray<FScriptStep>& ScriptFor(int32 Level)
@@ -119,6 +120,9 @@ void AArenaGameMode::CompleteLevel()
 {
     if (bLevelCompleted) return;
     bLevelCompleted = true;
+    // Winning Stage 2 unlocks endless goblins; winning Stage 3 brings the goblin (and his shop) to camp.
+    if (!bLegacyMap && !bForestRun && !bEndless && (CampaignLevel == 2 || CampaignLevel == 3))
+        HellgirlProgress::SetFlag(CampaignLevel == 2 ? TEXT("Stage2Won") : TEXT("Stage3Won"));
     // Automated checks never touch the player's real wallet or progress.
     if (FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl"))) return;
     if (auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance())) Wallet->BankCarried();
@@ -175,12 +179,14 @@ void AArenaGameMode::TickPortalMenus(AArenaFighter* Hero)
 
 void AArenaGameMode::TickGoblinWaves(float Dt)
 {
+    RunNaturalWavesCheck(Dt);
     if (bEndless) { if (!RunEndlessCheck()) TickEndless(Dt); return; }
     auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
     if (!Hero || !Hero->IsAlive()) return;
     const TArray<FScriptStep>& Script = ScriptFor(CampaignLevel);
     ActivatedSites = ClearedSites = EnemiesRemaining = 0;
     for (auto S : SpawnSites) { ActivatedSites += S->bActivated; ClearedSites += S->bCleared; EnemiesRemaining += S->LivingEnemies(); }
+    RescueStragglers(Hero, Dt);
     auto Done = [&](const FScriptStep& S)
     {
         switch (S.Kind)
@@ -282,6 +288,7 @@ void AArenaGameMode::TickEndless(float Dt)
         if (I >= EndlessWaveStart) WaveDone &= S->bCleared;
     }
     Prompt.Empty();
+    RescueStragglers(Hero, Dt);
     const int32 Best = HellgirlProgress::EndlessBest();
     if (EndlessWave > 0 && !WaveDone)
     {
@@ -316,7 +323,7 @@ void AArenaGameMode::TickEndless(float Dt)
     if (EndlessWave % 5 == 0)
     {
         const int32 Count = FMath::Min(4 + EndlessWave / 2, 14);
-        for (const float End : {-2850.f, 2750.f})
+        for (const float End : {-2400.f, 2300.f})
             if (auto* S = Site(FVector(End, Random.FRandRange(-600.f, 600.f), 10), FString::Printf(TEXT("WAVE %d / ARMY"), EndlessWave), Count, 0, false))
             { S->bInstantGroup = true; S->bGroupGuardsHome = false; Wave.Add(S); }
     }
@@ -369,3 +376,101 @@ bool AArenaGameMode::RunEndlessCheck()
 #endif
 }
 bool AArenaGameMode::IsPortalIntroPending() const { return bStoryEnabled && !OpenPortalIntro.IsNone() && !PlayedStory.Contains(OpenPortalIntro); }
+
+// -HellgirlNaturalWavesCheck: the waves play out for real. Hellgirl stands in the middle of the section being fought
+// over and only goblins that actually reach her die, so a goblin that spawns somewhere unreachable (or a wave that
+// cannot finish spawning) stalls the run and is reported. Soul portals are continued; the run passes at the exit
+// (Stages 2 and 3) or after endless wave 7.
+void AArenaGameMode::RunNaturalWavesCheck(float Dt)
+{
+#if WITH_DEV_AUTOMATION_TESTS
+    if (!FParse::Param(FCommandLine::Get(), TEXT("HellgirlNaturalWavesCheck"))) return;
+    auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
+    if (!Hero) return;
+    static float Clock = 0.f, SinceProgress = 0.f;
+    static int32 LastProgress = -1, Portals = 0;
+    Clock += Dt; SinceProgress += Dt;
+    Hero->Health = Hero->MaxHealth = 100000.f;
+    auto Finish = [](bool Passed) { FPlatformMisc::RequestExitWithStatus(false, Passed ? 0 : 1); };
+    if (bEndless ? EndlessWave >= 8 && Portals >= 2 : IsExitOpen())
+    {
+        UE_LOG(LogTemp, Display, TEXT("NATURAL WAVES CHECK PASSED: level %d%s, %d soul portals, %.0f s"), CampaignLevel, bEndless ? TEXT(" endless") : TEXT(""), Portals, Clock);
+        Finish(true); return;
+    }
+    if (IsSoulPortalOpen()) { ++Portals; ChoosePortal(EPortalChoice::Continue); }
+    // Where the fighting is: the section of the first wave not yet cleared.
+    float StandX = 0.f;
+    if (CampaignLevel == 3)
+        for (auto Site : SpawnSites)
+            if (!Site->bCleared) { const int32 Section = SectionOf(static_cast<float>(Site->GetActorLocation().X)); StandX = Section == 0 ? -4800.f : Section == 1 ? 0.f : 4100.f; break; }
+    // Off the centre line, so she never stands where a soul portal opens (its menu would pause the run).
+    const FVector Stand(StandX, -1100.f, Hero->GetActorLocation().Z);
+    if (FVector::Dist2D(Hero->GetActorLocation(), Stand) > 300.f) { Hero->SetActorLocation(Stand + FVector(0, 0, 100)); Hero->ResetAfterRecovery(); }
+    // Every goblin must appear on its wave's side of the castle gates.
+    if (!bEndless)
+        for (TActorIterator<AArenaFighter> It(GetWorld()); It; ++It)
+            if (It->bEnemy && It->IsAlive() && It->EncounterSite.IsValid() && !It->bBossEncounter
+                && SectionOf(static_cast<float>(It->GetActorLocation().X)) != SectionOf(static_cast<float>(It->EncounterSite->GetActorLocation().X)))
+            {
+                UE_LOG(LogTemp, Error, TEXT("NATURAL WAVES CHECK FAILED: a goblin of %s is at %s, beyond its section"), *It->EncounterSite->SiteName, *It->GetActorLocation().ToCompactString());
+                Finish(false); return;
+            }
+    for (TActorIterator<AArenaFighter> It(GetWorld()); It; ++It)
+        // The Queen keeps her distance and throws claws, so she is fought wherever she stands.
+        if (It->bEnemy && It->IsAlive() && FVector::Dist2D(It->GetActorLocation(), Hero->GetActorLocation()) < (It->bBossEncounter ? 3000.f : 450.f))
+            It->ApplyPhysicsDamage(1000000.f, FVector::ZeroVector);
+    int32 BossHealth = 0;
+    for (TActorIterator<AArenaFighter> It(GetWorld()); It; ++It) if (It->bEnemy && It->bBossEncounter) BossHealth += FMath::RoundToInt(It->Health);
+    const int32 Progress = ClearedSites * 100 + Portals * 10 + EndlessWave + BossHealth * 10000 + EnemiesRemaining * 1000000;
+    if (Progress != LastProgress) { LastProgress = Progress; SinceProgress = 0.f; }
+    if (SinceProgress > 45.f || Clock > 900.f)
+    {
+        UE_LOG(LogTemp, Error, TEXT("NATURAL WAVES CHECK FAILED: level %d%s stalled at wave %d (%d sites cleared, %d portals)"),
+            CampaignLevel, bEndless ? TEXT(" endless") : TEXT(""), bEndless ? EndlessWave : ScriptStep, ClearedSites, Portals);
+        for (auto Site : SpawnSites)
+            if (Site->bActivated && !Site->bCleared)
+            {
+                UE_LOG(LogTemp, Error, TEXT("  %s at %s: spawned %d / %d, %d alive"), *Site->SiteName, *Site->GetActorLocation().ToCompactString(), Site->GetSpawned(), Site->WaveTotal(), Site->LivingEnemies());
+                for (TActorIterator<AArenaFighter> It(GetWorld()); It; ++It)
+                    if (It->bEnemy && It->IsAlive() && It->EncounterSite == Site)
+                        UE_LOG(LogTemp, Error, TEXT("    alive at %s"), *It->GetActorLocation().ToCompactString());
+            }
+        Finish(false);
+    }
+#endif
+}
+
+// The last few goblins of a wave can end up where they cannot reach Hellgirl (knocked onto a wall top, stuck on a
+// ledge, fallen through the floor). After 12 s without a kill, stragglers far from her are brought back near her,
+// so a wave (and the portal after it) can always be finished.
+void AArenaGameMode::RescueStragglers(AArenaFighter* Hero, float Dt)
+{
+    if (EnemiesRemaining != LastLivingEnemies) { LastLivingEnemies = EnemiesRemaining; StragglerClock = 0.f; }
+    StragglerClock += Dt;
+    const bool Stalled = EnemiesRemaining > 0 && EnemiesRemaining <= 4 && StragglerClock > 12.f;
+    FCollisionObjectQueryParams Solid; Solid.AddObjectTypesToQuery(ECC_WorldStatic); Solid.AddObjectTypesToQuery(ECC_WorldDynamic);
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(StragglerRescue), false, Hero);
+    const FVector Near = Hero->GetActorLocation();
+    for (TActorIterator<AArenaFighter> It(GetWorld()); It; ++It)
+    {
+        AArenaFighter* Enemy = *It;
+        if (!Enemy->bEnemy || !Enemy->IsAlive() || Enemy->bBossEncounter || !Enemy->EncounterSite.IsValid() || !SpawnSites.Contains(Enemy->EncounterSite.Get())) continue;
+        const bool Fell = Enemy->GetActorLocation().Z < Near.Z - 1500.f;
+        if (!Fell && !(Stalled && FVector::Dist2D(Enemy->GetActorLocation(), Near) > 900.f)) continue;
+        // A spot on open ground 600-800 units from her, with nothing solid in between.
+        for (int32 Try = 0; Try < 12; ++Try)
+        {
+            const float Angle = Try * 2.39996f + GetWorld()->GetTimeSeconds();
+            const FVector P = Near + FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.f) * (600.f + 20.f * Try);
+            FHitResult Floor, Wall;
+            if (!GetWorld()->LineTraceSingleByObjectType(Floor, P + FVector(0, 0, 800), P - FVector(0, 0, 1200), Solid, Query) || Floor.ImpactNormal.Z < .7f) continue;
+            if (GetWorld()->LineTraceSingleByObjectType(Wall, Near + FVector(0, 0, 40), Floor.ImpactPoint + FVector(0, 0, 90), Solid, Query)) continue;
+            Enemy->SetActorLocation(Floor.ImpactPoint + FVector(0, 0, 110), false, nullptr, ETeleportType::TeleportPhysics);
+            Enemy->ResetAfterRecovery();
+            Enemy->HomePosition = Floor.ImpactPoint;
+            UE_LOG(LogTemp, Display, TEXT("Straggler %s brought back to Hellgirl"), *Enemy->GetName());
+            break;
+        }
+    }
+    if (Stalled) StragglerClock = 0.f;
+}

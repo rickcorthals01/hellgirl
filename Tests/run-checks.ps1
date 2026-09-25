@@ -31,6 +31,9 @@ $checks = @(
     @('Map',            '/Engine/Maps/Entry?StageMap=2', 0), @('Map', '/Engine/Maps/Entry?StageMap=3', 0),
     @('ImpArena',       '/Engine/Maps/Entry?StageMap=1?CampaignLevel=4', 60),
     @('Endless',        '/Engine/Maps/Entry?StageMap=1?CampaignLevel=2?Endless=1', 60),
+    # Waves played out for real: only goblins that reach Hellgirl die, so unreachable or unspawnable goblins stall.
+    @('NaturalWaves', '/Engine/Maps/Entry?StageMap=1?CampaignLevel=2', 60, $null, 'Natural2'), @('NaturalWaves', '/Engine/Maps/Entry?StageMap=1?CampaignLevel=3', 60, $null, 'Natural3'),
+    @('NaturalWaves', '/Engine/Maps/Entry?StageMap=1?CampaignLevel=2?Endless=1', 60, $null, 'NaturalEndless'),
     @('Court',          '/Engine/Maps/Entry?SuccubusCourt=1', 60),
     # Random forest rooms: the planner over many seeds, then one fight room and the boss room as built.
     @('Combo',          '/Engine/Maps/Entry?ForestRun=1?Seed=5?Room=1', 60),

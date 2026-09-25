@@ -70,7 +70,7 @@ void AArenaHUD::DrawHUD()
         Wash(0.f, 16.f, 360.f, 66.f);
         Say(TEXT("FOREST CAMP"), Gold, 28.f, 22.f, 1.5f);
         if (Wallet) Say(FString::Printf(TEXT("%lld souls"), Wallet->Coins), SoulBlue, 28.f, 54.f);
-        const FString Prompt = GM->Prompt.IsEmpty() ? TEXT("Campfire: outfits  ·  Goblin: shop  ·  Forest road: levels") : GM->Prompt;
+        const FString Prompt = !GM->Prompt.IsEmpty() ? GM->Prompt : GM->HasMerchant() ? TEXT("Campfire: outfits  ·  Goblin: shop  ·  Forest road: levels") : TEXT("Campfire: outfits  ·  Forest road: levels");
         Centered(Prompt, GM->Prompt.IsEmpty() ? Ash : Gold, H - 92.f, GM->Prompt.IsEmpty() ? 1.f : 1.25f);
         Centered(TEXT("E / Y  interact     Esc / Start  pause"), Ash, H - 58.f);
         return;

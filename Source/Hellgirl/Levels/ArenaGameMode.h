@@ -35,6 +35,7 @@ public:
     void BuildForestHubDetails();
     void TickForestHub(float Dt);
     int32 GetHubInteraction() const;
+    bool HasMerchant() const { return HubMerchant != nullptr; }
     void RunForestHubCheck(float Dt);
     void TravelToCampaign(int32 Level);
     int32 GetUnlockedLevel() const;
@@ -69,6 +70,8 @@ public:
     void TickGoblinWaves(float Dt);
     void TickEndless(float Dt);
     bool RunEndlessCheck();
+    void RunNaturalWavesCheck(float Dt);
+    void RescueStragglers(class AArenaFighter* Hero, float Dt);
     void StartEndless();
     // Soul portal menu choices: continue to the next wave, stock carried souls, or (endless / exit) leave for camp.
     enum class EPortalChoice : uint8 { Continue, Stock, Leave, Stay };
@@ -136,6 +139,8 @@ private:
     bool bKeepCarriedSouls = false; // set when moving on to the next forest room
     int32 ScriptStep = -1;
     int32 EndlessWaveStart = 0; // first spawn site of the current endless wave
+    int32 LastLivingEnemies = -1;
+    float StragglerClock = 0.f;
     void TickPortalMenus(class AArenaFighter* Hero);
     TArray<FVector4> ForestThorns; // X, Y, radius
     UPROPERTY() TObjectPtr<AStaticMeshActor> ForestExitMarker;

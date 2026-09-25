@@ -13,7 +13,9 @@ namespace HellgirlProgress
     {
         static const TArray<FString> Names = {
             TEXT("CampSetUp"),          // 01.5: "This place looks safe.." played on the first visit to camp
-            TEXT("EndlessGoblins"),     // 02.5: endless mode unlocked (and its notice shown)
+            TEXT("Stage2Won"),          // Stage 2 finished (its exit reached): unlocks endless goblins
+            TEXT("Stage3Won"),          // Stage 3 finished: the goblin follows her to camp, then the shop
+            TEXT("EndlessGoblins"),     // 02.5: the endless unlock notice has been shown
             TEXT("UltimatesUnlocked"),  // 03: the Goblin Queen at 30% health
             TEXT("GoblinFollowed"),     // 03.5: "A goblin has followed Hellgirl to her camp."
             TEXT("ShopUnlocked")};      // 03.5: first talk with the goblin
@@ -24,6 +26,9 @@ namespace HellgirlProgress
     inline TSet<FString>& SessionFlags() { static TSet<FString> Flags; return Flags; }
     inline bool Flag(const TCHAR* Name)
     {
+        // The camp story check starts as if Stages 2 and 3 had just been won.
+        if (IsAutomated() && FParse::Param(FCommandLine::Get(), TEXT("StoryCamp"))
+            && (FCString::Strcmp(Name, TEXT("Stage2Won")) == 0 || FCString::Strcmp(Name, TEXT("Stage3Won")) == 0)) return true;
         if (IsAutomated()) return SessionFlags().Contains(Name);
         bool Value = false;
         GConfig->GetBool(Section, Name, Value, GGameUserSettingsIni);
@@ -43,11 +48,8 @@ namespace HellgirlProgress
     inline bool UltimatesUnlocked()
     {
         if (IsCheckRun()) return true;
-        if (IsAutomated()) return Flag(TEXT("UltimatesUnlocked"));
-        // Progress from before this unlock existed: the Queen was already beaten.
-        int32 Unlocked = 1;
-        GConfig->GetInt(Section, TEXT("UnlockedLevel"), Unlocked, GGameUserSettingsIni);
-        return Unlocked >= 4 || Flag(TEXT("UltimatesUnlocked"));
+        // Only the Queen fight in Stage 3 unlocks them, whatever older progress says.
+        return Flag(TEXT("UltimatesUnlocked"));
     }
     inline int32& SessionBest() { static int32 Best = 0; return Best; }
     inline int32 EndlessBest()

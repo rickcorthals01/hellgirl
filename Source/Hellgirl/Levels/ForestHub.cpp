@@ -57,7 +57,8 @@ void AArenaGameMode::BuildForestHub()
     ForestArt::Solid(World,ForestArt::Kit(TEXT("SM_Gateway")),FTransform(FRotator::ZeroRotator,FVector(1240,0,-5),FVector(1.2f)),true);
     Prop(FVector(1650,0,440),FVector(.5f,6,9),FLinearColor(.008f,.014f,.012f));
     // A friendly display actor, never an enemy fighter, so attacks and targeting cannot hurt him.
-    if (GetUnlockedLevel()>=4)
+    // He follows Hellgirl home once she has beaten Stage 3 (03.5); checks of the camp itself always have him.
+    if (HellgirlProgress::Flag(TEXT("Stage3Won")) || (HellgirlProgress::IsCheckRun() && GetUnlockedLevel()>=4))
     {
         const auto& Model=GetDefault<UHellgirlEnemyModels>()->ForType(EHellgirlEnemyType::Goblins);
         HubMerchant=GetWorld()->SpawnActor<ASkeletalMeshActor>(FVector(-100,700,5),FRotator(0,-160,0));
@@ -121,8 +122,8 @@ void AArenaGameMode::TickForestHub(float Dt)
             const int32 Unlocked=GetUnlockedLevel();
             const TCHAR* Flag=nullptr; const TCHAR* Moment=nullptr;
             if (Unlocked>=2 && !HellgirlProgress::Flag(TEXT("CampSetUp"))) { Flag=TEXT("CampSetUp"); Moment=TEXT("C_SetUpCamp"); }
-            else if (Unlocked>=3 && !HellgirlProgress::Flag(TEXT("EndlessGoblins"))) { Flag=TEXT("EndlessGoblins"); Moment=TEXT("C_EndlessUnlocked"); }
-            else if (Unlocked>=4 && !HellgirlProgress::Flag(TEXT("GoblinFollowed"))) { Flag=TEXT("GoblinFollowed"); Moment=TEXT("C_GoblinFollowed"); }
+            else if (HellgirlProgress::Flag(TEXT("Stage2Won")) && !HellgirlProgress::Flag(TEXT("EndlessGoblins"))) { Flag=TEXT("EndlessGoblins"); Moment=TEXT("C_EndlessUnlocked"); }
+            else if (HellgirlProgress::Flag(TEXT("Stage3Won")) && !HellgirlProgress::Flag(TEXT("GoblinFollowed"))) { Flag=TEXT("GoblinFollowed"); Moment=TEXT("C_GoblinFollowed"); }
             if (Flag && PC->ShowConversation(Moment)) HellgirlProgress::SetFlag(Flag);
             else if (Flag) HellgirlProgress::SetFlag(Flag); // a missing conversation must not block camp
             if (Flag) return;
