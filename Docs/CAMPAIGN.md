@@ -119,4 +119,4 @@ Built from the scripts in `Developer idea folder lol\Dialog and Story` (01 to 03
 - **Code:** the rules and stats are in `Source/Hellgirl/Rules/PortalUpgrades.h`, buying is in `Levels/SoulUpgrades.cpp`, and the stats apply through `AArenaFighter::Upgrades`.
 - The `Endless` check buys offers at each portal: it verifies the price, that each offer sells once, the stats and fresh offers.
 
-**Goblin tuning (2026-09-25):** goblins hit harder and attack faster. Their dagger slash deals AttackDamage x1.2 (13 at difficulty 1, was 10, and more in later endless waves). The slash cycle is 1.9 s (was 2.55 s). Up to three goblins attack at once (was two), with attack starts at least 0.3 s apart (was 0.45 s). Other enemies are unchanged. The numbers are in `Rules/EnemyTuning.h`.
+**Goblin tuning (2026-09-25):** goblins hit harder and attack faster. Their dagger slash deals AttackDamage x1.2 (13 at difficulty 1, was 10, and more in later endless waves). The slash cycle is 1.9 s (was 2.55 s). Up to six goblins attack at once (was two), with attack starts at least 0.3 s apart (was 0.45 s). Other enemies are unchanged. The numbers are in `Rules/EnemyTuning.h`.

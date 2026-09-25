@@ -24,6 +24,6 @@ inline int32 WaveSize(int32 Authored) { return Authored <= 0 ? 0 : FMath::Max(1,
 constexpr float GoblinDamageScale = 1.2f;
 constexpr float GoblinSlashSeconds = 1.3f;
 constexpr float GoblinRecovery = .6f;
-constexpr int32 GoblinAttackSlots = 3;
+constexpr int32 GoblinAttackSlots = 6;
 constexpr float GoblinAttackSpacing = .3f;
 }
