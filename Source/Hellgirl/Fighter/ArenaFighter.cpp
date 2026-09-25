@@ -30,6 +30,7 @@
 #include "Camera/PlayerCameraManager.h"
 #include "Misc/PackageName.h"
 #include "Misc/App.h"
+#include "Rules/EnemyTuning.h"
 #include "Engine/PointLight.h"
 #include "Particles/ParticleSystem.h"
 #include "TimerManager.h"
@@ -278,7 +279,7 @@ void AArenaFighter::MakeEnemy(int32 Wave, bool Flying)
     for (UStaticMeshComponent* Part : {Body.Get(), Head.Get(), RightHand.Get(), LeftHand.Get(), RightFoot.Get(), LeftFoot.Get()})
         Part->SetVisibility(true);
     bFlyingEnemy = Flying;
-    MaxHealth = 55.f + Wave * 12.f;
+    MaxHealth = EnemyTuning::OrdinaryHealth(Wave);
     Health = MaxHealth;
     AttackDamage = 9.f + Wave * 2.f;
     AttackRange = 165.f;
@@ -825,11 +826,6 @@ void AArenaFighter::PlayImpact(const FVector& Direction, float Damage, bool Heav
     // The contact point: on the side facing the attacker, around chest height.
     const FVector Toward = -Direction.GetSafeNormal2D();
     const FVector At = GetActorLocation() + Toward * 38.f * GetActorScale3D().X + FVector(0.f, 0.f, 30.f);
-    // Only heavy hits throw a small puff of sparks; light hits and blocks rely on the flash and hit-stop.
-    static const TCHAR* BurstPath = TEXT("/Game/Realistic_Starter_VFX_Pack_Vol2/Particles/Sparks/P_Sparks_F.P_Sparks_F");
-    if (Heavy && !Blocked)
-        if (auto* Sparks = LoadObject<UParticleSystem>(nullptr, BurstPath))
-            UGameplayStatics::SpawnEmitterAtLocation(World, Sparks, At, Toward.Rotation(), FVector(.18f));
     // A brief flash of light at the contact point: warm for hits, cold for blocks.
     if (auto* Flash = World->SpawnActor<APointLight>(At, FRotator::ZeroRotator))
     {

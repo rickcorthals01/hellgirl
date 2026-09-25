@@ -1,6 +1,7 @@
 #include "Enemies/EnemySpawnPoint.h"
 #include "Fighter/ArenaFighter.h"
 #include "Rules/StageOneLayout.h"
+#include "Rules/EnemyTuning.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -57,6 +58,17 @@ void AEnemySpawnPoint::UseBurrow()
     Glow->SetRelativeLocation(FVector(0.f, 0.f, 40.f));
 }
 
+int32 AEnemySpawnPoint::WaveTotal() const
+{
+    // Ordinary waves are scaled up globally (Rules/EnemyTuning.h); a boss site spawns just its boss.
+    return bBoss ? EnemyCount : EnemyTuning::WaveSize(EnemyCount);
+}
+
+int32 AEnemySpawnPoint::WaveFlyers() const
+{
+    return FMath::Min(WaveTotal(), bBoss ? FlyingCount : EnemyTuning::WaveSize(FlyingCount));
+}
+
 int32 AEnemySpawnPoint::LivingEnemies() const
 {
     int32 Count = 0;
@@ -79,7 +91,7 @@ void AEnemySpawnPoint::SpawnOne()
     const float Radius = 190.f + 45.f * Spawned;
     const float X = static_cast<float>(GetActorLocation().X) + FMath::Cos(Angle) * Radius;
     const float Y = static_cast<float>(GetActorLocation().Y) + FMath::Sin(Angle) * Radius;
-    const bool Flying = Spawned >= EnemyCount - FlyingCount;
+    const bool Flying = Spawned >= WaveTotal() - WaveFlyers();
     // Each position on the spawn spiral can have a different terrain height.
     // Ignore pawns so a previous spawn cannot become the next enemy's floor.
     FCollisionObjectQueryParams FloorTypes;
@@ -136,13 +148,13 @@ void AEnemySpawnPoint::Tick(float Dt)
     if (bActivated && !bCleared && Player && Player->IsAlive())
     {
         SpawnDelay -= Dt;
-        if (Spawned < EnemyCount && SpawnDelay <= 0.f)
+        if (Spawned < WaveTotal() && SpawnDelay <= 0.f)
         {
             SpawnOne();
             if (bInstantGroup)
-                while (Spawned < EnemyCount) { const int32 Before = Spawned; SpawnOne(); if (Before == Spawned) break; }
+                while (Spawned < WaveTotal()) { const int32 Before = Spawned; SpawnOne(); if (Before == Spawned) break; }
         }
-        if (Spawned >= EnemyCount && LivingEnemies() == 0) bCleared = true;
+        if (Spawned >= WaveTotal() && LivingEnemies() == 0) bCleared = true;
     }
     // Burning while enemies come through, smouldering before, cold once cleared.
     const bool Burning = bActivated && !bCleared;

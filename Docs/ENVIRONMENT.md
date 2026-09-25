@@ -41,7 +41,7 @@ That (re)creates the materials (`Tools/Materials/create_forest_materials.py`), r
 ## Hit feedback and HUD
 
 Every landed hit (`AArenaFighter::PlayImpact`) gives:
-- **Sparks:** heavy hits only, a small `P_Sparks_F` puff at the contact point. Light hits and blocks rely on the flash and hit-stop.
+- **No particles:** the user found sparks too busy, so hits use only the flash, hit-stop and shake.
 - **Flash:** a 0.07 s flash of light, warm for hits and cold blue for blocks.
 - **Hit-stop:** a brief freeze, 0.04 s for a light hit and 0.085 s for a heavy one.
 - **Camera shake:** when Hellgirl is hit, or lands a heavy blow.

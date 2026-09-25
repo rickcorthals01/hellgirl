@@ -162,6 +162,8 @@ void AArenaFighter::RunCombatBalanceCheck(float Dt)
         for (const FVector& Position : Positions)
         {
             auto* Imp = Enemy(EHellgirlEnemyType::Imps, Position);
+            // A fixed 67 health keeps this test about area damage, independent of enemy tuning (Rules/EnemyTuning.h).
+            if (Imp) Imp->Health = Imp->MaxHealth = 67.f;
             if (!Check(Imp != nullptr && Imp->Health == 67.f, TEXT("Area fixture uses fresh ordinary sixty-seven-health Imps"))) return;
             Group.Add(Imp);
         }

@@ -32,6 +32,9 @@ public:
     float EnemyScale = 1.f;
     bool bCleared = false;
     int32 LivingEnemies() const;
+    // Enemies this site actually spawns: EnemyCount/FlyingCount scaled by Rules/EnemyTuning.h (bosses unscaled).
+    int32 WaveTotal() const;
+    int32 WaveFlyers() const;
     bool RegisterReinforcement(AArenaFighter* Enemy);
     // Goblins come out of a dirt burrow instead of a burning hell rift.
     void UseBurrow();

@@ -35,7 +35,8 @@ void AHellgirlPlayerController::RunStoryCheck()
             auto* Site=Sites[State->Wave].Get();
             Hero->SetActorLocation(Site->GetActorLocation()+FVector(0,0,115));
             if (Site->bCleared) { ++State->Wave; return true; }
-            if (Site->LivingEnemies()<Site->EnemyCount) return true;
+            // Clear the wave as its enemies arrive (waves are scaled up, see Rules/EnemyTuning.h).
+            if (Site->LivingEnemies()==0) return true;
             for (TActorIterator<AArenaFighter> It(PC->GetWorld());It;++It) if (It->bEnemy && It->EncounterSite==Site) It->Health=0;
             return true;
         }
