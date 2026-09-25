@@ -62,7 +62,7 @@ FString UHellgirlWallet::DescribeSlot(int32 Slot) const
     if (!UGameplayStatics::DoesSaveGameExist(SlotName(Slot),0)) return TEXT("Empty");
     auto* Save=Cast<UHellgirlGameSave>(UGameplayStatics::LoadGameFromSlot(SlotName(Slot),0));
     if (!ValidSave(Save)) return TEXT("Unreadable or incompatible save");
-    return FString::Printf(TEXT("%s / %lld coins / %s"),Save->bHub?TEXT("Forest camp"):*FString::Printf(TEXT("Stage %d - Level %d"),Save->Level<=3?1:2,Save->Level<=3?Save->Level:1),Save->Coins,*Save->Date);
+    return FString::Printf(TEXT("%s / %lld souls / %s"),Save->bHub?TEXT("Forest camp"):*FString::Printf(TEXT("Stage %d - Level %d"),Save->Level<=3?1:2,Save->Level<=3?Save->Level:1),Save->Coins,*Save->Date);
 }
 
 bool UHellgirlWallet::LoadSlot(int32 Slot)

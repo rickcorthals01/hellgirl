@@ -11,23 +11,35 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Components/PointLightComponent.h"
 
+// The currency is souls: each pickup is a small glowing wisp with its own soft light.
+// (The class and wallet keep their original "coin" names so existing saves still load.)
 ACoinPickup::ACoinPickup()
 {
     PrimaryActorTick.bCanEverTick = true;
     Coin = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Coin"));
     RootComponent = Coin;
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> Mesh(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> Mesh(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
+    static ConstructorHelpers::FObjectFinder<UMaterialInterface> GlowMaterial(TEXT("/Game/Environment/Materials/M_EnvironmentGlow.M_EnvironmentGlow"));
     Coin->SetStaticMesh(Mesh.Object);
+    if (GlowMaterial.Succeeded()) Coin->SetMaterial(0, GlowMaterial.Object);
     Coin->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    Coin->SetRelativeScale3D(FVector(.32f, .32f, .07f));
-    Coin->SetRelativeRotation(FRotator(90.f, 0.f, 0.f));
+    Coin->SetCastShadow(false);
+    Coin->SetRelativeScale3D(FVector(.2f));
+    Glow = CreateDefaultSubobject<UPointLightComponent>(TEXT("SoulLight"));
+    Glow->SetupAttachment(RootComponent);
+    Glow->SetAbsolute(false, false, true);
+    Glow->SetIntensity(900.f);
+    Glow->SetAttenuationRadius(220.f);
+    Glow->SetCastShadows(false);
+    Glow->SetLightColor(FLinearColor(.45f, .8f, 1.f));
     Label = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Value"));
     Label->SetupAttachment(RootComponent);
     Label->SetAbsolute(false, true, true);
     Label->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
-    Label->SetTextRenderColor(FColor(255, 205, 45));
-    Label->SetWorldSize(28.f);
+    Label->SetTextRenderColor(FColor(150, 215, 255));
+    Label->SetWorldSize(26.f);
 }
 
 void ACoinPickup::SetAmount(int32 Value)
@@ -35,7 +47,10 @@ void ACoinPickup::SetAmount(int32 Value)
     Amount = FMath::Clamp(Value, 1, 6);
     Label->SetText(FText::FromString(FString::Printf(TEXT("+%d"), Amount)));
     if (UMaterialInstanceDynamic* Material = Coin->CreateAndSetMaterialInstanceDynamic(0))
-        Material->SetVectorParameterValue(TEXT("Color"), FLinearColor(1.f, .65f, .04f));
+    {
+        Material->SetVectorParameterValue(TEXT("Color"), FLinearColor(.3f, .65f, 1.f));
+        Material->SetScalarParameterValue(TEXT("EmissiveStrength"), 2.2f);
+    }
 }
 
 void ACoinPickup::Tick(float Dt)
@@ -43,7 +58,10 @@ void ACoinPickup::Tick(float Dt)
     Super::Tick(Dt);
     if (bCollected) return;
     Age += Dt;
-    AddActorWorldRotation(FRotator(0.f, Dt * 100.f, 0.f));
+    // A soul pulses gently instead of spinning.
+    const float Pulse = 1.f + .12f * FMath::Sin(Age * 5.f);
+    Coin->SetRelativeScale3D(FVector(.2f * Pulse));
+    Glow->SetIntensity(900.f * Pulse);
     Label->SetWorldLocation(GetActorLocation() + FVector(0.f, 0.f, 45.f + FMath::Sin(Age * 4.f) * 6.f));
     AArenaFighter* Player = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
     if (!Player) return;
@@ -86,5 +104,10 @@ void ACoinPickup::SetHeart()
     bHeart=true;
     Label->SetText(FText::FromString(TEXT("HEART +50% HP")));
     Label->SetTextRenderColor(FColor::Red);
-    if (auto* Material=Coin->CreateAndSetMaterialInstanceDynamic(0)) Material->SetVectorParameterValue(TEXT("Color"),FLinearColor(1.f,.03f,.15f));
+    Glow->SetLightColor(FLinearColor(1.f,.1f,.15f));
+    if (auto* Material=Coin->CreateAndSetMaterialInstanceDynamic(0))
+    {
+        Material->SetVectorParameterValue(TEXT("Color"),FLinearColor(1.f,.03f,.15f));
+        Material->SetScalarParameterValue(TEXT("EmissiveStrength"),4.f);
+    }
 }

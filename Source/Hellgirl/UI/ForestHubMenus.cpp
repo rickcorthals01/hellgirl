@@ -235,18 +235,18 @@ public:
         {
             Items->AddSlot().AutoHeight().Padding(0,0,0,18)[SNew(STextBlock).Text_Lambda([this]() {
                 const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
-                return FText::FromString(FString::Printf(TEXT("Your purse: %lld coins"),Wallet?Wallet->Coins:0)); })];
+                return FText::FromString(FString::Printf(TEXT("Your souls: %lld"),Wallet?Wallet->Coins:0)); })];
             Items->AddSlot().AutoHeight().Padding(0,6)
             [SAssignNew(FirstButton,SButton).HAlign(HAlign_Center).ContentPadding(14)
                 .IsEnabled_Lambda([this]() { const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr; return Wallet && !Wallet->bLoadFailed && !Wallet->bGoblinQueenOwned && Wallet->Coins>=200; })
                 .OnClicked_Lambda([this]() { if (Owner.IsValid()) if (auto* Wallet=Cast<UHellgirlWallet>(Owner->GetGameInstance())) Wallet->BuyGoblinQueen(); return FReply::Handled(); })
                 [SNew(STextBlock).Text_Lambda([this]() {
                     const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
-                    return FText::FromString(Wallet && Wallet->bGoblinQueenOwned ? TEXT("GOBLIN QUEEN / OWNED") : TEXT("GOBLIN QUEEN SKIN / 200 COINS")); })]];
+                    return FText::FromString(Wallet && Wallet->bGoblinQueenOwned ? TEXT("GOBLIN QUEEN / OWNED") : TEXT("GOBLIN QUEEN SKIN / 200 SOULS")); })]];
             Items->AddSlot().AutoHeight().Padding(0,12)[Text(TEXT("Equip purchased outfits at the campfire."),14)];
             Items->AddSlot().AutoHeight()[SNew(STextBlock).Text_Lambda([this]() {
                 const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
-                return FText::FromString(Wallet && Wallet->bSaveFailed ? TEXT("Couldn't save purchase. Coins were not spent. Try again.") : TEXT("")); })];
+                return FText::FromString(Wallet && Wallet->bSaveFailed ? TEXT("Couldn't save purchase. Your souls were not spent. Try again.") : TEXT("")); })];
         }
         TSharedPtr<SButton> Close;
         Items->AddSlot().AutoHeight().Padding(0,24,0,0)
@@ -273,7 +273,7 @@ void AHellgirlPlayerController::InteractWithHub()
     const int32 Kind=GM->GetHubInteraction();
     if (Kind==2)
     {
-        ShowDialogue(FText::FromString(TEXT("Goblin Merchant")),FText::FromString(TEXT("Take a look. The Goblin Queen outfit is yours for 200 coins.")));
+        ShowDialogue(FText::FromString(TEXT("Goblin Merchant")),FText::FromString(TEXT("Take a look. The Goblin Queen outfit is yours for 200 souls.")));
         if (bDialogueOpen) DialogueNextHubMenu=2;
     }
     else if (Kind>=0) OpenHubMenu(Kind);

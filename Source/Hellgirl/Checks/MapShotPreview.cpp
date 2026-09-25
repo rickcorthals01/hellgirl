@@ -78,7 +78,12 @@ void AArenaGameMode::RunMapShot(float Dt)
         {
             const FVector Away = (Dummy->GetActorLocation() - Hero->GetActorLocation()).GetSafeNormal2D();
             if (Hit == 0) Dummy->ReceiveHit(30.f, Away, 700.f, 0.f);
-            else if (Hit == 2) Dummy->ReceiveHit(8.f, Away, 120.f, 0.f);
+            else if (Hit == 2)
+            {
+                Dummy->ReceiveHit(8.f, Away, 120.f, 0.f);
+                // Drop souls as a defeated enemy would, between Hellgirl and the goblin.
+                EnemyDefeated(FMath::Lerp(Hero->GetActorLocation(), Dummy->GetActorLocation(), .5f));
+            }
             else if (Hit < 4) FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/MapShot/Impact_%d.png"), Hit / 2), false, false);
             else FPlatformMisc::RequestExitWithStatus(false, 0);
             ++Hit;

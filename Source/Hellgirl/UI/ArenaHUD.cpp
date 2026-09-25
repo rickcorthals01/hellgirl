@@ -16,7 +16,7 @@ namespace
 {
 // Gothic palette: parchment text, old gold, blood red, ember orange, cold teal.
 const FLinearColor Parchment(.93f, .87f, .76f), Gold(.95f, .72f, .32f), Blood(.78f, .1f, .09f), Ember(1.f, .62f, .22f),
-    Teal(.25f, .85f, .78f), Ash(.5f, .48f, .46f), Shade(.01f, .008f, .012f, .6f), Groove(.07f, .05f, .06f, .85f);
+    Teal(.25f, .85f, .78f), SoulBlue(.55f, .82f, 1.f), Ash(.5f, .48f, .46f), Shade(.01f, .008f, .012f, .6f), Groove(.07f, .05f, .06f, .85f);
 }
 
 void AArenaHUD::DrawHUD()
@@ -59,12 +59,12 @@ void AArenaHUD::DrawHUD()
             DrawRect(FLinearColor(Shade.R, Shade.G, Shade.B, Shade.A * (1.f - I / 6.f)), X + WW * I / 6.f, Y, WW / 6.f, WH);
     };
 
-    // ---- Camp: title, coins, and the prompt of whatever you stand next to. ----
+    // ---- Camp: title, souls, and the prompt of whatever you stand next to. ----
     if (GM->bForestHub)
     {
         Wash(0.f, 16.f, 360.f, 66.f);
         Say(TEXT("FOREST CAMP"), Gold, 28.f, 22.f, 1.5f);
-        if (Wallet) Say(FString::Printf(TEXT("%lld coins"), Wallet->Coins), Parchment, 28.f, 54.f);
+        if (Wallet) Say(FString::Printf(TEXT("%lld souls"), Wallet->Coins), SoulBlue, 28.f, 54.f);
         const FString Prompt = GM->Prompt.IsEmpty() ? TEXT("Campfire: outfits  ·  Goblin: shop  ·  Forest road: levels") : GM->Prompt;
         Centered(Prompt, GM->Prompt.IsEmpty() ? Ash : Gold, H - 92.f, GM->Prompt.IsEmpty() ? 1.f : 1.25f);
         Centered(TEXT("E / Y  interact     Esc / Start  pause"), Ash, H - 58.f);
@@ -77,7 +77,7 @@ void AArenaHUD::DrawHUD()
     Say(GM->Objective, Parchment, 28.f, 50.f);
     if (!GM->Prompt.IsEmpty()) Say(GM->Prompt, Ember, 28.f, 74.f);
 
-    // ---- Top right: a small minimap, coins underneath. ----
+    // ---- Top right: a small minimap, souls underneath. ----
     const float MapSize = 150.f, MapX = W - MapSize - 24.f, MapY = 20.f;
     DrawRect(FLinearColor(0.f, 0.f, 0.f, .55f), MapX - 3.f, MapY - 3.f, MapSize + 6.f, MapSize + 6.f);
     DrawRect(FLinearColor(.03f, .03f, .035f, .6f), MapX, MapY, MapSize, MapSize);
@@ -109,17 +109,17 @@ void AArenaHUD::DrawHUD()
     DrawRect(Teal, PlayerDot.X - 3.f, PlayerDot.Y - 3.f, 6.f, 6.f);
     if (Wallet)
     {
-        FString Coins = FString::Printf(TEXT("%lld coins"), static_cast<long long>(Wallet->Coins));
-        if (Wallet->bLoadFailed) Coins = TEXT("wallet not loaded");
+        FString Coins = FString::Printf(TEXT("%lld souls"), static_cast<long long>(Wallet->Coins));
+        if (Wallet->bLoadFailed) Coins = TEXT("souls not loaded");
         else if (Wallet->bSaveFailed) Coins += TEXT("  (not saved)");
         float TW, TH;
         GetTextSize(Coins, TW, TH);
-        Say(Coins, Gold, MapX + MapSize - TW, MapY + MapSize + 8.f);
+        Say(Coins, SoulBlue, MapX + MapSize - TW, MapY + MapSize + 8.f);
         if (FPlatformTime::Seconds() - Wallet->PickupTime < 2.5)
         {
             const FString Gain = FString::Printf(TEXT("+%d"), Wallet->LastPickup);
             GetTextSize(Gain, TW, TH);
-            Say(Gain, Gold, MapX + MapSize - TW, MapY + MapSize + 28.f, 1.f, 1.f - static_cast<float>((FPlatformTime::Seconds() - Wallet->PickupTime) / 2.5));
+            Say(Gain, SoulBlue, MapX + MapSize - TW, MapY + MapSize + 28.f, 1.f, 1.f - static_cast<float>((FPlatformTime::Seconds() - Wallet->PickupTime) / 2.5));
         }
     }
 

@@ -30,3 +30,5 @@ The first forest hub is implemented (see FOREST HUB.md), including the campfire 
 Balance update: encounter bosses have 900 HP (previously 450). Phase thresholds remain percentages.
 
 Balance update (2026-09-25): ordinary enemies have 35% less health and every non-boss wave spawns 50% more enemies (rounded), so a wave holds about the same total health spread over more bodies. Bosses keep their health; their summons count as ordinary. Both numbers live in Source/Hellgirl/Rules/EnemyTuning.h. Maps keep their authored wave sizes; AEnemySpawnPoint::WaveTotal() applies the scale.
+
+Currency (2026-09-25): the currency is now **souls** instead of coins. Defeated enemies drop glowing blue soul wisps that drift to Hellgirl, with the same drop rules as before. The HUD, shop, merchant and save slots all say souls. Internally the code still calls them Coins (UHellgirlWallet::Coins, ACoinPickup), so existing saves keep their balance. Docs/History describes the older coin version.

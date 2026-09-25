@@ -20,6 +20,7 @@ private:
     friend class UHellgirlWallet;
     UPROPERTY() TObjectPtr<UStaticMeshComponent> Coin;
     UPROPERTY() TObjectPtr<UTextRenderComponent> Label;
+    UPROPERTY() TObjectPtr<class UPointLightComponent> Glow;
     int32 Amount = 1;
     float Age = 0.f;
     bool bCollected = false;

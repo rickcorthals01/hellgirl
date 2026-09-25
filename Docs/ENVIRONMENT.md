@@ -50,7 +50,7 @@ Hit-stop and the shake are switched off when the command line contains "Check", 
 
 The HUD (`UI/ArenaHUD.cpp`) is drawn without big boxes:
 - **Top left:** title and objective.
-- **Top right:** a small minimap with coins underneath.
+- **Top right:** a small minimap with your souls underneath.
 - **Top centre:** the boss bar.
 - **Bottom left:** health, energy tubes, stamina, and CHARGE, SLAM and weapon labels.
 - **Centre:** move callouts that fade.
