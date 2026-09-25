@@ -156,4 +156,4 @@ Replaces the carried-souls rules above.
   - Nothing is backdated: an achievement only unlocks when it happens.
   - A short "ACHIEVEMENT" notice shows when one unlocks. The full achievement system comes later.
 
-**Ultimate tip (2026-09-25):** in Stage 3, the how-to after "I'll show you!" is now a dialogue box (`[L3_UltimateTip]`), not on-screen text. Its `{UltimateKey}` is filled in with the keys bound to the ultimate.
+**Ultimate tip (2026-09-25):** in Stage 3, the how-to after "I'll show you!" is now a dialogue box (`[L3_UltimateTip]`), not on-screen text. Its `%UltimateKey%` is replaced with the ultimate's key on the device in use: "Q" on keyboard, "Right Thumbstick" on a controller. Braces don't work as placeholders, because the config reader strips `{ }` from lines.

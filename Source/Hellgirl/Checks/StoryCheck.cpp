@@ -12,13 +12,15 @@
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
 #include "Framework/Application/SlateApplication.h"
+#include "InputKeyEventArgs.h"
+#include "Engine/GameViewportClient.h"
 #include "Progress/CampaignProgress.h"
 #include "Progress/HellgirlWallet.h"
 void AHellgirlPlayerController::RunStoryCheck()
 {
 #if WITH_DEV_AUTOMATION_TESTS
     if (!FParse::Param(FCommandLine::Get(),TEXT("HellgirlStoryCheck"))) return;
-    struct FState { int32 Phase=0,Wave=0,Pages=0,Portraits=0,Portals=0,LastPage=-1; FName LastId; double PageAt=0; bool bShot=false,bPressed=false; int32 PortalStage=0,CampPhase=0; double PortalAt=0,CampAt=0; TArray<FName> Seen; TWeakObjectPtr<AArenaFighter> Queen; double Start=FPlatformTime::Seconds(); };
+    struct FState { int32 Phase=0,Wave=0,Pages=0,Portraits=0,Portals=0,LastPage=-1; FName LastId; double PageAt=0; bool bShot=false,bPressed=false; int32 PortalStage=0,CampPhase=0; bool bDeviceTested=false; double PortalAt=0,CampAt=0; TArray<FName> Seen; TWeakObjectPtr<AArenaFighter> Queen; double Start=FPlatformTime::Seconds(); };
     auto State=MakeShared<FState>(); TWeakObjectPtr<AHellgirlPlayerController> Weak(this);
     FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([Weak,State](float) {
         if (!Weak.IsValid()) return false;
@@ -105,6 +107,28 @@ void AHellgirlPlayerController::RunStoryCheck()
             if (GM->HasPlayedStory(TEXT("L1_AfterWave5"))) { Hero->SetActorLocation(GM->ExitPosition+FVector(0,0,115)); GM->UseExitPortal(); }
             return true;
         }
+        // Stage 3 is played "on a controller": a real controller button press must switch the key names shown in
+        // dialogue, so the ultimate tip later reads "Press Right Thumbstick to ...".
+        // (The engine hands every key, button and stick movement to the controller's InputKey; a headless run cannot
+        // route a synthetic press there, so the events go to it directly.)
+        if (GM->CampaignLevel==3 && !State->bDeviceTested && !PC->IsDialogueOpen() && !PC->IsPauseMenuOpen())
+        {
+            State->bDeviceTested=true;
+            FViewport* View=PC->GetWorld()->GetGameViewport()?PC->GetWorld()->GetGameViewport()->Viewport:nullptr;
+            const FInputDeviceId Device=FInputDeviceId::CreateFromInternalId(0);
+            auto Send=[&](const FKey& Key,EInputEvent Event,float Amount)
+            { PC->InputKey(FInputKeyEventArgs(View,Device,Key,Event,Amount,false,FPlatformTime::Cycles64())); };
+            bool Ok=!PC->IsUsingGamepad();
+            Send(EKeys::Gamepad_RightX,IE_Axis,.2f); Ok&=!PC->IsUsingGamepad();          // stick drift is ignored
+            Send(EKeys::Gamepad_FaceButton_Top,IE_Pressed,1.f); Ok&=PC->IsUsingGamepad(); // a button press
+            Send(EKeys::Gamepad_FaceButton_Top,IE_Released,1.f);
+            Send(EKeys::MouseX,IE_Axis,.5f); Ok&=PC->IsUsingGamepad();                    // a tiny mouse nudge is ignored
+            Send(EKeys::Q,IE_Pressed,1.f); Ok&=!PC->IsUsingGamepad();                     // a key: back to keyboard
+            Send(EKeys::Q,IE_Released,1.f);
+            Send(EKeys::Gamepad_RightY,IE_Axis,.9f); Ok&=PC->IsUsingGamepad();           // a full stick push
+            UE_LOG(LogTemp,Display,TEXT("Input device tracking: %s"),Ok?TEXT("ok"):TEXT("wrong"));
+            if (!Ok) { Fail(TEXT("Keyboard / controller tracking for dialogue key names")); return false; }
+        }
         // Stages 2 and 3 follow their wave scripts (Levels/GoblinWaves.cpp): every conversation in order, the soul
         // portals (continued at once), the gates, and in Stage 3 the Queen: ultimates unlock at 30%, she begs, flees.
         if (PC->IsDialogueOpen())
@@ -121,7 +145,11 @@ void AHellgirlPlayerController::RunStoryCheck()
                 if (Id==TEXT("L3_SubjectsReply") && GM->IsSoulPortalOpen()) { Fail(TEXT("Subjects? before continuing through the portal")); return false; }
                 if (Id==TEXT("QueenLowHealth") && HellgirlProgress::UltimatesUnlocked()) { Fail(TEXT("Ultimates were unlocked before the Queen's 30% moment")); return false; }
                 // The how-to box names the ultimate key.
-                if (Id==TEXT("L3_UltimateTip") && (!HellgirlProgress::UltimatesUnlocked() || PC->GetConversationLine().Contains(TEXT("{UltimateKey}"))))
+                // (On keyboard it reads "Press Q to ..."; a controller key is named "Right Thumbstick".)
+                if (Id==TEXT("L3_UltimateTip")) UE_LOG(LogTemp,Display,TEXT("Ultimate tip reads: %s (gamepad %d, controller name \"%s\")"),*PC->GetConversationLine(),PC->IsUsingGamepad(),*AHellgirlPlayerController::FriendlyKeyName(EKeys::Gamepad_RightThumbstick));
+                if (Id==TEXT("L3_UltimateTip") && (!HellgirlProgress::UltimatesUnlocked() || PC->GetConversationLine().Contains(TEXT("UltimateKey"))
+                    || !PC->GetConversationLine().StartsWith(PC->IsUsingGamepad()?TEXT("Press Right Thumbstick to"):TEXT("Press Q to")) || PC->GetConversationLine().Contains(TEXT("Gamepad"))
+                    || AHellgirlPlayerController::FriendlyKeyName(EKeys::Gamepad_RightThumbstick)!=TEXT("Right Thumbstick")))
                 { Fail(TEXT("Ultimate tip before the unlock, or its key was not filled in")); return false; }
                 if (Id==TEXT("QueenDefeat") && Page==0 && (!HellgirlProgress::UltimatesUnlocked() || Hero->Energy<Hero->MaxEnergy))
                 { Fail(TEXT("Ultimate unlock or full energy missing after 30%")); return false; }

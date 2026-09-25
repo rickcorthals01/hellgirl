@@ -321,3 +321,37 @@ void AHellgirlPlayerController::EnsureGothicFrame()
         }
     }
 }
+
+bool AHellgirlPlayerController::InputKey(const FInputKeyEventArgs& Params)
+{
+    // A button, or a stick or trigger pushed well past its dead zone, means a controller; a key, a mouse button or
+    // a real mouse movement means keyboard and mouse.
+    const bool Analog = Params.Key.IsAxis1D() || Params.Key.IsAxis2D();
+    if (Params.Key.IsGamepadKey()) { if (!Analog || FMath::Abs(Params.AmountDepressed) > .5f) bUsingGamepad = true; }
+    else if (!Analog || FMath::Abs(Params.AmountDepressed) > 2.f) bUsingGamepad = false;
+    return Super::InputKey(Params);
+}
+
+FString AHellgirlPlayerController::FriendlyKeyName(const FKey& Key)
+{
+    FString Name = Key.GetDisplayName().ToString();
+    if (Key.IsGamepadKey())
+    {
+        Name.RemoveFromStart(TEXT("Gamepad "));
+        Name.RemoveFromEnd(TEXT(" Button"));
+    }
+    return Name;
+}
+
+FString AHellgirlPlayerController::KeysFor(FName Action) const
+{
+    FString Keys, AnyDevice;
+    for (const FInputActionKeyMapping& Mapping : GetDefault<UInputSettings>()->GetActionMappings())
+    {
+        if (Mapping.ActionName != Action) continue;
+        const FString Name = FriendlyKeyName(Mapping.Key);
+        AnyDevice += (AnyDevice.IsEmpty() ? TEXT("") : TEXT(" / ")) + Name;
+        if (Mapping.Key.IsGamepadKey() == bUsingGamepad) Keys += (Keys.IsEmpty() ? TEXT("") : TEXT(" / ")) + Name;
+    }
+    return Keys.IsEmpty() ? AnyDevice : Keys;
+}

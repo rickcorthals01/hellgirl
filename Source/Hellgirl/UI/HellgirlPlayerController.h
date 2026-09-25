@@ -12,6 +12,13 @@ public:
     virtual void BeginPlay() override;
     virtual void SetupInputComponent() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
+    // Tracks whether the player last used a controller or keyboard / mouse, for key names shown in dialogue.
+    virtual bool InputKey(const FInputKeyEventArgs& Params) override;
+    bool IsUsingGamepad() const { return bUsingGamepad; }
+    // A key as players read it: "Q", or for a controller "Right Thumbstick" (not "Gamepad Right Thumbstick Button").
+    static FString FriendlyKeyName(const FKey& Key);
+    // The keys bound to an action on the device in use, e.g. "Q" or "Right Thumbstick".
+    FString KeysFor(FName Action) const;
     void TogglePauseMenu();
     void InteractWithHub();
     void OpenHubMenu(int32 Kind);
@@ -44,6 +51,7 @@ public:
     bool IsPauseMenuOpen() const { return bMenuOpen; }
 private:
     bool bMainMenuActive = false;
+    bool bUsingGamepad = false;
     FName ConversationId;
     int32 ConversationPage=0;
     TArray<FText> ConversationSpeakers, ConversationLines;
