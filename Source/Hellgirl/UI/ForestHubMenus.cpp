@@ -22,6 +22,7 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Progress/CampaignProgress.h"
+#include "Progress/Achievements.h"
 
 class SLevelSelectMenu : public SCompoundWidget
 {
@@ -250,11 +251,17 @@ public:
                 return FText::FromString(FString::Printf(TEXT("Your Soul Coins: %lld"),Wallet?Wallet->Coins:0)); })];
             Items->AddSlot().AutoHeight().Padding(0,6)
             [SAssignNew(FirstButton,SButton).HAlign(HAlign_Center).ContentPadding(14)
-                .IsEnabled_Lambda([this]() { const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr; return Wallet && !Wallet->bLoadFailed && !Wallet->bGoblinQueenOwned && Wallet->Coins>=200; })
+                .IsEnabled_Lambda([this]() { const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr; return Wallet && Wallet->CanBuyGoblinQueen(); })
                 .OnClicked_Lambda([this]() { if (Owner.IsValid()) if (auto* Wallet=Cast<UHellgirlWallet>(Owner->GetGameInstance())) Wallet->BuyGoblinQueen(); return FReply::Handled(); })
                 [SNew(STextBlock).Text_Lambda([this]() {
                     const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
-                    return FText::FromString(Wallet && Wallet->bGoblinQueenOwned ? TEXT("GOBLIN QUEEN / OWNED") : TEXT("GOBLIN QUEEN SKIN / 200 SOUL COINS")); })]];
+                    return FText::FromString(Wallet && Wallet->bGoblinQueenOwned ? TEXT("GOBLIN QUEEN / OWNED") : TEXT("GOBLIN QUEEN SKIN / 20000 SOUL COINS")); })]];
+            // It is only for sale once endless Goblins wave 50 has been cleared.
+            Items->AddSlot().AutoHeight().Padding(0,4)[SNew(STextBlock).AutoWrapText(true).Justification(ETextJustify::Center).Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).ColorAndOpacity(FLinearColor(.75f,.6f,.45f))
+                .Text_Lambda([this]() {
+                    const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
+                    return FText::FromString(!Wallet || Wallet->bGoblinQueenOwned ? TEXT("") : !HellgirlAchievements::Has(HellgirlAchievements::EndlessGoblins50)
+                        ? TEXT("Requires: beat wave 50 of endless Goblins") : TEXT("")); })];
             Items->AddSlot().AutoHeight().Padding(0,12)[Text(TEXT("Equip purchased outfits at the campfire."),14)];
             Items->AddSlot().AutoHeight()[SNew(STextBlock).Text_Lambda([this]() {
                 const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
@@ -291,7 +298,7 @@ void AHellgirlPlayerController::InteractWithHub()
     }
     else if (Kind==2)
     {
-        ShowDialogue(FText::FromString(TEXT("Goblin Merchant")),FText::FromString(TEXT("Take a look. The Goblin Queen outfit is yours for 200 Soul Coins.")));
+        ShowDialogue(FText::FromString(TEXT("Goblin Merchant")),FText::FromString(TEXT("Take a look. The Goblin Queen outfit is yours for 20000 Soul Coins, once you have beaten fifty waves of goblins.")));
         if (bDialogueOpen) DialogueNextHubMenu=2;
     }
     else if (Kind>=0) OpenHubMenu(Kind);

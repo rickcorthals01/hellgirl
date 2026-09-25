@@ -7,6 +7,7 @@
 #include "UI/HellgirlPlayerController.h"
 #include "Progress/HellgirlWallet.h"
 #include "Progress/CampaignProgress.h"
+#include "Progress/Achievements.h"
 #include "Rules/PortalUpgrades.h"
 #include "Rules/StageOneLayout.h"
 #include "Enemies/EnemySpawnPoint.h"
@@ -64,6 +65,10 @@ void AArenaHUD::DrawHUD()
         for (int32 I = 0; I < 6; ++I)
             DrawRect(FLinearColor(Shade.R, Shade.G, Shade.B, Shade.A * (1.f - I / 6.f)), X + WW * I / 6.f, Y, WW / 6.f, WH);
     };
+
+    // ---- An achievement just unlocked (Progress/Achievements.h), in camp and in levels. ----
+    if (const double Since = FPlatformTime::Seconds() - HellgirlAchievements::LastUnlockedAt(); Since < 5.0)
+        Centered(TEXT("ACHIEVEMENT  ·  ") + HellgirlAchievements::LastUnlocked(), Gold, H * .14f, 1.2f, FMath::Clamp(static_cast<float>(5.0 - Since), 0.f, 1.f));
 
     // ---- Camp: title, Soul Coins, the last level's deposit, and the prompt of whatever you stand next to. ----
     if (GM->bForestHub)

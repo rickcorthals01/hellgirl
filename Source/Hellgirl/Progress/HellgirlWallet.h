@@ -90,6 +90,9 @@ public:
     int64 LastLost = 0;
     double LostTime = -10.0;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Wallet") bool bGoblinQueenOwned = false;
+    // The Goblin Queen outfit: 20000 Soul Coins, only after clearing endless Goblins wave 50 (an achievement).
+    static constexpr int64 GoblinQueenPrice = 20000;
+    bool CanBuyGoblinQueen() const;
     bool BuyGoblinQueen();
     bool StartNewGame();
     FString SaveSlot(int32 Slot);

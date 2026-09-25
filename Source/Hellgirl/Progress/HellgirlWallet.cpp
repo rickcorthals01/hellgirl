@@ -4,17 +4,21 @@
 #include "UI/HellgirlPlayerController.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Progress/CampaignProgress.h"
+#include "Progress/Achievements.h"
 
 namespace { const FString WalletSlot = TEXT("HellgirlWallet_v1"); }
 
 void UHellgirlWallet::Init()
 {
     Super::Init();
+    if (HellgirlProgress::EndlessBest() >= 50) HellgirlAchievements::Unlock(HellgirlAchievements::EndlessGoblins50, false);
     if (UGameplayStatics::DoesSaveGameExist(WalletSlot, 0))
     {
         const UHellgirlWalletSave* Save = Cast<UHellgirlWalletSave>(UGameplayStatics::LoadGameFromSlot(WalletSlot, 0));
         bLoadFailed = !Save || Save->Coins < 0;
         if (!bLoadFailed) { Coins = Save->Coins; bGoblinQueenOwned = Save->bGoblinQueenOwned; }
+        // Progress from before achievements existed counts (quietly).
+        if (!bLoadFailed && bGoblinQueenOwned) HellgirlAchievements::Unlock(HellgirlAchievements::GoblinQueenOutfit, false);
     }
 }
 
@@ -54,12 +58,18 @@ void UHellgirlWallet::LoseLevel()
     ResetLevel();
 }
 
+bool UHellgirlWallet::CanBuyGoblinQueen() const
+{
+    return !bLoadFailed && !bGoblinQueenOwned && Coins >= GoblinQueenPrice && HellgirlAchievements::Has(HellgirlAchievements::EndlessGoblins50);
+}
+
 bool UHellgirlWallet::BuyGoblinQueen()
 {
-    if (bLoadFailed || bGoblinQueenOwned || Coins < 200) return false;
-    Coins -= 200; bGoblinQueenOwned = true;
-    if (SaveWallet()) return true;
-    Coins += 200; bGoblinQueenOwned = false;
+    if (!CanBuyGoblinQueen()) return false;
+    Coins -= GoblinQueenPrice; bGoblinQueenOwned = true;
+    // Automated checks buy in memory only.
+    if (HellgirlProgress::IsAutomated() || SaveWallet()) { HellgirlAchievements::Unlock(HellgirlAchievements::GoblinQueenOutfit); return true; }
+    Coins += GoblinQueenPrice; bGoblinQueenOwned = false;
     return false;
 }
 

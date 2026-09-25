@@ -5,6 +5,7 @@
 #include "Enemies/EnemySpawnPoint.h"
 #include "Progress/HellgirlWallet.h"
 #include "Progress/CampaignProgress.h"
+#include "Progress/Achievements.h"
 #include "Rules/PortalUpgrades.h"
 #include "Rules/SoulRewards.h"
 #include "UI/HellgirlPlayerController.h"
@@ -311,6 +312,8 @@ void AArenaGameMode::TickEndless(float Dt)
         return;
     }
     if (EndlessWave > 0) HellgirlProgress::RecordEndless(EndlessWave);
+    // Clearing wave 50 is an achievement (and opens the Goblin Queen outfit in the shop).
+    if (EndlessWave >= 50) HellgirlAchievements::Unlock(HellgirlAchievements::EndlessGoblins50);
     if (ScriptStep != EndlessWave) { ScriptStep = EndlessWave; WaveCountdown = EndlessWave == 0 ? 2.5f : EnemyTuning::WaveBreak(3.f); }
     // Every third wave cleared, a soul portal: continue, stock the souls, or leave with them.
     const FName PortalId(*FString::Printf(TEXT("Endless_Portal_%d"), EndlessWave));
@@ -415,6 +418,26 @@ bool AArenaGameMode::RunEndlessCheck()
     TickEndless(0.f);
     Passed &= EndlessWave == 10 && Portals == 3 && Armies == 2 && Queens == 1 && HellgirlProgress::EndlessBest() >= 9
         && SpawnSites.Last()->Difficulty == 3 && SpawnSites[0]->Difficulty == 1;
+    // The Goblin Queen outfit costs 20000 Soul Coins and needs endless wave 50 cleared; both are achievements
+    // (automated runs keep all of this in memory).
+    {
+        const int64 CoinsKept = Wallet->Coins;
+        const bool bOwnedKept = Wallet->bGoblinQueenOwned;
+        HellgirlAchievements::Session().Remove(HellgirlAchievements::EndlessGoblins50);
+        HellgirlAchievements::Session().Remove(HellgirlAchievements::GoblinQueenOutfit);
+        Wallet->bGoblinQueenOwned = false; Wallet->Coins = 25000;
+        Passed &= !Wallet->BuyGoblinQueen() && Wallet->Coins == 25000; // not before wave 50
+        EndlessWave = 50; EndlessWaveStart = SpawnSites.Num(); ScriptStep = 50; WaveCountdown = 5.f;
+        TickEndless(0.f); // wave 50 is cleared
+        Passed &= HellgirlAchievements::Has(HellgirlAchievements::EndlessGoblins50);
+        Wallet->Coins = 19999;
+        Passed &= !Wallet->BuyGoblinQueen();
+        Wallet->Coins = 25000;
+        Passed &= Wallet->BuyGoblinQueen() && Wallet->Coins == 5000 && Wallet->bGoblinQueenOwned
+            && HellgirlAchievements::Has(HellgirlAchievements::GoblinQueenOutfit) && !Wallet->BuyGoblinQueen();
+        if (!Passed) UE_LOG(LogTemp, Error, TEXT("Goblin Queen outfit purchase or achievements failed"));
+        Wallet->Coins = CoinsKept; Wallet->bGoblinQueenOwned = bOwnedKept;
+    }
     // Falling: nothing more goes to camp (the stocked Soul Coins stay).
     Wallet->LevelSouls.Souls = 7;
     const int64 EarnedBefore = Wallet->LevelSouls.Earned, CoinsAtDeath = Wallet->Coins;
@@ -427,7 +450,7 @@ bool AArenaGameMode::RunEndlessCheck()
     Passed &= R.Speed == 30 && R.Combo == 15 && R.Energy == 10 && R.Total == 135 && HellgirlSouls::Compute(100, 0, 290.f, 40, 0.f, 0.f, 0.f).Total == 100;
     // Prices climb 40% per level owned.
     Passed &= HellgirlUpgrades::Cost(0, 0) == 43 && HellgirlUpgrades::Cost(0, 1) == 60 && HellgirlUpgrades::Cost(0, 2) == 77;
-    if (Passed) { UE_LOG(LogTemp, Display, TEXT("ENDLESS CHECK PASSED: ten waves, armies on 5 and 10, the Goblin Queen on 10, soul portals after 3/6/9 with five fresh upgrade offers, each buyable once, stocking Souls as Soul Coins, tougher goblins, best wave, a fall depositing nothing more, the Soul Coin reward")); }
+    if (Passed) { UE_LOG(LogTemp, Display, TEXT("ENDLESS CHECK PASSED: ten waves, armies on 5 and 10, the Goblin Queen on 10, soul portals after 3/6/9 with five fresh upgrade offers, each buyable once, stocking Souls as Soul Coins, tougher goblins, best wave, a fall depositing nothing more, the Soul Coin reward, the Goblin Queen outfit (20000, after wave 50) and its achievements")); }
     else { UE_LOG(LogTemp, Error, TEXT("ENDLESS CHECK FAILED: wave %d, %d portals, %d armies, best %d, souls %lld"), EndlessWave, Portals, Armies, HellgirlProgress::EndlessBest(), Wallet->LevelSouls.Souls); }
     FPlatformMisc::RequestExitWithStatus(false, Passed ? 0 : 1);
     return true;
