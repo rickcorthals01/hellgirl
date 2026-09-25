@@ -27,13 +27,16 @@ void AArenaGameMode::TickGoblinPrelude(float Dt)
     if (Next<5)
     {
         const float X=Hero->GetActorLocation().X;
-        const bool Entered=CampaignLevel==2 || Next==0 || (Next<3?X>-3200.f:X>3500.f);
+        bool Entered=CampaignLevel==2 || Next==0 || (Next<3?X>-3200.f:X>3500.f);
+        // Stage 1's story: no enemies until the voice has spoken.
+        const bool Waiting=bStoryEnabled && CampaignLevel==1 && Next==0 && !HasPlayedStory(TEXT("L1_Voice"));
+        if (Waiting) Entered=false;
         if (Entered && !SpawnSites[Next]->bActivated)
         {
             WaveCountdown-=Dt;
             if (WaveCountdown<=0.f) { SpawnSites[Next]->bEnabled=true; SpawnSites[Next]->bActivated=true; }
         }
-        Objective=Entered ? FString::Printf(TEXT("WAVE %d / 5 — %s"),Next+1,SpawnSites[Next]->bActivated?TEXT("Defeat the goblins"):TEXT("Incoming")) : TEXT("Gate opened! Move to the next section");
+        Objective=Waiting ? TEXT("Look around") : Entered ? FString::Printf(TEXT("WAVE %d / 5 — %s"),Next+1,SpawnSites[Next]->bActivated?TEXT("Defeat the goblins"):TEXT("Incoming")) : TEXT("Gate opened! Move to the next section");
     }
     else
     {
@@ -50,7 +53,7 @@ void AArenaGameMode::TickGoblinPrelude(float Dt)
     {
         PromptAction=4; Prompt=TEXT("Return to camp? E / D-pad Up: YES   N / D-pad Down: NO");
         if (PC && (PC->WasInputKeyJustPressed(EKeys::N)||PC->WasInputKeyJustPressed(EKeys::Gamepad_DPad_Down))) AnswerPrompt(false);
-        else if (PC && (PC->WasInputKeyJustPressed(EKeys::E)||PC->WasInputKeyJustPressed(EKeys::Gamepad_DPad_Up))) AnswerPrompt(true);
+        else if (PC && (PC->WasInputKeyJustPressed(EKeys::E)||PC->WasInputKeyJustPressed(EKeys::Gamepad_DPad_Up))) UseExitPortal();
     }
 }
 

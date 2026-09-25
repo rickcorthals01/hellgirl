@@ -4,6 +4,7 @@
 #include "Levels/ArenaGameMode.h"
 #include "Rules/CombatEnergyRules.h"
 #include "Rules/ComboRules.h"
+#include "UI/HellgirlPlayerController.h"
 #include "Progress/HellgirlWallet.h"
 #include "Rules/StageOneLayout.h"
 #include "Enemies/EnemySpawnPoint.h"
@@ -27,6 +28,8 @@ void AArenaHUD::DrawHUD()
     const AArenaFighter* Player = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
     const AArenaGameMode* GM = Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(this));
     if (!Player || !GM) return;
+    // Conversations have the screen to themselves.
+    if (const auto* PC = Cast<AHellgirlPlayerController>(GetOwningPlayerController()); PC && PC->IsDialogueOpen()) return;
     const float W = Canvas->ClipX, H = Canvas->ClipY;
     const double Now = GetWorld()->GetRealTimeSeconds();
     const auto* Wallet = Cast<UHellgirlWallet>(GetWorld()->GetGameInstance());

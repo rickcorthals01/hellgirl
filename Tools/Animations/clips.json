@@ -40,6 +40,7 @@
     "Knockdown":      { "file": "Knocked Down.fbx", "trim": [7, 43], "hold": 3, "slide": 0.25,
                         "then": [{ "file": "Kip Up.fbx", "trim": [10, 62], "step": 2 }] },
     "Death":          { "file": "Death.fbx" },
+    "WakeUp":         { "file": "Getting Up.fbx", "trim": [1, 75], "slide": 0.3 },
     "SwordSlash":     { "file": "Great Sword Pack/great sword slash.fbx", "strike": "RightHand" },
     "SwordBackslash": { "file": "Great Sword Pack/great sword slash (3).fbx", "strike": "RightHand" },
     "SwordThrust":    { "file": "SwordThrust.fbx", "strike": "RightHand" },

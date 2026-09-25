@@ -69,6 +69,10 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat") float MediumAirDashRange = 600.f;
     void ReceiveHit(float Damage, const FVector& Direction, float Knockback = 160.f, float Knockdown = 0.f, TSharedPtr<FCombatImpactBudget> ImpactBudget = nullptr);
     const HellgirlCombo::FMeter& GetComboMeter() const { return ComboMeter; }
+    // Stage 1 opening: Hellgirl lies on the floor (no control) until released, then plays the get-up.
+    void BeginWakeUp() { WakeUpTime = 0.f; bWakeHeld = true; }
+    void ReleaseWakeUp() { bWakeHeld = false; }
+    bool IsWakingUp() const { return WakeUpTime >= 0.f; }
     // Previews only: start the meter at a given number of points.
     void SetComboPointsForPreview(float Points) { ComboMeter.Points = Points; ComboMeter.SinceHit = 0.f; }
     bool IsBossAttackArmored() const;
@@ -151,6 +155,8 @@ private:
     void PlayImpact(const FVector& Direction, float Damage, bool Heavy, bool Blocked);
     // Style combo meter (Rules/ComboRules.h): varied landed hits raise a 1.1x-2.0x damage bonus.
     HellgirlCombo::FMeter ComboMeter;
+    float WakeUpTime = -1.f;
+    bool bWakeHeld = false;
     bool bComboCredited = false;
     float ComboMultiplier() const;
     void RunComboCheck();

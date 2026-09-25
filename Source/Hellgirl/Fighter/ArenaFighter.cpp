@@ -42,7 +42,7 @@ const TCHAR* const CombatClipNames[] = {
     TEXT("Idle"), TEXT("Jump"), TEXT("RightPunch"), TEXT("LeftPunch"), TEXT("DoubleJab"), TEXT("RightKick"), TEXT("LeftKick"), TEXT("LegSweep"),
     TEXT("Headbutt"), TEXT("DodgeSlam"), TEXT("Charge"), TEXT("ChargedStrike"),
     TEXT("AirPunch"), TEXT("AirLeftPunch"), TEXT("AirKick"), TEXT("AirCrashKick"), TEXT("AirSlam"),
-    TEXT("Dodge"), TEXT("Hit"), TEXT("Knockdown"), TEXT("Death"), TEXT("Block"),
+    TEXT("Dodge"), TEXT("Hit"), TEXT("Knockdown"), TEXT("Death"), TEXT("WakeUp"), TEXT("Block"),
     TEXT("SwordSlash"), TEXT("SwordBackslash"), TEXT("SwordThrust"), TEXT("SwordSpin")};
 
 const TCHAR* AttackClipName(FistCombat::Move Type)
@@ -888,6 +888,14 @@ void AArenaFighter::Tick(float Dt)
     Super::Tick(Dt);
     UpdateCameraShake(Dt);
     if (!bEnemy) { ComboMeter.Tick(Dt); RunComboCheck(); }
+    if (WakeUpTime >= 0.f)
+    {
+        // No control until she is on her feet (the knockdown lock blocks moving, attacking and dodging).
+        KnockdownClock = FMath::Max(KnockdownClock, .1f);
+        if (!bWakeHeld) WakeUpTime += Dt;
+        const UAnimSequence* GetUp = CombatAnimations.FindRef(TEXT("WakeUp")).Get();
+        if (!bWakeHeld && (!GetUp || WakeUpTime * 1.3f >= GetUp->GetPlayLength())) { WakeUpTime = -1.f; KnockdownClock = 0.f; }
+    }
     RunBossDesignCheck();
     RunRevisedCombatCheck();
     UpdateUltimate(Dt);
@@ -1135,6 +1143,12 @@ void AArenaFighter::UpdatePose(float Dt)
             Clip = CombatAnimations.FindRef(TEXT("Death"));
             PlayerDeathAnimationTime += Dt;
             if (Clip) Position = FMath::Min(PlayerDeathAnimationTime, Clip->GetPlayLength());
+        }
+        else if (WakeUpTime >= 0.f)
+        {
+            // Lying still while held, then getting up a little faster than the clip's own pace.
+            Clip = CombatAnimations.FindRef(TEXT("WakeUp"));
+            if (Clip) Position = bWakeHeld ? 0.f : FMath::Min(WakeUpTime * 1.3f, Clip->GetPlayLength());
         }
         else if (KnockdownClock > 0.f)
         {

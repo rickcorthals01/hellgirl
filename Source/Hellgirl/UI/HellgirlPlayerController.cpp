@@ -192,6 +192,7 @@ void AHellgirlPlayerController::ResumeGame()
     if (!bMenuOpen) return;
     if (PauseWidget.IsValid() && GetWorld() && GetWorld()->GetGameViewport()) GetWorld()->GetGameViewport()->RemoveViewportWidgetContent(PauseWidget.ToSharedRef());
     ConversationId=NAME_None; ConversationPage=0; ConversationSpeakers.Reset(); ConversationLines.Reset();
+    ConversationPortraits.Reset(); ConversationLeft.Reset(); ConversationNarration.Reset();
     PauseWidget.Reset(); bMenuOpen=false; bDialogueOpen=false; DialogueNextHubMenu=-1; DialoguePortrait=nullptr;
     FlushPressedKeys();
     SetPause(false); bShowMouseCursor=false;

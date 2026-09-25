@@ -26,6 +26,7 @@ $checks = @(
     @('Physics',        $castle, 60), @('PhysicsPause',  $castle, 0),  @('Pause',         $castle, 0),
     @('EnemyMoveset',   $castle, 60), @('BossDesign',    $castle, 60), @('GoblinStage',   $castle, 60),
     @('Story',          $queen,  60), @('Campaign',      $queen,  60), @('Save',          $castle, 60),
+    @('Story',          '/Engine/Maps/Entry?StageMap=1?CampaignLevel=1', 60, $null, 'Story1'),
     @('Terrain',        $queen,  60), @('Map',           $queen,  60),
     @('Map',            '/Engine/Maps/Entry?StageMap=2', 0), @('Map', '/Engine/Maps/Entry?StageMap=3', 0),
     @('ImpArena',       '/Engine/Maps/Entry?StageMap=1?CampaignLevel=4', 60),
@@ -59,8 +60,8 @@ function Wait-Run($process, $name) {
 $results = @()
 try {
     foreach ($c in $checks) {
-        $name, $url, $fps, $extra = $c
-        $label = if ($url -match 'StageMap=([23])') { "$name$($matches[1])" } elseif ($url -match 'Room=(\d)') { "$name$($matches[1])" } elseif ($extra) { "$name" + ($extra -replace '^-Roll','') } else { $name }
+        $name, $url, $fps, $extra, $custom = $c
+        $label = if ($custom) { $custom } elseif ($url -match 'StageMap=([23])') { "$name$($matches[1])" } elseif ($url -match 'Room=(\d)') { "$name$($matches[1])" } elseif ($extra) { "$name" + ($extra -replace '^-Roll','') } else { $name }
         $log = Join-Path $logDir "$label.log"
         $argList = @("`"$project`"", $url, '-game', '-nullrhi', '-unattended', '-nosound', '-NoSplash', "-Hellgirl$($name)Check", "-abslog=`"$log`"")
         if ($fps -gt 0) { $argList += @('-UseFixedTimeStep', "-FPS=$fps") }

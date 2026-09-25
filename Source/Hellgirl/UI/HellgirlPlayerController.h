@@ -31,6 +31,10 @@ public:
     bool ShowConversation(FName Id);
     FName GetConversation() const { return ConversationId; }
     int32 GetConversationPage() const { return ConversationPage; }
+    // The portrait shown on the current conversation page (null when none).
+    UTexture2D* GetConversationPortrait() const { return ConversationPortraits.IsValidIndex(ConversationPage) ? ConversationPortraits[ConversationPage].Get() : nullptr; }
+    // A black screen that fades to the game over Seconds (real time, so it runs during dialogue).
+    void FadeFromBlack(float Seconds);
     void RunStoryCheck();
     void SelectOutfit(int32 Outfit);
     int32 GetSelectedOutfit() const;
@@ -40,7 +44,12 @@ private:
     FName ConversationId;
     int32 ConversationPage=0;
     TArray<FText> ConversationSpeakers, ConversationLines;
-    void PresentDialoguePage(FText Speaker,FText Line,UTexture2D* Portrait);
+    UPROPERTY() TArray<TObjectPtr<UTexture2D>> ConversationPortraits;
+    TArray<bool> ConversationLeft, ConversationNarration;
+    // Portrait on the left for Hellgirl, on the right for everyone else; narration is centred text on black.
+    void PresentDialoguePage(FText Speaker,FText Line,UTexture2D* Portrait,bool bPortraitLeft=false,bool bNarration=false);
+    UTexture2D* FindPortrait(const FString& Speaker,const FString& Mood) const;
+    TSharedPtr<SWidget> FadeWidget;
     bool bMenuOpen = false;
     bool bDialogueOpen = false;
     int32 DialogueNextHubMenu = -1;

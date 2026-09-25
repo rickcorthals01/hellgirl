@@ -24,6 +24,9 @@ public:
     bool IsImpArena() const { return !bLegacyMap && !bForestHub && CampaignLevel == 4; }
     void QueueStory(FName Moment);
     void StoryFinished(FName Moment);
+    bool HasPlayedStory(FName Moment) const;
+    // Answering YES at a level's exit portal (Stage 1 plays a last line first).
+    void UseExitPortal();
     void QueenSurrendered(class AArenaFighter* Queen);
     bool TickStory(float Dt);
     void TravelToHub();
@@ -99,6 +102,7 @@ private:
     TSet<FName> PlayedStory;
     TWeakObjectPtr<class AArenaFighter> SurrenderedQueen;
     float QueenFleeClock=0.f;
+    FVector WokeAt = FVector::ZeroVector;
     TArray<FVector4> ForestThorns; // X, Y, radius
     UPROPERTY() TObjectPtr<AStaticMeshActor> ForestExitMarker;
     UPROPERTY() TObjectPtr<class APointLight> ForestExitLight;

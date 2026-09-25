@@ -1,5 +1,6 @@
 #include "UI/HellgirlPlayerController.h"
 #include "Fighter/ArenaFighter.h"
+#include "Fighter/HellgirlOutfits.h"
 #include "Levels/ArenaGameMode.h"
 #include "Kismet/GameplayStatics.h"
 #include "Misc/ConfigCacheIni.h"
@@ -18,6 +19,8 @@
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Styling/CoreStyle.h"
+#include "Containers/Ticker.h"
+#include "HAL/PlatformTime.h"
 
 #include "Widgets/SLeafWidget.h"
 #include "Rendering/DrawElements.h"
@@ -51,45 +54,56 @@ private:
     FSlateBrush Corners[4];
 };
 
+// The dialogue box runs along the bottom of the screen; the speaker's portrait stands on top of it,
+// on the left for Hellgirl and on the right for everyone else. Narration is centred text on a black screen.
 class SGothicDialogue : public SCompoundWidget
 {
 public:
     SLATE_BEGIN_ARGS(SGothicDialogue) {} SLATE_ARGUMENT(TWeakObjectPtr<AHellgirlPlayerController>,Owner)
-        SLATE_ARGUMENT(UTexture2D*,Frame) SLATE_ARGUMENT(UTexture2D*,Portrait)
+        SLATE_ARGUMENT(UTexture2D*,Frame) SLATE_ARGUMENT(UTexture2D*,Portrait) SLATE_ARGUMENT(bool,PortraitLeft) SLATE_ARGUMENT(bool,Narration)
         SLATE_ARGUMENT(FText,Speaker) SLATE_ARGUMENT(FText,Line) SLATE_END_ARGS()
     TSharedPtr<SButton> ContinueButton;
     void Construct(const FArguments& Args)
     {
         Owner=Args._Owner;
-        FrameBrush.SetResourceObject(Args._Frame); FrameBrush.ImageSize=FVector2D(400,640);
-        FrameBrush.DrawAs=ESlateBrushDrawType::Box; FrameBrush.Margin=FMargin(.2f,.12f);
-        PortraitBrush.SetResourceObject(Args._Portrait); PortraitBrush.ImageSize=FVector2D(170,170); PortraitBrush.DrawAs=ESlateBrushDrawType::Image;
-        const FLinearColor Ink(.95f,.89f,.77f),Shadow(.012f,.008f,.023f,.48f);
-        ChildSlot.HAlign(HAlign_Center).VAlign(VAlign_Top).Padding(FMargin(26,110,26,26))
+        PortraitBrush.SetResourceObject(Args._Portrait); PortraitBrush.ImageSize=FVector2D(420,420); PortraitBrush.DrawAs=ESlateBrushDrawType::Image;
+        const FLinearColor Ink(.95f,.89f,.77f),Shadow(.012f,.008f,.023f,.62f);
+        auto Continue=SAssignNew(ContinueButton,SButton).ContentPadding(FMargin(12,3)).ButtonColorAndOpacity(FLinearColor(.09f,.055f,.11f,.6f))
+            .OnClicked_Lambda([this]() { if (Owner.IsValid()) Owner->ContinueDialogue(); return FReply::Handled(); })
+            [SNew(STextBlock).Text(FText::FromString(TEXT("Continue  /  A"))).Font(FCoreStyle::GetDefaultFontStyle("Regular",12)).ColorAndOpacity(Ink)];
+        if (Args._Narration)
+        {
+            ChildSlot[SNew(SOverlay)
+                + SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor::Black)]
+                + SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(60)
+                  [SNew(STextBlock).Text(Args._Line).Font(FCoreStyle::GetDefaultFontStyle("Italic",34)).ColorAndOpacity(Ink).Justification(ETextJustify::Center).AutoWrapText(true)]
+                + SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Bottom).Padding(40)[Continue]];
+            return;
+        }
+        const bool HasPortrait=Args._Portrait!=nullptr, HasName=!Args._Speaker.IsEmpty();
+        const EHorizontalAlignment Side=Args._PortraitLeft?HAlign_Left:HAlign_Right;
+        ChildSlot.HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(FMargin(24,0,24,20))
         [SNew(SScaleBox).Stretch(EStretch::ScaleToFit).StretchDirection(EStretchDirection::DownOnly)
-          [SNew(SBox).WidthOverride(1400).HeightOverride(260)
-            [SNew(SHorizontalBox)
-              + SHorizontalBox::Slot().FillWidth(1.f).Padding(0,0,12,0)
-              [SNew(SOverlay)
-                + SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(Shadow)]
-                + SOverlay::Slot()[SNew(SDialogueFrame).Frame(Args._Frame).Visibility(EVisibility::HitTestInvisible)]
-                + SOverlay::Slot().Padding(120,28,120,26)
-                [SNew(SVerticalBox)
-                  + SVerticalBox::Slot().AutoHeight().Padding(0,0,0,10)
-                  [SNew(STextBlock).Text(Args._Speaker).Font(FCoreStyle::GetDefaultFontStyle("Bold",24)).ColorAndOpacity(Ink)]
-                  + SVerticalBox::Slot().FillHeight(1)
-                  [SNew(SScrollBox)
-                    + SScrollBox::Slot()[SNew(STextBlock).Text(Args._Line).WrapTextAt(880).Font(FCoreStyle::GetDefaultFontStyle("Regular",23)).ColorAndOpacity(Ink)]]
-                  + SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Right).Padding(0,8,0,0)
-                  [SAssignNew(ContinueButton,SButton).ContentPadding(FMargin(12,3)).ButtonColorAndOpacity(FLinearColor(.09f,.055f,.11f,.6f))
-                    .OnClicked_Lambda([this]() { if (Owner.IsValid()) Owner->ContinueDialogue(); return FReply::Handled(); })
-                    [SNew(STextBlock).Text(FText::FromString(TEXT("Continue  /  A"))).Font(FCoreStyle::GetDefaultFontStyle("Regular",12)).ColorAndOpacity(Ink)]]]]
-              + SHorizontalBox::Slot().AutoWidth()
-              [SNew(SBox).WidthOverride(260).HeightOverride(260)
-                [SNew(SOverlay)
-                  + SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(Shadow)]
-                  + SOverlay::Slot().Padding(26)[SNew(SImage).Image(&PortraitBrush).Visibility(Args._Portrait?EVisibility::HitTestInvisible:EVisibility::Collapsed)]
-                  + SOverlay::Slot()[SNew(SDialogueFrame).Frame(Args._Frame).Visibility(EVisibility::HitTestInvisible)]]]]]];
+          [SNew(SBox).WidthOverride(1500).HeightOverride(560)
+            [SNew(SOverlay)
+              // The portrait first, so the box in front covers the bottom of the bust.
+              + SOverlay::Slot().HAlign(Side).VAlign(VAlign_Top).Padding(FMargin(70,0,70,0))
+                [SNew(SBox).WidthOverride(420).HeightOverride(420).Visibility(HasPortrait?EVisibility::HitTestInvisible:EVisibility::Collapsed)
+                  [SNew(SImage).Image(&PortraitBrush)]]
+              + SOverlay::Slot().VAlign(VAlign_Bottom)
+                [SNew(SBox).HeightOverride(220)
+                  [SNew(SOverlay)
+                    + SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(Shadow)]
+                    + SOverlay::Slot()[SNew(SDialogueFrame).Frame(Args._Frame).Visibility(EVisibility::HitTestInvisible)]
+                    + SOverlay::Slot().Padding(120,26,120,22)
+                      [SNew(SVerticalBox)
+                        + SVerticalBox::Slot().AutoHeight().HAlign(Side).Padding(0,0,0,10)
+                          [SNew(STextBlock).Text(Args._Speaker).Font(FCoreStyle::GetDefaultFontStyle("Bold",24)).ColorAndOpacity(FLinearColor(.95f,.72f,.32f))
+                            .Visibility(HasName?EVisibility::Visible:EVisibility::Collapsed)]
+                        + SVerticalBox::Slot().FillHeight(1)
+                          [SNew(SScrollBox)
+                            + SScrollBox::Slot()[SNew(STextBlock).Text(Args._Line).WrapTextAt(1220).Font(FCoreStyle::GetDefaultFontStyle("Regular",24)).ColorAndOpacity(Ink)]]
+                        + SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Right).Padding(0,6,0,0)[Continue]]]]]]];
     }
     virtual FReply OnPreviewKeyDown(const FGeometry&,const FKeyEvent& Event) override
     {
@@ -102,7 +116,7 @@ public:
         return FReply::Unhandled();
     }
 private:
-    FSlateBrush FrameBrush,PortraitBrush;
+    FSlateBrush PortraitBrush;
     TWeakObjectPtr<AHellgirlPlayerController> Owner;
 };
 void AHellgirlPlayerController::ShowDialogue(FText Speaker,FText Line,UTexture2D* Portrait)
@@ -111,12 +125,13 @@ void AHellgirlPlayerController::ShowDialogue(FText Speaker,FText Line,UTexture2D
     if (auto* Fighter=Cast<AArenaFighter>(GetPawn())) Fighter->PrepareForPause();
     FlushPressedKeys(); EnsureGothicFrame();
     bMenuOpen=bDialogueOpen=true; DialoguePortrait=Portrait; DialogueNextHubMenu=-1;
+    ConversationPortraits.Reset(); ConversationLeft.Reset(); ConversationNarration.Reset();
     PresentDialoguePage(Speaker,Line,Portrait);
 }
-void AHellgirlPlayerController::PresentDialoguePage(FText Speaker,FText Line,UTexture2D* Portrait)
+void AHellgirlPlayerController::PresentDialoguePage(FText Speaker,FText Line,UTexture2D* Portrait,bool bPortraitLeft,bool bNarration)
 {
     if (PauseWidget.IsValid()) GetWorld()->GetGameViewport()->RemoveViewportWidgetContent(PauseWidget.ToSharedRef());
-    auto Widget=SNew(SGothicDialogue).Owner(this).Frame(FrameTexture).Portrait(Portrait).Speaker(Speaker).Line(Line);
+    auto Widget=SNew(SGothicDialogue).Owner(this).Frame(FrameTexture).Portrait(Portrait).PortraitLeft(bPortraitLeft).Narration(bNarration).Speaker(Speaker).Line(Line);
     PauseWidget=Widget; GetWorld()->GetGameViewport()->AddViewportWidgetContent(Widget,110);
     bShowMouseCursor=true; FInputModeUIOnly Mode; Mode.SetWidgetToFocus(Widget->ContinueButton);
     Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock); SetInputMode(Mode);
@@ -128,7 +143,8 @@ void AHellgirlPlayerController::ContinueDialogue()
     if (!ConversationId.IsNone() && ConversationLines.IsValidIndex(ConversationPage+1))
     {
         ++ConversationPage;
-        PresentDialoguePage(ConversationSpeakers[ConversationPage],ConversationLines[ConversationPage],nullptr);
+        PresentDialoguePage(ConversationSpeakers[ConversationPage],ConversationLines[ConversationPage],ConversationPortraits[ConversationPage],
+            ConversationLeft[ConversationPage],ConversationNarration[ConversationPage]);
         return;
     }
     const FName Finished=ConversationId;
@@ -136,6 +152,40 @@ void AHellgirlPlayerController::ContinueDialogue()
     ResumeGame();
     if (NextMenu>=0) OpenHubMenu(NextMenu);
     if (!Finished.IsNone()) if (auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(this))) GM->StoryFinished(Finished);
+}
+
+// Hellgirl's portraits follow her outfit (falling back to Rags); other speakers use a set named after them,
+// e.g. "Goblin Queen" -> /Game/Dialogue/Portraits/GoblinQueen/T_GoblinQueen_Angry. Missing art shows no portrait.
+UTexture2D* AHellgirlPlayerController::FindPortrait(const FString& Speaker,const FString& Mood) const
+{
+    if (Speaker.IsEmpty() || Mood.Equals(TEXT("none"),ESearchCase::IgnoreCase)) return nullptr;
+    const FString Wanted=Mood.IsEmpty()?TEXT("Neutral"):Mood;
+    TArray<FString> Sets;
+    if (Speaker.Equals(TEXT("Hellgirl"),ESearchCase::IgnoreCase)) { Sets.Add(HellgirlOutfits::Folder(GetSelectedOutfit())); Sets.AddUnique(TEXT("Rags")); }
+    else Sets.Add(Speaker.Replace(TEXT(" "),TEXT("")));
+    for (const FString& Set : Sets)
+        for (const FString& Try : {Wanted,FString(TEXT("Neutral"))})
+            if (auto* Texture=LoadObject<UTexture2D>(nullptr,*FString::Printf(TEXT("/Game/Dialogue/Portraits/%s/T_%s_%s.T_%s_%s"),*Set,*Set,*Try,*Set,*Try)))
+                return Texture;
+    return nullptr;
+}
+
+void AHellgirlPlayerController::FadeFromBlack(float Seconds)
+{
+    if (!GetWorld() || !GetWorld()->GetGameViewport()) return;
+    if (FadeWidget.IsValid()) GetWorld()->GetGameViewport()->RemoveViewportWidgetContent(FadeWidget.ToSharedRef());
+    const double Start=FPlatformTime::Seconds();
+    FadeWidget=SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).Visibility(EVisibility::HitTestInvisible)
+        .BorderBackgroundColor_Lambda([Start,Seconds]() { return FLinearColor(0,0,0,FMath::Clamp(1.f-static_cast<float>(FPlatformTime::Seconds()-Start)/FMath::Max(Seconds,.01f),0.f,1.f)); });
+    GetWorld()->GetGameViewport()->AddViewportWidgetContent(FadeWidget.ToSharedRef(),105);
+    TWeakObjectPtr<AHellgirlPlayerController> Weak(this);
+    FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([Weak](float)
+    {
+        if (Weak.IsValid() && Weak->FadeWidget.IsValid() && Weak->GetWorld() && Weak->GetWorld()->GetGameViewport())
+            Weak->GetWorld()->GetGameViewport()->RemoveViewportWidgetContent(Weak->FadeWidget.ToSharedRef());
+        if (Weak.IsValid()) Weak->FadeWidget.Reset();
+        return false;
+    }),Seconds+.1f);
 }
 
 #include "Containers/Ticker.h"
@@ -184,24 +234,36 @@ void AHellgirlPlayerController::RunDialogueCheck()
 #endif
 }
 
-
+// A conversation is a section of Content/Dialogue/LevelOne.ini with numbered pages:
+//   SpeakerN = who talks (empty: a box without a name)
+//   LineN    = what they say
+//   MoodN    = portrait mood (Neutral, Angry, Surprised, Headache, Quiet, Smirk, EvilSmirk, Laugh, Hurt...; "none" hides it)
+//   StyleN   = Narration for centred text on a black screen
 bool AHellgirlPlayerController::ShowConversation(FName Id)
 {
     if (bMenuOpen) return false;
     FConfigFile Script;
     Script.Read(FPaths::ProjectContentDir()/TEXT("Dialogue/LevelOne.ini"));
     TArray<FText> Speakers,Lines;
+    TArray<TObjectPtr<UTexture2D>> Portraits;
+    TArray<bool> Left,Narration;
     for (int32 I=0;;++I)
     {
-        FString Speaker,Line;
+        FString Speaker,Line,Mood,Style;
         if (!Script.GetString(*Id.ToString(),*FString::Printf(TEXT("Line%d"),I),Line)) break;
         Script.GetString(*Id.ToString(),*FString::Printf(TEXT("Speaker%d"),I),Speaker);
+        Script.GetString(*Id.ToString(),*FString::Printf(TEXT("Mood%d"),I),Mood);
+        Script.GetString(*Id.ToString(),*FString::Printf(TEXT("Style%d"),I),Style);
+        const bool IsNarration=Style.Equals(TEXT("Narration"),ESearchCase::IgnoreCase);
         Speakers.Add(FText::FromString(Speaker)); Lines.Add(FText::FromString(Line));
+        Portraits.Add(IsNarration?nullptr:FindPortrait(Speaker,Mood));
+        Left.Add(Speaker.Equals(TEXT("Hellgirl"),ESearchCase::IgnoreCase)); Narration.Add(IsNarration);
     }
     if (Lines.IsEmpty()) return false;
     ShowDialogue(Speakers[0],Lines[0]);
     if (!bDialogueOpen) return false;
     ConversationId=Id; ConversationPage=0; ConversationSpeakers=MoveTemp(Speakers); ConversationLines=MoveTemp(Lines);
+    ConversationPortraits=MoveTemp(Portraits); ConversationLeft=MoveTemp(Left); ConversationNarration=MoveTemp(Narration);
+    PresentDialoguePage(ConversationSpeakers[0],ConversationLines[0],ConversationPortraits[0],ConversationLeft[0],ConversationNarration[0]);
     return true;
 }
-
