@@ -73,16 +73,26 @@ Open them from the forest road, under **World II**. Stage I opens once World I i
 
 | Stage | What happens |
 |---|---|
-| **I, The Swamp of Souls** | One stretch of swamp (always seed 1101). A six-second camera flight from the far end back to Hellgirl, then the Goblin Queen's intro. Ten waves of rats and frogs, each arriving ahead of Hellgirl along the corridor. Conversations after waves 2, 6 and 9, then the purple portal by the light at the end. |
-| **II, Deeper In** | A run of ten rooms (a new seed each run), one wave per room; the light only opens once the room's wave is beaten. Health, energy and Souls carry over, and dying ends the run. Her lines play at rooms 1, 5, 7 and 10. Room 10 is the Frog King's: he waits on his giant lily pad, guarded by rats and frogs. Beating him brings "Up there! I can see it." and the purple portal. |
+| **I, The Swamp of Souls** | One stretch of swamp (always seed 1101). A six-second camera flight from the far end back to Hellgirl, then the Goblin Queen's intro. Ten waves of rats and frogs from the areas' points (below). Blue portals open after waves 2, 6 and 9: stepping in plays her conversation, then the portal menu (continue, stock Souls, upgrades). After wave 10, the purple portal by the light at the end. |
+| **II, Deeper In** | A run of ten rooms (a new seed each run). Each room sends groups of random rats and frogs from three to five of the areas' points (all five in room 10); the light only opens once they are all beaten. Health, energy and Souls carry over, and dying ends the run. Her lines play at rooms 1, 5, 7 and 10. Room 10 is the Frog King's: he waits on his giant lily pad, guarded by rats and frogs. Beating him brings "Up there! I can see it." and the purple portal. |
 | **III, The Doorway** | Two waves (seed 3303), then the doorway conversation, ending "Watch out!". The Rat Queen's fight comes later, in her own area, so for now the purple portal leads back to camp. Her after-fight conversation is already in `LevelTwo.ini` (`S3_AfterRatQueen`). |
 
-Waves (before the global ×1.5 wave scaling):
-- **Stage I:** 3 rats; 4 rats; 3+1 frog; 3+2; 3 frogs; 4+2; 5+2; 3+4; 5+4; 6+5.
-- **Stage II, room *r*:** 2 + *r*/3 rats and 1 + *r*/3 frogs; room 10 has the Frog King plus 3 and 3.
-- **Stage III:** 5+2, then 4+4.
+### Where the waves come from
 
-The dialogue file lists "WAVE 1 & 2" then "WAVE 4 & 5 & 6", so its lines are read as coming after waves 2, 6 and 9.
+Every wave comes from a fixed point in one of the room's five areas, and only once Hellgirl gets within 13 m of it (or passes it) along the corridor; the next wave waits until the last one is beaten. Each area has a point on the north and the south side (5.5 m off the middle). West to east:
+
+| Area | Where | Stage I (rats + frogs, before the global ×1.5 wave scaling) |
+|---|---|---|
+| 0 | the first mud, 62% of the way to the water | rats only: 3, then 4 |
+| 1 | the start of the water (18% across it) | mostly rats: 3+1, then 4+2 |
+| 2 | the middle of the water | frogs only: 3, then 4 |
+| 3 | where the water nears the mud again (82% across) | mostly frogs: 2+4, then 2+5 |
+| 4 | the last mud, 45% of the way to the light | rats and frogs: 4+4, then 6+5 |
+
+- **Stage II, room *r*:** groups at 3 of the areas in rooms 1–3, 4 in rooms 4–6, 5 in rooms 7–10. Each group is one or two enemies before scaling (two more often later in the run, always two in room 10), a random mix of rats and frogs. In room 10 the Frog King joins the group from the middle of the water.
+- **Stage III:** 5+2 from the start of the water, then 4+4 from where it nears the mud.
+
+The dialogue file lists "WAVE 1 & 2" then "WAVE 4 & 5 & 6", so the blue portals are read as coming after waves 2, 6 and 9.
 
 ## The rat and the frog
 
@@ -91,7 +101,7 @@ Both come from their rigged Meshy models, with Mixamo clips fitted onto their ri
 | | Moves |
 |---|---|
 | **Rat** (fast, 470 cm/s) | **Bite:** a quick 0.45 s lunge for low damage, once every 4 s. A perfect dodge cannot counter it and it shows no counter flash; a normal dodge still avoids it. **Punch:** a very fast 0.55 s charge and release for medium damage, followed 55% of the time by a second punch with the other hand. **Dodge roll:** when Hellgirl winds up an attack at it, a 40% chance (at most every 3 s) to roll aside and away, untouchable while rolling, dropping its own attack if that has not landed yet. |
-| **Frog** | Always hopping, fast and high (a 0.3–0.75 s pause between hops): straight at her from afar, around her up close, and up and over her when its slam is ready. **Punch** on the ground (0.45 s, low damage). **Air punch** when level with her mid-hop. **Slam** from high up (every 5 s): a blue circle marks where it will land, then it dives. It deals medium damage in a 3.2 m circle with a small blast that pushes her back; other enemies in the splash take 6 damage and are pushed away. |
+| **Frog** | Always hopping, fast and high (a 0.3–0.75 s pause between hops): straight at her from afar, around her up close, and up and over her when its slam is ready. **Punch** on the ground (0.45 s, low damage). **Air punch** when level with her mid-hop. **Slam** from high up (every 6 s): a blue circle marks where it will land, then it dives. It deals medium damage in a 3.2 m circle with a small blast that pushes her back; other enemies in the splash take 6 damage and are pushed away. |
 | **Frog King** (mini-boss, 750 health, boss bar) | A bigger frog (1.25 × model, 1.5 × actor) that hops higher and slams every 2.8 s in a 4.6 m circle. |
 
 Their clips:
@@ -102,5 +112,5 @@ New model slots can hold `Attack2`, `AirAttack`, `HeavyAttack`, `Dodge` and `Jum
 
 Checks:
 - `SwampEnemy` (in the swamp map): the rat bites (uncounterable), punches and rolls away from her swings; the frog hops and slams her.
-- `SwampStage` (Stage I, a Stage II room, Stage II room 10 and Stage III): walks each script. It checks the wave counts, that only rats, frogs and the Frog King appear, where the Frog King stands, that the portal or light opens, and that every conversation exists.
+- `SwampStage` (Stage I, a Stage II room, Stage II room 10 and Stage III): walks each script, stepping Hellgirl up to each wave's point. It checks the wave counts, that only rats, frogs and the Frog King appear, where the Frog King stands, that the points run west to east and a wave never starts while she is far from its point, Stage I's areas (rats only in the first mud, frogs only mid-water) and its blue portals after waves 2, 6 and 9, that the portal or light opens, and that every conversation exists.
 - `-HellgirlSwampEnemyPreview` (at camp, windowed): the rat's and the frog's clips at their key moments, saved to `Saved/Screenshots/SwampEnemies_*.png`.
