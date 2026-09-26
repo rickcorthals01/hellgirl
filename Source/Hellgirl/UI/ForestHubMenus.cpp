@@ -251,20 +251,59 @@ public:
             Items->AddSlot().AutoHeight().Padding(0,0,0,18)[SNew(STextBlock).Text_Lambda([this]() {
                 const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
                 return FText::FromString(FString::Printf(TEXT("Your Soul Coins: %lld"),Wallet?Wallet->Coins:0)); })];
-            Items->AddSlot().AutoHeight().Padding(0,6)
-            [SAssignNew(FirstButton,SButton).HAlign(HAlign_Center).ContentPadding(14)
+            // Two columns: the energy moves, and the permanent upgrades with the outfits below (Rules/ShopUpgrades.h).
+            TSharedRef<SVerticalBox> Moves=SNew(SVerticalBox), Stats=SNew(SVerticalBox);
+            auto Heading=[](const TCHAR* Label) { return SNew(STextBlock).Text(FText::FromString(Label)).Font(FCoreStyle::GetDefaultFontStyle("Bold",15)).ColorAndOpacity(FLinearColor(.75f,.6f,.45f)); };
+            Moves->AddSlot().AutoHeight().Padding(0,0,0,6)[Heading(TEXT("MOVES"))];
+            Stats->AddSlot().AutoHeight().Padding(0,0,0,6)[Heading(TEXT("PERMANENT UPGRADES"))];
+            for (int32 Item=0; Item<HellgirlShop::Count; ++Item)
+            {
+                TSharedPtr<SButton> Button;
+                (HellgirlShop::IsMove(Item)?Moves:Stats)->AddSlot().AutoHeight().Padding(0,4)
+                [SAssignNew(Button,SButton).HAlign(HAlign_Fill).ContentPadding(FMargin(14,8))
+                    .IsEnabled_Lambda([this,Item]() { const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr; return Wallet && Wallet->CanBuyShopItem(Item); })
+                    .OnClicked_Lambda([this,Item]() { if (Owner.IsValid()) if (auto* Wallet=Cast<UHellgirlWallet>(Owner->GetGameInstance())) Wallet->BuyShopItem(Item); return FReply::Handled(); })
+                    [SNew(SVerticalBox)
+                        + SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",16)).ColorAndOpacity(FLinearColor(.92f,.85f,.69f))
+                            .Text_Lambda([this,Item]() {
+                                const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
+                                const HellgirlShop::FInfo& Info=HellgirlShop::Info(Item);
+                                const int32 Level=Wallet?Wallet->ShopLevel(Item):0;
+                                const FString Price=Level>=Info.MaxLevel ? (HellgirlShop::IsMove(Item)?TEXT("OWNED"):TEXT("MAXED")) : FString::Printf(TEXT("%lld"),Info.Price);
+                                return FText::FromString(FString::Printf(TEXT("%s  /  %s"),Info.Name,*Price)); })]
+                        + SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",12)).ColorAndOpacity(FLinearColor(.62f,.58f,.52f)).AutoWrapText(true)
+                            .Text_Lambda([this,Item]() {
+                                const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
+                                const HellgirlShop::FInfo& Info=HellgirlShop::Info(Item);
+                                if (HellgirlShop::IsMove(Item)) return FText::FromString(Info.Detail);
+                                // Stats show what is owned so far.
+                                const int32 Level=Wallet?Wallet->ShopLevel(Item):0;
+                                const HellgirlShop::FStats Now=HellgirlShop::Stats(Wallet?Wallet->ShopLevels:TArray<int32>());
+                                const FString Total=Item==static_cast<int32>(HellgirlShop::EItem::Health) ? FString::Printf(TEXT("+%d health"),FMath::RoundToInt(Now.BonusHealth))
+                                    : Item==static_cast<int32>(HellgirlShop::EItem::Souls) ? FString::Printf(TEXT("+%g%% Souls"),Now.SoulBonus*100.f)
+                                    : Item==static_cast<int32>(HellgirlShop::EItem::Damage) ? FString::Printf(TEXT("+%d%% damage"),FMath::RoundToInt((Now.Damage-1.f)*100.f))
+                                    : FString::Printf(TEXT("+%d%% speed"),FMath::RoundToInt((Now.Speed-1.f)*100.f));
+                                return FText::FromString(FString::Printf(TEXT("%s  ·  owned %d / %d (%s)"),Info.Detail,Level,Info.MaxLevel,*Total)); })]]];
+                if (!FirstButton) FirstButton=Button;
+            }
+            Stats->AddSlot().AutoHeight().Padding(0,16,0,6)[Heading(TEXT("OUTFITS"))];
+            Stats->AddSlot().AutoHeight().Padding(0,4)
+            [SNew(SButton).HAlign(HAlign_Center).ContentPadding(FMargin(14,8))
                 .IsEnabled_Lambda([this]() { const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr; return Wallet && Wallet->CanBuyGoblinQueen(); })
                 .OnClicked_Lambda([this]() { if (Owner.IsValid()) if (auto* Wallet=Cast<UHellgirlWallet>(Owner->GetGameInstance())) Wallet->BuyGoblinQueen(); return FReply::Handled(); })
                 [SNew(STextBlock).Text_Lambda([this]() {
                     const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
                     return FText::FromString(Wallet && Wallet->bGoblinQueenOwned ? TEXT("GOBLIN QUEEN / OWNED") : TEXT("GOBLIN QUEEN SKIN / 20000 SOUL COINS")); })]];
             // It is only for sale once endless Goblins wave 50 has been cleared.
-            Items->AddSlot().AutoHeight().Padding(0,4)[SNew(STextBlock).AutoWrapText(true).Justification(ETextJustify::Center).Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).ColorAndOpacity(FLinearColor(.75f,.6f,.45f))
+            Stats->AddSlot().AutoHeight().Padding(0,4)[SNew(STextBlock).AutoWrapText(true).Justification(ETextJustify::Center).Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).ColorAndOpacity(FLinearColor(.75f,.6f,.45f))
                 .Text_Lambda([this]() {
                     const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
                     return FText::FromString(!Wallet || Wallet->bGoblinQueenOwned ? TEXT("") : !HellgirlAchievements::Has(HellgirlAchievements::EndlessGoblins50)
                         ? TEXT("Requires: beat wave 50 of endless Goblins") : TEXT("")); })];
-            Items->AddSlot().AutoHeight().Padding(0,12)[Text(TEXT("Equip purchased outfits at the campfire."),14)];
+            Stats->AddSlot().AutoHeight().Padding(0,6)[Text(TEXT("Equip purchased outfits at the campfire."),13)];
+            Items->AddSlot().AutoHeight()[SNew(SHorizontalBox)
+                + SHorizontalBox::Slot().FillWidth(1).Padding(0,0,14,0)[Moves]
+                + SHorizontalBox::Slot().FillWidth(1).Padding(14,0,0,0)[Stats]];
             Items->AddSlot().AutoHeight()[SNew(STextBlock).Text_Lambda([this]() {
                 const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
                 return FText::FromString(Wallet && Wallet->bSaveFailed ? TEXT("Couldn't save purchase. Your Soul Coins were not spent. Try again.") : TEXT("")); })];
@@ -274,7 +313,7 @@ public:
         [SAssignNew(Close,SButton).HAlign(HAlign_Center).ContentPadding(14).OnClicked_Lambda([this]() { if (Owner.IsValid()) Owner->ResumeGame(); return FReply::Handled(); })[Text(TEXT("BACK TO CAMP"),18)]];
         if (!FirstButton) FirstButton=Close;
         ChildSlot.HAlign(HAlign_Center).VAlign(VAlign_Center)
-        [SNew(SBox).WidthOverride(470)
+        [SNew(SBox).WidthOverride(Args._Kind==2 ? 900 : 470)
           [SNew(SBorder).Padding(32).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(.022f,.035f,.03f,.97f))[Items]]];
     }
     virtual FReply OnPreviewKeyDown(const FGeometry&,const FKeyEvent& Event) override

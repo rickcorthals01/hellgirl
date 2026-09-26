@@ -47,7 +47,7 @@ FString UHellgirlWallet::SaveSlot(int32 Slot)
     for (auto Site:GM->GetSpawnSites()) if (Site->bActivated && !Site->bCleared) return TEXT("Finish this wave before saving.");
     auto* Save=Cast<UHellgirlGameSave>(UGameplayStatics::CreateSaveGameObject(UHellgirlGameSave::StaticClass()));
     if (!Save) return TEXT("Could not create save.");
-    Save->Coins=Coins; Save->LevelSouls=LevelSouls; Save->bGoblinQueenOwned=bGoblinQueenOwned;
+    Save->Coins=Coins; Save->LevelSouls=LevelSouls; Save->bGoblinQueenOwned=bGoblinQueenOwned; Save->ShopLevels=ShopLevels;
     for (const FString& Flag : HellgirlProgress::AllFlags()) if (HellgirlProgress::Flag(*Flag)) Save->Flags.Add(Flag);
     Save->Level=GM->CampaignLevel; Save->Unlocked=GM->GetUnlockedLevel(); Save->bHub=GM->bForestHub;
     Save->ImpArenaLayoutVersion=GM->CampaignLevel==4 && !GM->bForestHub ? 1 : 0;
@@ -89,7 +89,7 @@ void UHellgirlWallet::RestorePending()
     auto* Hero=Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this,0));
     if (!PendingLoad || !GM || !Hero) return;
     const auto* Save=PendingLoad.Get();
-    Coins=Save->Coins; LevelSouls=Save->LevelSouls; bGoblinQueenOwned=Save->bGoblinQueenOwned; bLoadFailed=false;
+    Coins=Save->Coins; LevelSouls=Save->LevelSouls; bGoblinQueenOwned=Save->bGoblinQueenOwned; ShopLevels=Save->ShopLevels; bLoadFailed=false;
     if (!IsSaveCheck())
     {
     SaveWallet();

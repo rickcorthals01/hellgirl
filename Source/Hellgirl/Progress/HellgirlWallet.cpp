@@ -15,7 +15,7 @@ void UHellgirlWallet::Init()
     {
         const UHellgirlWalletSave* Save = Cast<UHellgirlWalletSave>(UGameplayStatics::LoadGameFromSlot(WalletSlot, 0));
         bLoadFailed = !Save || Save->Coins < 0;
-        if (!bLoadFailed) { Coins = Save->Coins; bGoblinQueenOwned = Save->bGoblinQueenOwned; }
+        if (!bLoadFailed) { Coins = Save->Coins; bGoblinQueenOwned = Save->bGoblinQueenOwned; ShopLevels = Save->ShopLevels; }
     }
 }
 
@@ -75,7 +75,7 @@ bool UHellgirlWallet::StartNewGame()
     // Write the fresh wallet first. A failed write leaves current progress intact.
     auto* Fresh=Cast<UHellgirlWalletSave>(UGameplayStatics::CreateSaveGameObject(UHellgirlWalletSave::StaticClass()));
     if (!Fresh || !UGameplayStatics::SaveGameToSlot(Fresh,WalletSlot,0)) return false;
-    Coins=0; ResetLevel(); bGoblinQueenOwned=false; bSaveFailed=bLoadFailed=false;
+    Coins=0; ResetLevel(); bGoblinQueenOwned=false; ShopLevels.Reset(); bSaveFailed=bLoadFailed=false;
     for (const FString& Flag : HellgirlProgress::AllFlags()) GConfig->SetBool(HellgirlProgress::Section,*Flag,false,GGameUserSettingsIni);
     GConfig->SetInt(HellgirlProgress::Section,TEXT("EndlessGoblinsBest"),0,GGameUserSettingsIni);
     LastPickup=0; PickupTime=-10.0; PendingLoad=nullptr;
@@ -95,6 +95,7 @@ bool UHellgirlWallet::SaveWallet()
     if (!Save) { bSaveFailed = true; return false; }
     Save->Coins = Coins;
     Save->bGoblinQueenOwned = bGoblinQueenOwned;
+    Save->ShopLevels = ShopLevels;
     bSaveFailed = !UGameplayStatics::SaveGameToSlot(Save, WalletSlot, 0);
     return !bSaveFailed;
 }
@@ -115,4 +116,35 @@ bool UHellgirlWallet::StockSouls(bool bWrite)
     LevelSouls.Stocked += Amount;
     LastStocked = Amount; StockTime = FPlatformTime::Seconds();
     return true;
+}
+
+bool UHellgirlWallet::CanBuyShopItem(int32 Item) const
+{
+    return !bLoadFailed && Item >= 0 && Item < HellgirlShop::Count && ShopLevel(Item) < HellgirlShop::Info(Item).MaxLevel
+        && Coins >= HellgirlShop::Info(Item).Price;
+}
+
+bool UHellgirlWallet::BuyShopItem(int32 Item)
+{
+    if (!CanBuyShopItem(Item)) return false;
+    const int64 Price = HellgirlShop::Info(Item).Price;
+    if (ShopLevels.Num() < HellgirlShop::Count) ShopLevels.SetNumZeroed(HellgirlShop::Count);
+    Coins -= Price; ++ShopLevels[Item];
+    // Automated checks buy in memory only.
+    if (HellgirlProgress::IsAutomated() || SaveWallet()) return true;
+    Coins += Price; --ShopLevels[Item];
+    return false;
+}
+
+bool UHellgirlWallet::OwnsMove(FistCombat::Move Type) const
+{
+    const int32 Item = HellgirlShop::ItemFor(Type);
+    if (Item < 0 || (HellgirlProgress::IsAutomated() && !bShopInChecks)) return true;
+    return ShopLevel(Item) > 0;
+}
+
+HellgirlShop::FStats UHellgirlWallet::ShopStats() const
+{
+    if (HellgirlProgress::IsAutomated() && !bShopInChecks) return HellgirlShop::FStats();
+    return HellgirlShop::Stats(ShopLevels);
 }

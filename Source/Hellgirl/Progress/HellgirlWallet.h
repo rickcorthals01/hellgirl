@@ -3,6 +3,7 @@
 #include "Engine/GameInstance.h"
 #include "GameFramework/SaveGame.h"
 #include "Rules/SoulRewards.h"
+#include "Rules/ShopUpgrades.h"
 #include "HellgirlWallet.generated.h"
 
 // One level's Souls (Rules/SoulRewards.h): what is left to spend, everything picked up, and the bonus measures.
@@ -27,6 +28,7 @@ class HELLGIRL_API UHellgirlWalletSave : public USaveGame
 public:
     UPROPERTY(SaveGame) int64 Coins = 0;
     UPROPERTY(SaveGame) bool bGoblinQueenOwned = false;
+    UPROPERTY(SaveGame) TArray<int32> ShopLevels; // the goblin's shop: levels bought of each item (Rules/ShopUpgrades.h)
 };
 
 UCLASS()
@@ -94,6 +96,16 @@ public:
     static constexpr int64 GoblinQueenPrice = 20000;
     bool CanBuyGoblinQueen() const;
     bool BuyGoblinQueen();
+    // The goblin's shop (Rules/ShopUpgrades.h): energy moves and permanent stat upgrades, kept in the wallet save.
+    UPROPERTY() TArray<int32> ShopLevels;
+    int32 ShopLevel(int32 Item) const { return ShopLevels.IsValidIndex(Item) ? ShopLevels[Item] : 0; }
+    bool CanBuyShopItem(int32 Item) const;
+    bool BuyShopItem(int32 Item);
+    // Whether Hellgirl may use a move (always, for moves the shop does not sell). Automated checks have every move
+    // and no stat upgrades, unless a check turns bShopInChecks on to test the shop itself.
+    bool OwnsMove(FistCombat::Move Type) const;
+    HellgirlShop::FStats ShopStats() const;
+    bool bShopInChecks = false;
     bool StartNewGame();
     FString SaveSlot(int32 Slot);
     bool LoadSlot(int32 Slot);

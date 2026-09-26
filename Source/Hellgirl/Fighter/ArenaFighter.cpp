@@ -191,6 +191,8 @@ AArenaFighter::AArenaFighter()
 void AArenaFighter::BeginPlay()
 {
     Super::BeginPlay();
+    // The shop's permanent upgrades (enemies are made after BeginPlay and clear them in MakeEnemy).
+    if (const auto* ShopWallet = Cast<UHellgirlWallet>(GetGameInstance())) { Shop = ShopWallet->ShopStats(); MaxHealth += Shop.BonusHealth; }
     Health = MaxHealth;
     // Only forward portal travel supplies energy. Fresh games and restarts
     // begin empty, independently of the persistent coin wallet.
@@ -273,6 +275,7 @@ bool AArenaFighter::SetOutfit(int32 Outfit)
 void AArenaFighter::MakeEnemy(int32 Wave, bool Flying)
 {
     bEnemy = true;
+    Shop = HellgirlShop::FStats();
     EnemyOrbitSign = GetUniqueID() % 2 ? -1.f : 1.f;
     Energy = 0.f;
     GetMesh()->SetVisibility(false);
@@ -505,18 +508,28 @@ void AArenaFighter::StartAttack(bool Heavy)
     else
         RequestedAttack = FistCombat::Select(Heavy, Airborne ? AirCombo : (ComboClock > 0.f && bLastComboHeavy == Heavy ? Combo : 0), Airborne, PostDodgeClock > 0.f, SelectedWeapon == 1);
     PendingCharge = 0.f;
-    bool bBasicAirFallback = false;
+    bool bBasicAirFallback = false, bShopLocked = false;
     if (!bEnemy)
     {
+        // Energy moves are bought in the goblin's shop (Rules/ShopUpgrades.h); until then they fall back to basic hits.
+        const auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance());
+        const bool Owned = !Wallet || Wallet->OwnsMove(RequestedAttack.Type);
+        bShopLocked = !Owned;
         // Normal input stays useful even when the aerial combo reaches its
         // area finisher without enough energy. Repeat a basic kick instead.
-        if (RequestedAttack.Type == FistCombat::Move::AirCrashKick && Energy < HellgirlEnergy::Cost(RequestedAttack.Type))
+        if ((RequestedAttack.Type == FistCombat::Move::AirCrashKick && (!Owned || Energy < HellgirlEnergy::Cost(RequestedAttack.Type)))
+            || (RequestedAttack.Type == FistCombat::Move::AirSlam && !Owned))
         {
             RequestedAttack = FistCombat::Select(false, 2, true, false);
             RequestedAttack.NextCombo = 0;
             bBasicAirFallback = true;
         }
-        if (Energy < HellgirlEnergy::Cost(RequestedAttack.Type)
+        if (!Owned && (RequestedAttack.Type == FistCombat::Move::ChargedStrike || RequestedAttack.Type == FistCombat::Move::DodgeSlam))
+        {
+            RequestedAttack = FistCombat::Select(Heavy, 0, false, false, SelectedWeapon == 1);
+            RequestedAttack.NextCombo = 0;
+        }
+        if ((!Owned || Energy < HellgirlEnergy::Cost(RequestedAttack.Type))
             && (RequestedAttack.Type == FistCombat::Move::LegSweep || RequestedAttack.Type == FistCombat::Move::SwordSpin))
         {
             RequestedAttack = FistCombat::Select(Heavy, 0, false, false, SelectedWeapon == 1);
@@ -536,7 +549,7 @@ void AArenaFighter::StartAttack(bool Heavy)
         Energy = FMath::Clamp(Energy - Cost, 0.f, MaxEnergy);
     }
     CurrentAttack = RequestedAttack;
-    if (!bEnemy) CurrentAttack.Duration /= GetSpeedMultiplier();
+    if (!bEnemy) CurrentAttack.Duration /= GetSpeedMultiplier() * Shop.Speed;
     bLastComboHeavy = Heavy;
     bSecondHitResolved = CurrentAttack.Type != FistCombat::Move::DoubleJab;
     JabHitTargets.Reset();
@@ -595,7 +608,8 @@ void AArenaFighter::StartAttack(bool Heavy)
     case Move::ChargedStrike: MoveLabel = TEXT("CHARGED AREA STRIKE"); break;
     default: MoveLabel = TEXT("HEAVY PUNCH"); break;
     }
-    if (bBasicAirFallback) MoveLabel = TEXT("AIR KICK / BUILD ENERGY FOR CRASH");
+    if (bBasicAirFallback && !bShopLocked) MoveLabel = TEXT("AIR KICK / BUILD ENERGY FOR CRASH");
+    if (bShopLocked) MoveLabel += TEXT("  ·  LOCKED: BUY IT AT THE GOBLIN'S SHOP");
     MoveLabelClock = CurrentAttack.Duration + 1.f;
     if (!bEnemy && Airborne) StartAirMove();
 }
@@ -705,7 +719,7 @@ void AArenaFighter::ResolveAttack()
     const float StoredRiposte = bEnemy ? 0.f : Riposte;
     const bool Critical = !bEnemy && CurrentAttack.Type == FistCombat::Move::Headbutt && FMath::FRand() < .25f;
     const float Damage = CurrentAttack.Damage * HellgirlDefense::BonusMultiplier(StoredRiposte)
-        * ((!bEnemy && UltimateClock > 0.f && ActiveUltimate == 0) ? 1.5f : 1.f) * (Critical ? 1.5f : 1.f) * (bEnemy ? 1.f : ComboMultiplier() * Upgrades.Damage);
+        * ((!bEnemy && UltimateClock > 0.f && ActiveUltimate == 0) ? 1.5f : 1.f) * (Critical ? 1.5f : 1.f) * (bEnemy ? 1.f : ComboMultiplier() * Upgrades.Damage * Shop.Damage);
     if (Critical) MoveLabel += TEXT(" / CRITICAL");
     Fighters.Sort([this](const AActor& A, const AActor& B) { return FVector::DistSquared(A.GetActorLocation(), GetActorLocation()) < FVector::DistSquared(B.GetActorLocation(), GetActorLocation()); });
     const bool PlayerArea = !bEnemy && FistCombat::IsPlayerAreaMove(CurrentAttack.Type);
@@ -960,7 +974,8 @@ void AArenaFighter::Tick(float Dt)
     if (bHeavyHeld && AttackClock <= 0.f && DodgeClock <= 0.f)
     {
         if (GetCharacterMovement()->IsFalling()) CancelCharge();
-        else
+        // Without Charge from the goblin's shop a held heavy is just a heavy on release.
+        else if (const auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance()); !Wallet || Wallet->OwnsMove(FistCombat::Move::ChargedStrike))
         {
             ChargeClock = FMath::Min(FMath::Max(MaxChargeSeconds, .2f), ChargeClock + Dt);
             MoveLabel = FString::Printf(TEXT("CHARGING %d%%   RELEASE HEAVY"), FMath::RoundToInt(100.f * ChargeClock / FMath::Max(MaxChargeSeconds, .2f)));
@@ -1014,7 +1029,7 @@ void AArenaFighter::Tick(float Dt)
     UpdatePose(Dt);
     const bool Guarding = IsBlocking();
     const bool Sprinting = !bEnemy && bSprintHeld && !bWalkHeld && !Guarding && AttackClock <= 0.f && !bHeavyHeld && GetCharacterMovement()->IsMovingOnGround();
-    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * GetSpeedMultiplier() * Upgrades.Speed * ((!bEnemy && bWalkHeld) ? .4f : (Sprinting ? 1.5f : 1.f)) * ((AttackClock > 0.f || bHeavyHeld || Guarding) ? .3f : 1.f);
+    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * GetSpeedMultiplier() * Upgrades.Speed * Shop.Speed * ((!bEnemy && bWalkHeld) ? .4f : (Sprinting ? 1.5f : 1.f)) * ((AttackClock > 0.f || bHeavyHeld || Guarding) ? .3f : 1.f);
     UpdatePlayerMomentum(Dt);
     GetCharacterMovement()->bOrientRotationToMovement = AttackClock <= 0.f && DodgeClock <= 0.f && !bHeavyHeld && !Guarding;
     if (Guarding && Controller)
