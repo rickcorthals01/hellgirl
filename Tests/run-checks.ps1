@@ -35,6 +35,7 @@ $checks = @(
     @('NaturalWaves', '/Engine/Maps/Entry?StageMap=1?CampaignLevel=2', 60, $null, 'Natural2'), @('NaturalWaves', '/Engine/Maps/Entry?StageMap=1?CampaignLevel=3', 60, $null, 'Natural3'),
     @('NaturalWaves', '/Engine/Maps/Entry?StageMap=1?CampaignLevel=2?Endless=1', 60, $null, 'NaturalEndless'),
     @('QuickSlash',   '/Engine/Maps/Entry?ForestHub=1', 60),
+    @('MiniSuccubus', '/Engine/Maps/Entry?ForestHub=1', 60),
     @('Court',          '/Engine/Maps/Entry?SuccubusCourt=1', 60),
     # Random forest rooms: the planner over many seeds, then one fight room and the boss room as built.
     @('Combo',          '/Engine/Maps/Entry?ForestRun=1?Seed=5?Room=1', 60),

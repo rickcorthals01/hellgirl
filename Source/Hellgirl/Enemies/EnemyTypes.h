@@ -9,7 +9,9 @@ class UAnimSequence;
 UENUM(BlueprintType)
 enum class EHellgirlEnemyType : uint8
 {
-    Imps, FlyingImps, ImpCommander, Gulps, GulpBoss, Succubus, SuccubusBoss, Goblins, GoblinQueen
+    Imps, FlyingImps, ImpCommander, Gulps, GulpBoss, Succubus, SuccubusBoss, Goblins, GoblinQueen,
+    // World III's mass enemy: small and flying only (hovers and dives like the flying imps).
+    MiniSuccubus
 };
 
 USTRUCT(BlueprintType)
@@ -42,6 +44,7 @@ public:
     UPROPERTY(Config, EditAnywhere, Category="Map 02") FEnemyModelSlot GulpBoss;
     UPROPERTY(Config, EditAnywhere, Category="Map 03") FEnemyModelSlot Succubus;
     UPROPERTY(Config, EditAnywhere, Category="Map 03") FEnemyModelSlot SuccubusBoss;
+    UPROPERTY(Config, EditAnywhere, Category="Map 03") FEnemyModelSlot MiniSuccubus;
     UPROPERTY(Config, EditAnywhere, Category="Level 01") FEnemyModelSlot Goblins;
     UPROPERTY(Config, EditAnywhere, Category="Level 01") FEnemyModelSlot GoblinQueen;
     const FEnemyModelSlot& ForType(EHellgirlEnemyType Type) const
@@ -56,6 +59,7 @@ public:
         case EHellgirlEnemyType::GulpBoss: return GulpBoss;
         case EHellgirlEnemyType::Succubus: return Succubus;
         case EHellgirlEnemyType::SuccubusBoss: return SuccubusBoss;
+        case EHellgirlEnemyType::MiniSuccubus: return MiniSuccubus;
         default: return Imps;
         }
     }

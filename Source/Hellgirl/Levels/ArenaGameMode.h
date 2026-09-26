@@ -73,6 +73,7 @@ public:
     void RunNaturalWavesCheck(float Dt);
     void RunQuickSlashCheck(float Dt);
     void RunEnemyModelPreview(float Dt);
+    void RunMiniSuccubusCheck(float Dt);
     void RescueStragglers(class AArenaFighter* Hero, float Dt);
     void StartEndless();
     // Soul portal menu choices: continue to the next wave, stock the Souls as Soul Coins, or (endless / exit) leave.

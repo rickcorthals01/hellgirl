@@ -1,15 +1,16 @@
 # Blender: rigs the Meshy mini succubus (an unrigged T-pose mesh) with Hellgirl's 24-bone skeleton plus three wing
-# bones per side, so the Mixamo clips of Tools/Animations fit onto her unchanged.
+# bones per side. Hellgirl's skeleton keeps her compatible with the Mixamo clips of Tools/Animations; her own
+# flying clips are keyframed on this rig by mini_succubus_flight.py.
 # Run through rig_mini_succubus.ps1, or:
 #   blender -b --factory-startup -P rig_mini_succubus.py -- <game root> <output fbx> [preview folder]
 #
 # How:
 #   * The skeleton is Hellgirl's (Rags) with every joint moved onto the mini succubus: joint heights and arm
 #     positions are measured from her mesh (arms, legs, head), depth is the middle of her body at that height.
-#   * Her legs are modelled together, so leg weights are split by side: left of the centre line only follows the
-#     left leg, right only the right.
+#   * Her legs are modelled together: below the crotch the mesh is cut along the centre line and each leg's cut side
+#     closed, and each side follows only its own leg, so the legs can part.
 #   * Her wings sit behind her arms. They are cut out by position and weighted to their own bones (root, top and
-#     outer/lower edge), which Mixamo clips don't drive: the wings keep their pose on her upper back.
+#     outer/lower edge), which her flying clips beat.
 #   * Everything else is weighted with Blender's automatic (heat) weights.
 import bpy, bmesh, os, sys, math
 from mathutils import Vector, Matrix

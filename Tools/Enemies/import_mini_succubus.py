@@ -1,6 +1,6 @@
 # Unreal (run through rig_mini_succubus.ps1): imports the rigged mini succubus as /Game/Enemies/MiniSuccubus/
-# MiniSuccubus (own skeleton and physics asset), her Meshy textures and material, and the clips fitted by
-# Tools/Animations/prepare_clips.py as /Game/Enemies/MiniSuccubus/Animations/<Clip>.
+# MiniSuccubus (own skeleton and physics asset), her Meshy textures and material, and the flying clips from
+# mini_succubus_flight.py as /Game/Enemies/MiniSuccubus/Animations/<Clip>.
 import os, sys
 import unreal as u
 
@@ -144,4 +144,8 @@ for file in sorted(os.listdir(clips_dir)):
 if failed:
     u.log_error("MINI SUCCUBUS IMPORT FAILED: clips " + ", ".join(failed))
     sys.exit(1)
+# Clips she no longer has (e.g. the ground walk and run from before she was flight-only) are removed.
+for path in u.EditorAssetLibrary.list_assets(DEST + "/Animations", recursive=False):
+    if path.split(".")[-1] not in done:
+        u.EditorAssetLibrary.delete_asset(path)
 u.log(f"MINI SUCCUBUS IMPORT PASSED: mesh, material, {len(done)} clips ({', '.join(done)})")

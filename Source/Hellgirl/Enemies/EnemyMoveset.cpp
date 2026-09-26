@@ -12,7 +12,7 @@ namespace
 bool UsesCastleMoves(const AArenaFighter* Fighter)
 {
     return Fighter && (Fighter->EnemyType == EHellgirlEnemyType::Imps
-        || Fighter->EnemyType == EHellgirlEnemyType::FlyingImps
+        || Fighter->EnemyType == EHellgirlEnemyType::FlyingImps || Fighter->EnemyType == EHellgirlEnemyType::MiniSuccubus
         || Fighter->EnemyType == EHellgirlEnemyType::ImpCommander
         || Fighter->EnemyType == EHellgirlEnemyType::Goblins || Fighter->EnemyType == EHellgirlEnemyType::GoblinQueen);
 }
@@ -277,7 +277,9 @@ void AArenaFighter::DrawEnemyMoveTelegraph()
 
 bool AArenaFighter::UpdateImpTactics(float Dt, AArenaFighter* Player)
 {
-    if (EnemyType != EHellgirlEnemyType::Imps && EnemyType != EHellgirlEnemyType::FlyingImps) return false;
+    if (EnemyType != EHellgirlEnemyType::Imps && EnemyType != EHellgirlEnemyType::FlyingImps && EnemyType != EHellgirlEnemyType::MiniSuccubus) return false;
+    // Flying imps and mini succubi hover above Hellgirl and dive at her.
+    const bool Flyer = EnemyType == EHellgirlEnemyType::FlyingImps || EnemyType == EHellgirlEnemyType::MiniSuccubus;
     if (!IsAlive() || !Player || !Player->IsAlive() || bCombatLaunched || KnockdownClock > 0.f || HitClock > 0.f)
         return true;
     if (EnemyMove != EEnemyMove::None || AttackClock > 0.f) return true;
@@ -292,7 +294,7 @@ bool AArenaFighter::UpdateImpTactics(float Dt, AArenaFighter* Player)
         EnemyDecisionClock = .18f + .03f * (GetUniqueID() % 5);
         if (CanBeginEnemyMove(Player))
         {
-            if (EnemyType == EHellgirlEnemyType::FlyingImps)
+            if (Flyer)
             {
                 FHitResult Floor;
                 if (Distance <= 680.f && FindEnemyFloor(this, GetActorLocation(), Floor)
@@ -311,7 +313,7 @@ bool AArenaFighter::UpdateImpTactics(float Dt, AArenaFighter* Player)
 
     // Available attackers close in; those waiting for a slot circulate at a
     // little distance. Keeping a persistent orbit sign avoids left/right jitter.
-    const bool Flying = EnemyType == EHellgirlEnemyType::FlyingImps;
+    const bool Flying = Flyer;
     const bool PreferClaw = !Flying && EnemyMoveCooldown <= 0.f && EnemyAttackSerial % 3 == 1;
     const float OrbitRadius = Flying ? 440.f : (PreferClaw ? 135.f : 275.f);
     const FVector Tangent(-Toward.Y, Toward.X, 0.f);

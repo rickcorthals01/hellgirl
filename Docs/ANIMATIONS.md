@@ -57,19 +57,33 @@ To check feet in game: `... -game -HellgirlFeetPreview` films the equipped outfi
 
 ## Mini succubus (enemy)
 
-The mini succubus (World III's mass enemy) came from Meshy as an unrigged T-pose mesh. `Tools\Enemies\rig_mini_succubus.ps1` rigs her and brings her into the game in three steps:
+The mini succubus is World III's mass enemy: small and flying only. She came from Meshy as an unrigged T-pose mesh. `Tools\Enemies\rig_mini_succubus.ps1` rigs her and brings her into the game in three steps:
 
-1. **Rig (Blender, `rig_mini_succubus.py`).** Hellgirl's 24-bone skeleton is fitted onto her, so the Mixamo clips above fit her unchanged.
+1. **Rig (Blender, `rig_mini_succubus.py`).** Hellgirl's 24-bone skeleton is fitted onto her, so Mixamo clips would still fit her. Three wing bones are added per side (`LeftWing1`–`3`, `RightWing1`–`3`).
    - Joint heights, the arm line and the depth of each joint are measured from her mesh.
-   - Her legs are modelled together. The mesh is cut along the centre line below the crotch and each leg's cut side is closed, and each side follows only its own leg, so a stride doesn't stretch a web between them.
-   - Her wings sit behind her arms. They are cut out by position (the arm is the tube in front of the wing membrane) and get three bones per side (`LeftWing1`–`3`, `RightWing1`–`3`) on her upper back.
+   - Her legs are modelled together. The mesh is cut along the centre line below the crotch, each leg's cut side is closed, and each side follows only its own leg.
+   - The wings are cut out by position (the arm is the tube in front of the wing membrane) and weighted to their own bones.
    - The rest of the body gets Blender's automatic weights.
-2. **Clips (Blender, `Tools/Animations/prepare_clips.py` with `mini_succubus_clips.json`).** Idle, Walk, Run, Attack (the right punch), Hit and Death. The wing bones are listed under `follow_parent_bones`: the clips have no wing bones, so the wings keep their pose on her back. A flap animation can be added later.
-3. **Import (Unreal, `import_mini_succubus.py`).** Creates `/Game/Enemies/MiniSuccubus/MiniSuccubus` with its own skeleton and physics asset, and `M_MiniSuccubus`: her Meshy textures with normal and emission maps, two-sided for the wing membrane, plus an `EmissiveStrength` parameter. The clips go to `/Game/Enemies/MiniSuccubus/Animations`.
+2. **Flying clips (Blender, `mini_succubus_flight.py`).** Keyframed directly on her rig as a few key poses blended smoothly, with the wingbeat on top:
+   - **Hover:** 2 wingbeats per second, legs dangling.
+   - **Fly:** leaning into the flight, legs trailing, 3 beats per second.
+   - **Attack:** a claw swipe landing at 60%, where enemy attacks connect in game.
+   - **Hit:** a flinch.
+   - **Death:** goes limp, wings drooping.
 
-**Checking the result:**
-- `-Preview <folder>` renders a weight map (one colour per bone) and a test pose from Blender.
-- `/Engine/Maps/Entry?ForestHub=1 -game -windowed -HellgirlMiniSuccubusPreview` shows her six clips in game and saves `Saved/Screenshots/MiniSuccubus_Row.png` and `_Close.png`.
-- Blender renders of clips moved onto another armature are misleading: they show the arms straight out, even for Hellgirl. Trust the in-game preview.
+   The poses are plain angle tables at the top of the script.
+3. **Import (Unreal, `import_mini_succubus.py`).**
+   - Creates `/Game/Enemies/MiniSuccubus/MiniSuccubus` with its own skeleton and physics asset.
+   - Builds `M_MiniSuccubus`: her Meshy textures with normal and emission maps, two-sided for the wing membrane, plus an `EmissiveStrength` parameter.
+   - Imports the clips into `Animations`, and removes clips that no longer exist there.
 
-She isn't an enemy type in the game yet.
+**In game:** she is enemy type `MiniSuccubus` (model slot in `Config/DefaultGame.ini`).
+- She always flies, whatever the spawn site asks for.
+- She hovers above Hellgirl and dives like the flying imps.
+- Her model is at half scale (about 0.8 m) and centred on the capsule.
+- No level spawns her yet.
+
+**Checks:**
+- `MiniSuccubus` (headless, at camp): three of them take off, dive and hurt Hellgirl, and die when hit.
+- `-HellgirlMiniSuccubusPreview` (windowed): her clips in game, with Hellgirl for scale, saved to `Saved/Screenshots/MiniSuccubus_*.png`.
+- Blender renders of clips moved onto another armature are misleading. Judge animations in game.

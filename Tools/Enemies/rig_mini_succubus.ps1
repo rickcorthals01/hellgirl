@@ -1,6 +1,6 @@
 # Rigs the Meshy mini succubus and brings her into the game.
 #   1. Blender (rig_mini_succubus.py): Hellgirl's skeleton fitted onto her, wing bones, weights -> MiniSuccubus.fbx
-#   2. Blender (Tools/Animations/prepare_clips.py): the Mixamo clips in mini_succubus_clips.json fitted onto her.
+#   2. Blender (mini_succubus_flight.py): her flying clips (she only flies) keyframed on that rig.
 #   3. Unreal (import_mini_succubus.py): /Game/Enemies/MiniSuccubus with material, physics asset and clips.
 # Close Unreal Editor first. From the project folder:
 #   powershell -ExecutionPolicy Bypass -File Tools\Enemies\rig_mini_succubus.ps1
@@ -24,11 +24,13 @@ if ($Preview) { $rigArgs += (Join-Path $Preview 'rig') }
 & $blender @rigArgs *> $log
 if (-not (Select-String $log -Pattern 'RIG MINI SUCCUBUS DONE' -Quiet)) { throw "Rigging failed; see $log" }
 
-Write-Host 'Fitting clips...'
+Write-Host 'Keyframing flying clips...'
 $log = Join-Path $logDir 'MiniSuccubusClips.log'
-& $blender -b --factory-startup -P (Join-Path $project 'Tools\Animations\prepare_clips.py') -- (Join-Path $PSScriptRoot 'mini_succubus_clips.json') $gameRoot (Join-Path $folder 'Clips') *> $log
-if (-not (Select-String $log -Pattern 'PREPARE CLIPS DONE' -Quiet)) { throw "Clip fitting failed; see $log" }
-Select-String $log -Pattern '^CLIP ' | ForEach-Object { Write-Host "  $($_.Line)" }
+$clips = Join-Path $folder 'Clips\MiniSuccubus'
+Remove-Item (Join-Path $clips '*.fbx') -ErrorAction SilentlyContinue
+& $blender -b --factory-startup -P (Join-Path $PSScriptRoot 'mini_succubus_flight.py') -- (Join-Path $folder 'MiniSuccubus.fbx') $clips *> $log
+if (-not (Select-String $log -Pattern 'FLIGHT CLIPS DONE' -Quiet)) { throw "Flying clips failed; see $log" }
+Select-String $log -Pattern '^FLIGHT CLIP ' | ForEach-Object { Write-Host "  $($_.Line)" }
 
 Write-Host 'Importing into Unreal...'
 $env:HELLGIRL_GAME_ROOT = $gameRoot

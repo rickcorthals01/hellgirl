@@ -331,6 +331,8 @@ void AArenaFighter::SetEnemyType(EHellgirlEnemyType Type)
     }
     if (Type == EHellgirlEnemyType::Goblins) { WalkSpeed=390.f; AttackDamage=10.f; }
     if (Type == EHellgirlEnemyType::GoblinQueen) { WalkSpeed=430.f; AttackDamage=20.f; }
+    // The mini succubus only flies, whatever the spawn site asked for.
+    if (Type == EHellgirlEnemyType::MiniSuccubus) { bFlyingEnemy = true; GetCharacterMovement()->SetMovementMode(MOVE_Flying); }
     const FString Name = StaticEnum<EHellgirlEnemyType>()->GetNameStringByValue(static_cast<int64>(Type));
     for (int32 I = Tags.Num()-1; I >= 0; --I)
         if (Tags[I].ToString().StartsWith(TEXT("EnemyType."))) Tags.RemoveAt(I);
@@ -1032,7 +1034,7 @@ void AArenaFighter::Tick(float Dt)
         {
             if (BossBehavior) BossBehavior->TickTactics(Dt,Player);
             else if (EnemyType == EHellgirlEnemyType::Goblins) UpdateGoblinTactics(Dt,Player);
-            else if (EnemyType == EHellgirlEnemyType::Imps || EnemyType == EHellgirlEnemyType::FlyingImps) UpdateImpTactics(Dt,Player);
+            else if (EnemyType == EHellgirlEnemyType::Imps || EnemyType == EHellgirlEnemyType::FlyingImps || EnemyType == EHellgirlEnemyType::MiniSuccubus) UpdateImpTactics(Dt,Player);
             else
             {
             const FVector Delta = Player->GetActorLocation() - GetActorLocation();
