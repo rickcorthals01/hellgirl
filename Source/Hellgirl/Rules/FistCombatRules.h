@@ -33,7 +33,8 @@ inline AttackSpec Select(bool Heavy, int Combo, bool Airborne, bool AfterDodge, 
         switch (Combo)
         {
         case 1: return {Move::AirLeftPunch, .3f, .4f, 18.f, 200.f, 30.f, 0.f, 2};
-        case 2: return {Move::AirKick, .38f, .45f, 25.f, 235.f, 50.f, 0.f, 3};
+        // The air kick (also the fallback for a locked Sky Slam or Crash Kick) was cut from 25 to 10 damage on 2026-09-26.
+        case 2: return {Move::AirKick, .38f, .45f, 10.f, 235.f, 50.f, 0.f, 3};
         case 3: return {Move::AirCrashKick, .65f, .5f, 14.f, 360.f, 420.f, 1.1f, 4};
         default: return {Move::AirPunch, .3f, .4f, 18.f, 200.f, 30.f, 0.f, 1};
         }
