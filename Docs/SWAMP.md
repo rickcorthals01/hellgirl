@@ -1,6 +1,6 @@
-# The swamp (World II, map preview)
+# The swamp (World II)
 
-World II starts in a dark swamp of glowing soul water. Open it from the forest road: **World II → THE SWAMP / MAP PREVIEW**. There are no enemies yet; the rats and frogs come later. The Rat Queen gets her own boss area later, and the Frog King is this map's mini-boss.
+World II is a dark swamp of glowing soul water, fought through in three stages (see Stages below). The Goblin Queen travels with Hellgirl and talks along the way. The Rat Queen gets her own boss area later; the Frog King is the swamp's mini-boss. The map on its own (no enemies) is still reachable with the URL option `Swamp=1` (Stage 0, four rooms).
 
 - A run is four rooms, each a stretch of the same swamp. Walk into the light at the east end to go on. The light in room 4 leads back to camp.
 - Room 4 is the Frog King's: his giant lily pad floats in the middle of the water.
@@ -66,3 +66,41 @@ powershell -ExecutionPolicy Bypass -File Tools\Environment\build_swamp_kit.ps1
   - the light only takes Hellgirl on once she reaches it.
 - Play a specific room: `/Engine/Maps/Entry?Swamp=1?Seed=4242?Room=4`.
 - `-HellgirlSwampPreview` (windowed, needs a GPU) saves eight views to `Saved/Screenshots/Swamp`, with the arms held up: from above, the way in, the water's edge, across the water, a zombie arm, back over the water, the light, and the play camera.
+
+## Stages
+
+Open them from the forest road, under **World II**. Stage I opens once World I is won (`Stage3Won`); each stage won opens the next (`SwampStage1Won`, `SwampStage2Won`, `SwampStage3Won`). The scripts follow "05 Swamps Stage 1.txt", "06 Swamps Stage 2.txt" and "07 Swamps Stage 3.txt". The conversations are in `Content/Dialogue/LevelTwo.ini`. The stage logic is in `Levels/SwampStages.cpp`.
+
+| Stage | What happens |
+|---|---|
+| **I, The Swamp of Souls** | One stretch of swamp (always seed 1101). A six-second camera flight from the far end back to Hellgirl, then the Goblin Queen's intro. Ten waves of rats and frogs, each arriving ahead of Hellgirl along the corridor. Conversations after waves 2, 6 and 9, then the purple portal by the light at the end. |
+| **II, Deeper In** | A run of ten rooms (a new seed each run), one wave per room; the light only opens once the room's wave is beaten. Health, energy and Souls carry over, and dying ends the run. Her lines play at rooms 1, 5, 7 and 10. Room 10 is the Frog King's: he waits on his giant lily pad, guarded by rats and frogs. Beating him brings "Up there! I can see it." and the purple portal. |
+| **III, The Doorway** | Two waves (seed 3303), then the doorway conversation, ending "Watch out!". The Rat Queen's fight comes later, in her own area, so for now the purple portal leads back to camp. Her after-fight conversation is already in `LevelTwo.ini` (`S3_AfterRatQueen`). |
+
+Waves (before the global ×1.5 wave scaling):
+- **Stage I:** 3 rats; 4 rats; 3+1 frog; 3+2; 3 frogs; 4+2; 5+2; 3+4; 5+4; 6+5.
+- **Stage II, room *r*:** 2 + *r*/3 rats and 1 + *r*/3 frogs; room 10 has the Frog King plus 3 and 3.
+- **Stage III:** 5+2, then 4+4.
+
+The dialogue file lists "WAVE 1 & 2" then "WAVE 4 & 5 & 6", so its lines are read as coming after waves 2, 6 and 9.
+
+## The rat and the frog
+
+Both come from their rigged Meshy models, with Mixamo clips fitted onto their rigs by `Tools/Enemies/swamp_enemies.ps1` (`rat_clips.json`, `frog_clips.json`). They are imported into `/Game/Enemies/Swamp/<Rat|Frog>`. Their model slots are `Rats`, `Frogs` and `FrogKing` in `Config/DefaultGame.ini`. The tactics are in `Enemies/SwampCombat.cpp`, the moves in `Enemies/EnemyMoveset.cpp`, and the numbers in `Rules/EnemyTuning.h`.
+
+| | Moves |
+|---|---|
+| **Rat** (fast, 470 cm/s) | **Bite:** a quick 0.45 s lunge for low damage, once every 4 s. A perfect dodge cannot counter it and it shows no counter flash; a normal dodge still avoids it. **Punch:** a very fast 0.55 s charge and release for medium damage, followed 55% of the time by a second punch with the other hand. **Dodge roll:** when Hellgirl winds up an attack at it, a 40% chance (at most every 3 s) to roll aside and away, untouchable while rolling, dropping its own attack if that has not landed yet. |
+| **Frog** | Always hopping, fast and high (a 0.3–0.75 s pause between hops): straight at her from afar, around her up close, and up and over her when its slam is ready. **Punch** on the ground (0.45 s, low damage). **Air punch** when level with her mid-hop. **Slam** from high up (every 5 s): a blue circle marks where it will land, then it dives. It deals medium damage in a 3.2 m circle with a small blast that pushes her back; other enemies in the splash take 6 damage and are pushed away. |
+| **Frog King** (mini-boss, 750 health, boss bar) | A bigger frog (1.25 × model, 1.5 × actor) that hops higher and slams every 2.8 s in a 4.6 m circle. |
+
+Their clips:
+- **Rat:** idle; its own Meshy run; bite (Headbutt); punch and second punch (RightPunch, mirrored); roll (Stand To Roll); hit.
+- **Frog:** idle; its own run; hop (Jump, played over its time in the air); punch (RightPunch); air punch (AirPunch); slam (Hellgirl's AirSlam); hit.
+
+New model slots can hold `Attack2`, `AirAttack`, `HeavyAttack`, `Dodge` and `Jump` clips as well as `Attack` and `QuickAttack`. Spawn sites can mix a second kind of enemy into a wave (`MixType`, `MixCount`).
+
+Checks:
+- `SwampEnemy` (in the swamp map): the rat bites (uncounterable), punches and rolls away from her swings; the frog hops and slams her.
+- `SwampStage` (Stage I, a Stage II room, Stage II room 10 and Stage III): walks each script. It checks the wave counts, that only rats, frogs and the Frog King appear, where the Frog King stands, that the portal or light opens, and that every conversation exists.
+- `-HellgirlSwampEnemyPreview` (at camp, windowed): the rat's and the frog's clips at their key moments, saved to `Saved/Screenshots/SwampEnemies_*.png`.

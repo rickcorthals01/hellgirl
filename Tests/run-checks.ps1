@@ -39,6 +39,11 @@ $checks = @(
     @('CourtFlyers',  '/Engine/Maps/Entry?SuccubusCourt=1', 60),
     @('Court',          '/Engine/Maps/Entry?SuccubusCourt=1', 60),
     @('Swamp',          '/Engine/Maps/Entry?Swamp=1?Seed=4242?Room=1', 60), @('Swamp', '/Engine/Maps/Entry?Swamp=1?Seed=9?Room=4', 60, $null, 'Swamp4'),
+    @('SwampEnemy',     '/Engine/Maps/Entry?Swamp=1?Seed=4242?Room=1', 60),
+    @('SwampStage',     '/Engine/Maps/Entry?Swamp=1?Stage=1?Seed=1101?Room=1', 60, $null, 'SwampStage1'),
+    @('SwampStage',     '/Engine/Maps/Entry?Swamp=1?Stage=2?Seed=77?Room=3', 60, $null, 'SwampStage2'),
+    @('SwampStage',     '/Engine/Maps/Entry?Swamp=1?Stage=2?Seed=77?Room=10', 60, $null, 'SwampStage2King'),
+    @('SwampStage',     '/Engine/Maps/Entry?Swamp=1?Stage=3?Seed=3303?Room=1', 60, $null, 'SwampStage3'),
     @('Graveyard',      '/Engine/Maps/Entry?Graveyard=1?Seed=4242?Room=1', 60), @('Graveyard', '/Engine/Maps/Entry?Graveyard=1?Seed=77?Room=4', 60, $null, 'Graveyard4'),
     # Random forest rooms: the planner over many seeds, then one fight room and the boss room as built.
     @('Combo',          '/Engine/Maps/Entry?ForestRun=1?Seed=5?Room=1', 60),

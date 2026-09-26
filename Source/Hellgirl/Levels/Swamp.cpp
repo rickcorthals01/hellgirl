@@ -58,23 +58,40 @@ float ArmRise(float T)
 
 void AArenaGameMode::StartSwamp()
 {
+    SwampStage = 0;
     TravelToSwampRoom(FMath::RandRange(1, 999999), 1);
 }
 
 void AArenaGameMode::TravelToSwampRoom(int32 Seed, int32 Room)
 {
-    UGameplayStatics::OpenLevel(this, FName(*UGameplayStatics::GetCurrentLevelName(this)), true, FString::Printf(TEXT("Swamp=1?Seed=%d?Room=%d"), Seed, Room));
+    FString Options = FString::Printf(TEXT("Swamp=1?Stage=%d?Seed=%d?Room=%d"), SwampStage, Seed, Room);
+    // Moving on through a Stage II run keeps Hellgirl's health, energy and Souls (the run is one level).
+    bKeepLevelSouls = SwampStage == 2 && Room > SwampRoomNumber;
+    if (bKeepLevelSouls)
+        if (const auto* Player = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0)); Player && Player->IsAlive())
+            Options += FString::Printf(TEXT("?RunHealth=%.1f?CombatEnergy=%.3f"), Player->Health, Player->Energy);
+    UGameplayStatics::OpenLevel(this, FName(*UGameplayStatics::GetCurrentLevelName(this)), true, Options);
 }
 
 void AArenaGameMode::BuildSwamp()
 {
     using namespace SwampRoom;
+    SwampStage = FMath::Clamp(UGameplayStatics::GetIntOption(OptionsString, TEXT("Stage"), 0), 0, 3);
+    // The map preview is a four-room walk; Stage II a ten-room run ending with the Frog King; Stages I and III one room.
+    SwampRooms = SwampStage == 2 ? 10 : SwampStage == 0 ? RoomsPerRun : 1;
+    bSwampKingRoom = SwampStage == 0 || SwampStage == 2;
     SwampSeed = UGameplayStatics::GetIntOption(OptionsString, TEXT("Seed"), 1);
-    SwampRoomNumber = FMath::Clamp(UGameplayStatics::GetIntOption(OptionsString, TEXT("Room"), 1), 1, RoomsPerRun);
-    const FPlan Plan = Make(SwampSeed, SwampRoomNumber);
+    SwampRoomNumber = FMath::Clamp(UGameplayStatics::GetIntOption(OptionsString, TEXT("Room"), 1), 1, SwampRooms);
+    const FPlan Plan = Make(SwampSeed, SwampRoomNumber, SwampRooms, bSwampKingRoom);
     SwampWaterStart = Plan.WaterStart;
     SwampWaterEnd = Plan.WaterEnd;
-    MapTitle = FString::Printf(TEXT("WORLD II / THE SWAMP / ROOM %d OF %d%s"), SwampRoomNumber, RoomsPerRun, Plan.bFrogKing ? TEXT(" / THE FROG KING") : TEXT(""));
+    MapTitle = SwampStage == 1 ? TEXT("WORLD II / STAGE I / THE SWAMP OF SOULS")
+        : SwampStage == 3 ? TEXT("WORLD II / STAGE III / THE DOORWAY")
+        : FString::Printf(TEXT("WORLD II / %s / ROOM %d OF %d%s"), SwampStage == 2 ? TEXT("STAGE II") : TEXT("THE SWAMP"), SwampRoomNumber, SwampRooms,
+            Plan.bFrogKing ? TEXT(" / THE FROG KING") : TEXT(""));
+    // The stages tell their story (the Goblin Queen travels with Hellgirl); checks run without it unless asked.
+    if (SwampStage > 0)
+        bStoryEnabled = !FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl")) || FParse::Param(FCommandLine::Get(), TEXT("HellgirlStoryCheck"));
     MapPlatforms.Add(FVector4(0.f, 0.f, Half * 2.f, HalfWidth * 2.f));
     UWorld* World = GetWorld();
 
@@ -130,6 +147,7 @@ void AArenaGameMode::BuildSwamp()
     ExitPortal->GetStaticMeshComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     ExitPortal->SetActorHiddenInGame(true);
     TotalSites = 0;
+    if (SwampStage > 0) BuildSwampWaves();
 }
 
 void AArenaGameMode::SwampSplash(FVector Where, float Size, int32 Droplets)
@@ -181,7 +199,7 @@ bool AArenaGameMode::TickSwamp(float Dt)
     using namespace SwampRoom;
     SwampClock += Dt;
     auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
-    const bool Last = SwampRoomNumber >= RoomsPerRun;
+    const bool Last = SwampRoomNumber >= SwampRooms;
 
     // The arms: rise out of the water, reach and claw (the material flexes the fingers), sink, stay under a while.
     for (FSwampArm& Arm : SwampArms)
@@ -223,8 +241,9 @@ bool AArenaGameMode::TickSwamp(float Dt)
     }
 
     if (!Hero || !Hero->IsAlive()) return false;
-    Objective = Last ? TEXT("THE SWAMP / Map preview · the Frog King's lily pad · the light leads back to camp")
-        : TEXT("THE SWAMP / Map preview · follow the light at the end");
+    if (SwampStage == 0)
+        Objective = Last ? TEXT("THE SWAMP / Map preview · the Frog King's lily pad · the light leads back to camp")
+            : TEXT("THE SWAMP / Map preview · follow the light at the end");
     Prompt.Empty();
     PromptAction = 0;
 
@@ -261,6 +280,8 @@ bool AArenaGameMode::TickSwamp(float Dt)
         Hero->SetActorLocation(FVector(Start.X, Start.Y, 115.f), false, nullptr, ETeleportType::TeleportPhysics);
         Hero->ResetAfterRecovery();
     }
+    // The stages: waves, conversations and the purple portal; the light stays shut until a Stage II room is clear.
+    if (SwampStage > 0 && TickSwampStage(Dt, Hero)) return false;
     if (FVector::Dist2D(At, ExitPosition) > 260.f) return false;
     // Stepping into the light: on to the next room, or home after the last one.
     if (FParse::Param(FCommandLine::Get(), TEXT("HellgirlSwampCheck"))) return true;
@@ -348,7 +369,7 @@ void AArenaGameMode::RunSwampCheck(float Dt)
     if (Passed && Shapes.Num() < 200) { Passed = false; Detail = TEXT("rooms are not varied enough"); }
 
     // 2. The built room matches its plan, with the water and a floor at the way in.
-    const FPlan Plan = Make(SwampSeed, SwampRoomNumber);
+    const FPlan Plan = Make(SwampSeed, SwampRoomNumber, SwampRooms, bSwampKingRoom);
     int32 Instances = 0, Boundary = 0, Water = 0, PlannedArms = 0;
     for (const FItem& Item : Plan.Items) PlannedArms += Item.Piece == EPiece::ZombieArm;
     for (TActorIterator<AActor> It(GetWorld()); It; ++It)

@@ -331,6 +331,9 @@ void AArenaFighter::SetEnemyType(EHellgirlEnemyType Type)
     }
     if (Type == EHellgirlEnemyType::Goblins) { WalkSpeed=390.f; AttackDamage=10.f; }
     if (Type == EHellgirlEnemyType::GoblinQueen) { WalkSpeed=430.f; AttackDamage=20.f; }
+    if (Type == EHellgirlEnemyType::Rats) { WalkSpeed=EnemyTuning::RatSpeed; AttackDamage=10.f; }
+    if (Type == EHellgirlEnemyType::Frogs) { WalkSpeed=380.f; AttackDamage=10.f; }
+    if (Type == EHellgirlEnemyType::FrogKing) { WalkSpeed=420.f; AttackDamage=16.f; }
     // The mini succubus only flies, whatever the spawn site asked for.
     if (Type == EHellgirlEnemyType::MiniSuccubus) { bFlyingEnemy = true; GetCharacterMovement()->SetMovementMode(MOVE_Flying); }
     const FString Name = StaticEnum<EHellgirlEnemyType>()->GetNameStringByValue(static_cast<int64>(Type));
@@ -358,6 +361,11 @@ void AArenaFighter::SetEnemyType(EHellgirlEnemyType Type)
             EnemyMoveAnimation = Model.Move.LoadSynchronous();
             EnemyAttackAnimation = Model.Attack.LoadSynchronous();
             EnemyQuickAttackAnimation = Model.QuickAttack.LoadSynchronous();
+            EnemyAttack2Animation = Model.Attack2.LoadSynchronous();
+            EnemyAirAttackAnimation = Model.AirAttack.LoadSynchronous();
+            EnemyHeavyAttackAnimation = Model.HeavyAttack.LoadSynchronous();
+            EnemyDodgeAnimation = Model.Dodge.LoadSynchronous();
+            EnemyJumpAnimation = Model.Jump.LoadSynchronous();
             EnemyHitAnimation = Model.Hit.LoadSynchronous();
             EnemyDeathAnimation = Model.Death.LoadSynchronous();
             EnemyActiveAnimation = nullptr;
@@ -634,6 +642,8 @@ bool AArenaFighter::CanCounter(const AArenaFighter* Enemy) const
     if (Enemy->IsBossAttackArmored()) return false;
     // The goblin quick slash is too fast to counter.
     if (Enemy->EnemyMove == EEnemyMove::GoblinQuickSlash) return false;
+    // Neither is the rat's bite.
+    if (Enemy->EnemyMove == EEnemyMove::RatBite) return false;
     const float UntilHit = Enemy->AttackClock - Enemy->CurrentAttack.Duration * (1.f - Enemy->CurrentAttack.ContactFraction);
     if (UntilHit <= 0.f || UntilHit > PerfectDodgeWindow) return false;
     const FVector Delta = GetActorLocation() - Enemy->GetActorLocation();
@@ -707,7 +717,7 @@ void AArenaFighter::ResolveAttack()
         FVector Delta = Other->GetActorLocation() - GetActorLocation();
         const bool bAirMove = FistCombat::IsAirStrike(CurrentAttack.Type);
         const bool bAreaAttack = (PlayerArea && !(SelectedWeapon == 1 && FistCombat::IsGroundImpact(CurrentAttack.Type)))
-            || (bEnemy && (EnemyMove == EEnemyMove::CommanderSlam || EnemyMove == EEnemyMove::CommanderJumpSlam));
+            || (bEnemy && (EnemyMove == EEnemyMove::CommanderSlam || EnemyMove == EEnemyMove::CommanderJumpSlam || EnemyMove == EEnemyMove::FrogSlam));
         const float Cone = bEnemy && EnemyMove == EEnemyMove::CommanderCleave ? -.1f : .25f;
         if (Delta.Size2D() > CurrentAttack.Range || FMath::Abs(Delta.Z) > (bAirMove ? 280.f : (bFlyingEnemy ? 200.f : 140.f))
             || (!bAreaAttack && FVector::DotProduct(GetActorForwardVector(), Delta.GetSafeNormal2D()) < Cone)) continue;
@@ -729,6 +739,8 @@ void AArenaFighter::ResolveAttack()
         if (Other->Health < PreviousHealth && CurrentAttack.Type == FistCombat::Move::DoubleJab) JabHitTargets.Add(Other);
         if (CurrentAttack.Type == FistCombat::Move::SwordThrust) break;
     }
+    // The frog's slam also splashes the other enemies around it.
+    if (bEnemy && EnemyMove == EEnemyMove::FrogSlam) FrogSlamSplash();
     if (!bEnemy)
     {
         if (bLandedHit && !bAttackEnergyGranted && UltimateClock <= 0.f)
@@ -924,7 +936,7 @@ void AArenaFighter::Tick(float Dt)
     RunAttackAnimationPreview(Dt);
     const float UntilHit = AttackClock - CurrentAttack.Duration * (1.f - CurrentAttack.ContactFraction);
     const bool FlashNow = bEnemy && IsAlive() && !bHitResolved && AttackClock > 0.f && UntilHit > 0.f && UntilHit <= PerfectDodgeWindow
-        && EnemyMove != EEnemyMove::GoblinQuickSlash; // no counter flash for a move that cannot be countered
+        && EnemyMove != EEnemyMove::GoblinQuickSlash && EnemyMove != EEnemyMove::RatBite; // no counter flash for a move that cannot be countered
     AttackFlash->SetVisibility(FlashNow);
     if (FlashNow)
     {
@@ -1035,6 +1047,8 @@ void AArenaFighter::Tick(float Dt)
         {
             if (BossBehavior) BossBehavior->TickTactics(Dt,Player);
             else if (EnemyType == EHellgirlEnemyType::Goblins) UpdateGoblinTactics(Dt,Player);
+            else if (EnemyType == EHellgirlEnemyType::Rats) UpdateRatTactics(Dt,Player);
+            else if (IsFrog()) UpdateFrogTactics(Dt,Player);
             else if (EnemyType == EHellgirlEnemyType::Imps || EnemyType == EHellgirlEnemyType::FlyingImps || EnemyType == EHellgirlEnemyType::MiniSuccubus) UpdateImpTactics(Dt,Player);
             else
             {
@@ -1072,11 +1086,28 @@ void AArenaFighter::UpdateEnemyAnimation(float Dt)
     const bool Attacking = !Dead && AttackClock > 0.f && EnemyAttackAnimation;
     const bool Hurt = !Dead && !Attacking && EnemyHitAnimation && EnemyHitAnimationTime < EnemyHitAnimation->GetPlayLength();
     const float Speed = GetVelocity().Size2D();
-    const bool Moving = !Dead && !Attacking && !Hurt && Speed > 10.f && KnockdownClock <= 0.f;
+    // A hopping frog plays its hop clip through the air.
+    const bool Hopping = !Dead && !Attacking && !Hurt && EnemyJumpAnimation && !bFlyingEnemy && !GetCharacterMovement()->IsMovingOnGround();
+    const bool Moving = !Dead && !Attacking && !Hurt && !Hopping && Speed > 10.f && KnockdownClock <= 0.f;
+    // Each move plays its own clip where the model has one, otherwise the attack clip.
+    auto MoveClip = [this]() -> UAnimSequence*
+    {
+        UAnimSequence* Own = nullptr;
+        switch (EnemyMove)
+        {
+        case EEnemyMove::GoblinQuickSlash: case EEnemyMove::RatBite: Own = EnemyQuickAttackAnimation.Get(); break;
+        case EEnemyMove::RatPunch2: Own = EnemyAttack2Animation.Get(); break;
+        case EEnemyMove::RatRoll: Own = EnemyDodgeAnimation.Get(); break;
+        case EEnemyMove::FrogAirPunch: Own = EnemyAirAttackAnimation.Get(); break;
+        case EEnemyMove::FrogSlam: Own = EnemyHeavyAttackAnimation.Get(); break;
+        default: break;
+        }
+        return Own ? Own : EnemyAttackAnimation.Get();
+    };
     if (Dead && EnemyDeathAnimation) Clip = EnemyDeathAnimation.Get();
-    else if (Attacking)
-        Clip = EnemyMove == EEnemyMove::GoblinQuickSlash && EnemyQuickAttackAnimation ? EnemyQuickAttackAnimation.Get() : EnemyAttackAnimation.Get();
+    else if (Attacking) Clip = MoveClip();
     else if (Hurt) Clip = EnemyHitAnimation.Get();
+    else if (Hopping) Clip = EnemyJumpAnimation.Get();
     else if (Moving && EnemyMoveAnimation) Clip = EnemyMoveAnimation.Get();
     if (EnemyActiveAnimation != Clip)
     {
@@ -1093,6 +1124,8 @@ void AArenaFighter::UpdateEnemyAnimation(float Dt)
         EnemyAnimationTime = AttackClipPosition(1.f - AttackClock / CurrentAttack.Duration, Clip);
     }
     else if (Hurt) EnemyAnimationTime = EnemyHitAnimationTime;
+    // The hop clip is stretched over a typical hop (about 1.4 s in the air).
+    else if (Hopping) EnemyAnimationTime = FMath::Clamp(EnemyAirTime / 1.4f, 0.f, .999f) * Length;
     else
     {
         const float Rate = Moving && EnemyType == EHellgirlEnemyType::Imps ? FMath::Clamp(Speed / 224.f, .4f, 1.8f) : 1.f;

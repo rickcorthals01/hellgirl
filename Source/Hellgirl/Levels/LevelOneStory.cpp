@@ -35,7 +35,7 @@ bool AArenaGameMode::HasPlayedStory(FName Moment) const { return PlayedStory.Con
 void AArenaGameMode::UseExitPortal()
 {
     // Stage 1: one last line before leaving for camp.
-    if (bStoryEnabled && CampaignLevel==1 && !PlayedStory.Contains(TEXT("L1_Portal"))) { QueueStory(TEXT("L1_Portal")); return; }
+    if (bStoryEnabled && !bSwamp && CampaignLevel==1 && !PlayedStory.Contains(TEXT("L1_Portal"))) { QueueStory(TEXT("L1_Portal")); return; }
     CompleteLevel();
     if (!FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl"))) TravelToHub();
 }
@@ -88,7 +88,7 @@ bool AArenaGameMode::TickStory(float Dt)
         }
     }
     if (PC->IsPauseMenuOpen()) return true;
-    if (CampaignLevel==1)
+    if (CampaignLevel==1 && !bSwamp)
     {
         if (!PlayedStory.Contains(TEXT("L1_Darkness")) && !PendingStory.Contains(TEXT("L1_Darkness")))
         {

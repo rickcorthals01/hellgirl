@@ -34,4 +34,28 @@ constexpr float GoblinQuickSlashRecovery = .35f;
 constexpr float GoblinQuickSlashDamageScale = .45f;
 constexpr float GoblinQuickSlashCooldown = 6.f;
 constexpr float GoblinQuickSlashReach = 220.f;
+
+// World II, the rat: fast and nimble. Its bite is a quick lunge (0.45 s) for low damage that a perfect dodge cannot
+// counter (a normal dodge still avoids it), once every few seconds. Its punch is a very fast charge and release
+// (0.55 s) for medium damage, sometimes followed straight away by a second punch. When Hellgirl winds up an attack
+// close by, it may dodge-roll aside (untouchable while rolling).
+constexpr float RatSpeed = 470.f;
+constexpr float RatBiteSeconds = .45f, RatBiteDamageScale = .5f, RatBiteCooldown = 4.f, RatBiteReach = 210.f;
+constexpr float RatPunchSeconds = .55f, RatPunchDamageScale = 1.15f, RatPunchRecovery = .55f, RatPunchReach = 190.f;
+constexpr float RatSecondPunchChance = .55f;
+constexpr float RatRollSeconds = .55f, RatRollDistance = 330.f, RatRollChance = .4f, RatRollCooldown = 3.f;
+constexpr int32 RatAttackSlots = 4;
+
+// World II, the frog: always hopping, fast and high. On the ground a quick punch (0.45 s, low damage); in the air a
+// punch when level with Hellgirl, or a slam straight down onto her from high up: medium damage in a circle, a small
+// blast that pushes her back, and a smaller hit and push for other enemies caught in it.
+constexpr float FrogHopMin = .3f, FrogHopMax = .75f;       // pause on the ground between hops
+constexpr float FrogHopUp = 720.f, FrogHopForward = 520.f;  // launch speeds (cm/s)
+constexpr float FrogPunchSeconds = .45f, FrogPunchDamageScale = .6f, FrogPunchReach = 175.f;
+constexpr float FrogAirPunchSeconds = .4f, FrogAirPunchDamageScale = .6f;
+constexpr float FrogSlamSeconds = 1.1f, FrogSlamDamageScale = 1.4f, FrogSlamRadius = 320.f, FrogSlamBlast = 520.f;
+constexpr float FrogSlamCooldown = 5.f, FrogSlamEnemyDamage = 6.f, FrogSlamEnemyPush = 420.f;
+constexpr int32 FrogAttackSlots = 3;
+// The Frog King (the swamp run's mini-boss): a bigger frog that hops higher and slams more often and wider.
+constexpr float FrogKingHealth = 750.f, FrogKingSlamCooldown = 2.8f, FrogKingSlamRadius = 460.f;
 }

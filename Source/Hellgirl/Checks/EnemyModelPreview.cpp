@@ -27,9 +27,10 @@ void AArenaGameMode::RunEnemyModelPreview(float Dt)
 #if WITH_DEV_AUTOMATION_TESTS
     struct FShot { EHellgirlEnemyType Type; const TCHAR* Clip; float At; };
     struct FPage { const TCHAR* Label; FShot Shots[5]; };
-    const bool bGoblins = FParse::Param(FCommandLine::Get(), TEXT("HellgirlGoblinPreview"));
+    const bool bSwampEnemies = FParse::Param(FCommandLine::Get(), TEXT("HellgirlSwampEnemyPreview"));
+    const bool bGoblins = FParse::Param(FCommandLine::Get(), TEXT("HellgirlGoblinPreview")) || bSwampEnemies; // both stand on the ground
     if (!bGoblins && !FParse::Param(FCommandLine::Get(), TEXT("HellgirlMiniSuccubusPreview"))) return;
-    const TCHAR* Name = bGoblins ? TEXT("Goblin") : TEXT("MiniSuccubus");
+    const TCHAR* Name = bSwampEnemies ? TEXT("SwampEnemies") : bGoblins ? TEXT("Goblin") : TEXT("MiniSuccubus");
     static float Clock = 0.f;
     static int32 Page = -1;
     static float PageClock = 0.f;
@@ -53,7 +54,17 @@ void AArenaGameMode::RunEnemyModelPreview(float Dt)
         return Result;
     };
     TArray<FPage> Pages;
-    if (bGoblins)
+    if (bSwampEnemies)
+    {
+        // The rat's and the frog's clips at their key moments (the attacks at their contact points).
+        Pages.Add({TEXT("Rat"), {{T::Rats, TEXT("RatIdle"), .3f}, {T::Rats, TEXT("RatRun"), .4f}, {T::Rats, TEXT("RatBite"), .4333f},
+            {T::Rats, TEXT("RatPunch"), .44f}, {T::Rats, TEXT("RatRoll"), .45f}}});
+        Pages.Add({TEXT("Frog"), {{T::Frogs, TEXT("FrogIdle"), .3f}, {T::Frogs, TEXT("FrogHop"), .45f}, {T::Frogs, TEXT("FrogPunch"), .44f},
+            {T::Frogs, TEXT("FrogAirPunch"), .7333f}, {T::Frogs, TEXT("FrogSlam"), .6286f}}});
+        Pages.Add({TEXT("More"), {{T::Rats, TEXT("RatPunch2"), .44f}, {T::Rats, TEXT("RatHit"), .3f}, {T::Frogs, TEXT("FrogRun"), .4f},
+            {T::FrogKing, TEXT("FrogIdle"), .3f}, {T::FrogKing, TEXT("FrogSlam"), .6286f}}});
+    }
+    else if (bGoblins)
     {
         // Each sweep passes through the clip's contact point (GoblinSlash .29, GoblinQuickSlash .57).
         Pages.Add(Sweep(T::Goblins, TEXT("GoblinSlash"), 0.f, .15f, .2895f, .5f, .85f));

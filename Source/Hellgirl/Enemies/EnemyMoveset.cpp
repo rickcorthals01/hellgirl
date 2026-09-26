@@ -14,7 +14,8 @@ bool UsesCastleMoves(const AArenaFighter* Fighter)
     return Fighter && (Fighter->EnemyType == EHellgirlEnemyType::Imps
         || Fighter->EnemyType == EHellgirlEnemyType::FlyingImps || Fighter->EnemyType == EHellgirlEnemyType::MiniSuccubus
         || Fighter->EnemyType == EHellgirlEnemyType::ImpCommander
-        || Fighter->EnemyType == EHellgirlEnemyType::Goblins || Fighter->EnemyType == EHellgirlEnemyType::GoblinQueen);
+        || Fighter->EnemyType == EHellgirlEnemyType::Goblins || Fighter->EnemyType == EHellgirlEnemyType::GoblinQueen
+        || Fighter->EnemyType == EHellgirlEnemyType::Rats || Fighter->EnemyType == EHellgirlEnemyType::Frogs || Fighter->EnemyType == EHellgirlEnemyType::FrogKing);
 }
 
 bool FindEnemyFloor(const AArenaFighter* Fighter, const FVector& Position, FHitResult& Floor)
@@ -73,7 +74,8 @@ bool AArenaFighter::CanBeginEnemyMove(const AArenaFighter* Player) const
         || bCombatLaunched || KnockdownClock > 0.f || HitClock > 0.f || DodgeClock > 0.f
         || AttackClock > 0.f || EnemyMove != EEnemyMove::None || EnemyMoveCooldown > 0.f)
         return false;
-    if (!bFlyingEnemy && !GetCharacterMovement()->IsMovingOnGround()) return false;
+    // Frogs attack in the air as well (a punch or a slam in mid-hop).
+    if (!bFlyingEnemy && !IsFrog() && !GetCharacterMovement()->IsMovingOnGround()) return false;
     if (FVector::DistSquared2D(GetActorLocation(), Player->GetActorLocation()) > FMath::Square(1800.f)) return false;
     FHitResult Obstacle;
     FCollisionQueryParams Query(SCENE_QUERY_STAT(EnemyMoveSight), false, this);
@@ -83,9 +85,9 @@ bool AArenaFighter::CanBeginEnemyMove(const AArenaFighter* Player) const
 
     const float Now = GetWorld()->GetTimeSeconds();
     // Goblins crowd in: more of them may attack at once, with less spacing (Rules/EnemyTuning.h).
-    const bool Goblin = EnemyType == EHellgirlEnemyType::Goblins;
-    const float Spacing = Goblin ? EnemyTuning::GoblinAttackSpacing : .45f;
-    const int32 Slots = Goblin ? EnemyTuning::GoblinAttackSlots : 2;
+    const bool Goblin = EnemyType == EHellgirlEnemyType::Goblins, Rat = EnemyType == EHellgirlEnemyType::Rats;
+    const float Spacing = Goblin || Rat ? EnemyTuning::GoblinAttackSpacing : IsFrog() ? .35f : .45f;
+    const int32 Slots = Goblin ? EnemyTuning::GoblinAttackSlots : Rat ? EnemyTuning::RatAttackSlots : IsFrog() ? EnemyTuning::FrogAttackSlots : 2;
     int32 Active = 0;
     for (TActorIterator<AArenaFighter> It(GetWorld()); It; ++It)
     {
@@ -117,6 +119,22 @@ void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
     case EEnemyMove::GoblinQuickSlash:
         Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::GoblinQuickSlashSeconds,.6f,AttackDamage*EnemyTuning::GoblinQuickSlashDamageScale,EnemyTuning::GoblinQuickSlashReach+15.f,60.f,0.f,0};
         Recovery=EnemyTuning::GoblinQuickSlashRecovery; Label=TEXT("GOBLIN / QUICK SLASH"); break;
+    case EEnemyMove::RatBite:
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::RatBiteSeconds,.6f,AttackDamage*EnemyTuning::RatBiteDamageScale,EnemyTuning::RatBiteReach+15.f,60.f,0.f,0};
+        Recovery=.35f; Label=TEXT("RAT / BITE"); break;
+    case EEnemyMove::RatPunch: case EEnemyMove::RatPunch2:
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::RatPunchSeconds,.6f,AttackDamage*EnemyTuning::RatPunchDamageScale,EnemyTuning::RatPunchReach,160.f,0.f,0};
+        Recovery=EnemyTuning::RatPunchRecovery; Label=Move==EEnemyMove::RatPunch ? TEXT("RAT / PUNCH") : TEXT("RAT / SECOND PUNCH"); break;
+    case EEnemyMove::FrogPunch:
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::FrogPunchSeconds,.6f,AttackDamage*EnemyTuning::FrogPunchDamageScale,EnemyTuning::FrogPunchReach,90.f,0.f,0};
+        Recovery=.3f; Label=TEXT("FROG / PUNCH"); break;
+    case EEnemyMove::FrogAirPunch:
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::FrogAirPunchSeconds,.6f,AttackDamage*EnemyTuning::FrogAirPunchDamageScale,200.f,120.f,0.f,0};
+        Recovery=.25f; Label=TEXT("FROG / AIR PUNCH"); break;
+    case EEnemyMove::FrogSlam:
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::FrogSlamSeconds,.6f,AttackDamage*EnemyTuning::FrogSlamDamageScale,
+            EnemyType==EHellgirlEnemyType::FrogKing ? EnemyTuning::FrogKingSlamRadius : EnemyTuning::FrogSlamRadius,EnemyTuning::FrogSlamBlast,0.f,0};
+        Recovery=.5f; Label=TEXT("FROG / SLAM"); break;
     case EEnemyMove::QueenMelee:
         Spec = {FistCombat::Move::EnemyClaw,1.6f,.6f,20.f,250.f,200.f,0.f,0}; Recovery=.7f; Label=TEXT("QUEEN / SHADOW ATTACK"); break;
     case EEnemyMove::QueenClaw:
@@ -146,10 +164,13 @@ void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
     FVector Facing = Delta.GetSafeNormal2D();
     if (Facing.IsNearlyZero()) Facing = GetActorForwardVector();
     FVector Endpoint = Start;
-    if (Move == EEnemyMove::ImpPounce || Move == EEnemyMove::CommanderRush || Move == EEnemyMove::FlyingDive || Move == EEnemyMove::CommanderJumpSlam)
+    const bool RatLunge = Move == EEnemyMove::RatBite || Move == EEnemyMove::RatPunch || Move == EEnemyMove::RatPunch2;
+    const bool FrogAir = Move == EEnemyMove::FrogAirPunch || Move == EEnemyMove::FrogSlam;
+    if (FrogAir) Endpoint = Player->GetActorLocation(); // the slam dives onto where she stands
+    else if (Move == EEnemyMove::ImpPounce || Move == EEnemyMove::CommanderRush || Move == EEnemyMove::FlyingDive || Move == EEnemyMove::CommanderJumpSlam || RatLunge)
     {
-        const float StopDistance = Move == EEnemyMove::CommanderJumpSlam ? 0.f : Move == EEnemyMove::CommanderRush ? 175.f : (Move == EEnemyMove::FlyingDive ? 130.f : 125.f);
-        const float MaximumTravel = Move == EEnemyMove::CommanderJumpSlam ? 1000.f : Move == EEnemyMove::CommanderRush ? 650.f : (Move == EEnemyMove::FlyingDive ? 550.f : 360.f);
+        const float StopDistance = Move == EEnemyMove::CommanderJumpSlam ? 0.f : Move == EEnemyMove::CommanderRush ? 175.f : RatLunge ? 105.f : (Move == EEnemyMove::FlyingDive ? 130.f : 125.f);
+        const float MaximumTravel = Move == EEnemyMove::CommanderJumpSlam ? 1000.f : Move == EEnemyMove::CommanderRush ? 650.f : RatLunge ? 140.f : (Move == EEnemyMove::FlyingDive ? 550.f : 360.f);
         const float Travel = FMath::Clamp(static_cast<float>(Delta.Size2D()) - StopDistance, 0.f, MaximumTravel);
         if (!IsEnemyGroundAheadSafe(Facing, Travel + 35.f)) return;
         Endpoint += Facing * Travel;
@@ -177,7 +198,8 @@ void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
     MoveLabelClock = Spec.Duration + .4f;
     SetActorRotation(Facing.Rotation());
     ConsumeMovementInputVector();
-    GetCharacterMovement()->StopMovementImmediately();
+    // A frog's air moves keep its hop going.
+    if (!FrogAir) GetCharacterMovement()->StopMovementImmediately();
     if (Move == EEnemyMove::FlyingDive) GetCharacterMovement()->SetMovementMode(MOVE_Flying);
 }
 
@@ -203,11 +225,31 @@ void AArenaFighter::UpdateEnemyMoveMotion(float Dt)
     if (!bEnemy || !UsesCastleMoves(this)) return;
     EnemyMoveCooldown = FMath::Max(0.f, EnemyMoveCooldown - Dt);
     GoblinQuickSlashClock = FMath::Max(0.f, GoblinQuickSlashClock - Dt);
+    RatBiteClock = FMath::Max(0.f, RatBiteClock - Dt);
+    RatRollClock = FMath::Max(0.f, RatRollClock - Dt);
+    FrogSlamClock = FMath::Max(0.f, FrogSlamClock - Dt);
     EnemyDecisionClock = FMath::Max(0.f, EnemyDecisionClock - Dt);
     if (EnemyMove == EEnemyMove::None) return;
     if (!IsAlive() || bCombatLaunched || KnockdownClock > 0.f || HitClock > 0.f || AttackClock <= 0.f)
     {
         CancelEnemyMove();
+        return;
+    }
+    if (EnemyMove == EEnemyMove::FrogAirPunch) { SetActorRotation(EnemyFacing.Rotation()); return; } // carried along by its hop
+    if (EnemyMove == EEnemyMove::FrogSlam)
+    {
+        SetActorRotation(EnemyFacing.Rotation());
+        const float AtContact = CurrentAttack.Duration * (1.f - CurrentAttack.ContactFraction);
+        if (!GetCharacterMovement()->IsMovingOnGround())
+        {
+            // Diving: the attack waits just before its contact until the frog lands, falling fast onto the spot it
+            // picked (where Hellgirl stood).
+            AttackClock = FMath::Max(AttackClock, AtContact + .02f);
+            const FVector Across(EnemyMoveTarget.X - GetActorLocation().X, EnemyMoveTarget.Y - GetActorLocation().Y, 0.f);
+            const FVector Drift = Across.GetSafeNormal() * FMath::Min(static_cast<float>(Across.Size()) * 3.f, 700.f);
+            GetCharacterMovement()->Velocity = FVector(Drift.X, Drift.Y, FMath::Min(GetCharacterMovement()->Velocity.Z - 4000.f * Dt, -900.f));
+        }
+        else if (!bHitResolved) AttackClock = FMath::Min(AttackClock, AtContact - .001f); // landed: the slam hits now
         return;
     }
     SetActorRotation(EnemyFacing.Rotation());
@@ -229,6 +271,8 @@ void AArenaFighter::UpdateEnemyMoveMotion(float Dt)
     case EEnemyMove::ImpPounce: StartFraction = .35f; EndFraction = .55f; break;
     case EEnemyMove::FlyingDive: StartFraction = .34f; EndFraction = .56f; break;
     case EEnemyMove::CommanderRush: StartFraction = .34f; EndFraction = .57f; break;
+    case EEnemyMove::RatBite: case EEnemyMove::RatPunch: case EEnemyMove::RatPunch2: StartFraction = .25f; EndFraction = .55f; break;
+    case EEnemyMove::RatRoll: StartFraction = 0.f; EndFraction = .8f; break;
     default: return;
     }
     const float NextProgress = FMath::Clamp((CurrentAttack.Duration - AttackClock + Dt) / CurrentAttack.Duration, 0.f, 1.f);
@@ -263,6 +307,17 @@ void AArenaFighter::DrawEnemyMoveTelegraph()
         const float UntilHit=AttackClock-CurrentAttack.Duration*(1.f-CurrentAttack.ContactFraction);
         if (UntilHit>0.f && UntilHit<=(bBossEncounter ? .45f : 1.2f))
             DrawDebugCircle(GetWorld(),EnemyMoveTarget-FVector(0,0,GetCapsuleComponent()->GetScaledCapsuleHalfHeight()-8),CurrentAttack.Range,48,FColor::Red,false,-1.f,0,6.f,FVector::ForwardVector,FVector::RightVector,false);
+    }
+    else if (EnemyMove == EEnemyMove::FrogSlam)
+    {
+        // Where the frog will land, with the reach of its splash.
+        FHitResult Ground;
+        const FVector Down(EnemyMoveTarget.X, EnemyMoveTarget.Y, EnemyMoveTarget.Z + 200.f);
+        FCollisionQueryParams Query(SCENE_QUERY_STAT(FrogSlamMark), false, this);
+        const float Z = GetWorld()->LineTraceSingleByChannel(Ground, Down, Down - FVector(0, 0, 900.f), ECC_Visibility, Query)
+            ? static_cast<float>(Ground.ImpactPoint.Z) + 6.f : static_cast<float>(EnemyMoveTarget.Z) - 80.f;
+        DrawDebugCircle(GetWorld(), FVector(EnemyMoveTarget.X, EnemyMoveTarget.Y, Z), CurrentAttack.Range, 48, FColor(90, 200, 255), false, -1.f, 0, 5.f,
+            FVector::ForwardVector, FVector::RightVector, false);
     }
     else if (EnemyMove == EEnemyMove::CommanderSlam)
     {

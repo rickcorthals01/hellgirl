@@ -23,6 +23,9 @@ public:
     bool bActivated = false;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Spawn Site") EHellgirlEnemyType GroundType = EHellgirlEnemyType::Imps;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Spawn Site") EHellgirlEnemyType FlyingType = EHellgirlEnemyType::FlyingImps;
+    // A second kind of ground enemy mixed into the wave (the swamp's rats and frogs): MixCount of EnemyCount are MixType.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Spawn Site") EHellgirlEnemyType MixType = EHellgirlEnemyType::Imps;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Spawn Site") int32 MixCount = 0;
     bool bEnabled = true;
     bool bBoss = false;
     bool bInstantGroup = false;
@@ -36,6 +39,7 @@ public:
     // Enemies this site actually spawns: EnemyCount/FlyingCount scaled by Rules/EnemyTuning.h (bosses unscaled).
     int32 WaveTotal() const;
     int32 WaveFlyers() const;
+    int32 WaveMixed() const;
     bool RegisterReinforcement(AArenaFighter* Enemy);
     // Goblins come out of a dirt burrow (forest run).
     void UseBurrow();

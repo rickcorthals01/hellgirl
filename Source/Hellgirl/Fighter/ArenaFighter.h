@@ -89,10 +89,18 @@ public:
     bool IsBossHidden() const;
     float FilterEnemyDamage(float Damage);
     void UpdateGoblinTactics(float Dt, AArenaFighter* Player);
+    // World II (Enemies/SwampCombat.cpp).
+    void UpdateRatTactics(float Dt, AArenaFighter* Player);
+    void UpdateFrogTactics(float Dt, AArenaFighter* Player);
+    bool IsFrog() const { return EnemyType == EHellgirlEnemyType::Frogs || EnemyType == EHellgirlEnemyType::FrogKing; }
+    // True while this fighter is winding up an attack that has not landed yet (rats roll away from it).
+    bool IsWindingUpAttack() const { return AttackClock > 0.f && !bHitResolved; }
     EEnemyMove GetEnemyMove() const { return EnemyMove; }
     // Checks only: the clip an enemy shows now, and the time left in its current attack.
     const UAnimSequence* GetEnemyActiveAnimation() const { return EnemyActiveAnimation; }
     float GetAttackClock() const { return AttackClock; }
+    int32 GetSplashHitsTaken() const { return SplashHitsTaken; }
+    float GetEnemyAirTime() const { return EnemyAirTime; }
     // Energy Hellgirl spends counts toward the level's Soul Coin bonus (Rules/SoulRewards.h).
     void NoteEnergySpent(float Amount);
     // Checks only: whether a perfect dodge right now would counter Enemy.
@@ -154,6 +162,14 @@ private:
     EEnemyMove EnemyMove = EEnemyMove::None;
     float EnemyMoveCooldown = 0.f;
     float GoblinQuickSlashClock = 0.f; // until this goblin may quick-slash again
+    // Rats and frogs: cooldowns for the bite, the roll and the slam, the second-punch follow-up, the frog's hop timer
+    // and how long it has been in the air (drives its hop clip).
+    float RatBiteClock = 0.f, RatRollClock = 0.f, FrogSlamClock = 0.f, FrogHopClock = 0.f, EnemyAirTime = 0.f;
+    int32 SplashHitsTaken = 0; // times a frog's slam splashed this enemy (checks)
+    bool bRatPunchChain = false;
+    void StartRatRoll(const FVector& Direction);
+    // The frog's slam landed: its splash hits and pushes the other enemies caught in it.
+    void FrogSlamSplash();
     float EnemyDecisionClock = 0.f;
     int32 EnemyAttackSerial = 0;
     FVector EnemyMoveStart = FVector::ZeroVector;
@@ -224,6 +240,11 @@ private:
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyMoveAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyAttackAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyQuickAttackAnimation;
+    UPROPERTY() TObjectPtr<UAnimSequence> EnemyAttack2Animation;
+    UPROPERTY() TObjectPtr<UAnimSequence> EnemyAirAttackAnimation;
+    UPROPERTY() TObjectPtr<UAnimSequence> EnemyHeavyAttackAnimation;
+    UPROPERTY() TObjectPtr<UAnimSequence> EnemyDodgeAnimation;
+    UPROPERTY() TObjectPtr<UAnimSequence> EnemyJumpAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyHitAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyDeathAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyActiveAnimation;

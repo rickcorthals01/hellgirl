@@ -255,7 +255,8 @@ void AHellgirlPlayerController::RunDialogueCheck()
 #endif
 }
 
-// A conversation is a section of Content/Dialogue/LevelOne.ini with numbered pages:
+// A conversation is a section of a script in Content/Dialogue (LevelOne.ini: World I, LevelTwo.ini: World II) with
+// numbered pages:
 //   SpeakerN = who talks (empty: a box without a name)
 //   LineN    = what they say
 //   MoodN    = portrait mood (Neutral, Angry, Surprised, Headache, Quiet, Smirk, EvilSmirk, Laugh, Hurt...; "none" hides it)
@@ -263,8 +264,15 @@ void AHellgirlPlayerController::RunDialogueCheck()
 bool AHellgirlPlayerController::ShowConversation(FName Id)
 {
     if (bMenuOpen) return false;
+    // The conversation's section, in whichever script has it.
     FConfigFile Script;
-    Script.Read(FPaths::ProjectContentDir()/TEXT("Dialogue/LevelOne.ini"));
+    for (const TCHAR* File : {TEXT("LevelOne.ini"), TEXT("LevelTwo.ini")})
+    {
+        FConfigFile Candidate;
+        Candidate.Read(FPaths::ProjectContentDir() / TEXT("Dialogue") / File);
+        FString First;
+        if (Candidate.GetString(*Id.ToString(), TEXT("Line0"), First)) { Script = MoveTemp(Candidate); break; }
+    }
     TArray<FText> Speakers,Lines;
     TArray<TObjectPtr<UTexture2D>> Portraits;
     TArray<bool> Left,Narration,Black;

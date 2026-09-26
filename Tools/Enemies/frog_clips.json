@@ -1,0 +1,13 @@
+{
+  "_help": "The frog enemy's clips (see rat_clips.json). The hop is Mixamo's jump; the slam is Hellgirl's air slam.",
+  "outfits": { "Frog": "Meshy Models/Enemies/Frog enemy model/fd1eec4b-b3cc-4c17-9168-4a4cfa57d2bf/Meshy_AI_Character_output.fbx" },
+  "clips": {
+    "FrogIdle":     { "file": "Standing Idle.fbx" },
+    "FrogRun":      { "file": "../Meshy Models/Enemies/Frog enemy model/fd1eec4b-b3cc-4c17-9168-4a4cfa57d2bf/Meshy_AI_Animation_Running_withSkin.fbx" },
+    "FrogHop":      { "file": "Jump(1).fbx", "lift": 0 },
+    "FrogPunch":    { "file": "RightPunch.fbx", "strike": "RightHand", "trim": [5, 30] },
+    "FrogAirPunch": { "file": "AirPunch.fbx", "strike": "LeftHand", "trim": [3, 18], "lift": 0 },
+    "FrogSlam":     { "file": "AirSlam.fbx", "trim": [21, 56], "contact": 43, "lift": 0 },
+    "FrogHit":      { "file": "Hit To Body.fbx", "trim": [3, 29] }
+  }
+}

@@ -71,6 +71,11 @@ int32 AEnemySpawnPoint::WaveFlyers() const
     return FMath::Min(WaveTotal(), bBoss ? FlyingCount : EnemyTuning::WaveSize(FlyingCount));
 }
 
+int32 AEnemySpawnPoint::WaveMixed() const
+{
+    return FMath::Min(WaveTotal() - WaveFlyers(), bBoss ? MixCount : EnemyTuning::WaveSize(MixCount));
+}
+
 int32 AEnemySpawnPoint::LivingEnemies() const
 {
     int32 Count = 0;
@@ -109,6 +114,9 @@ void AEnemySpawnPoint::SpawnOne()
     const float X = static_cast<float>(GetActorLocation().X) + FMath::Cos(Angle) * Radius;
     const float Y = static_cast<float>(GetActorLocation().Y) + FMath::Sin(Angle) * Radius;
     const bool Flying = Spawned >= WaveTotal() - WaveFlyers();
+    // The mixed-in kind is spread evenly through the ground enemies: exactly WaveMixed() of them.
+    const int32 Ground = FMath::Max(1, WaveTotal() - WaveFlyers());
+    const bool Mixed = !Flying && (Spawned + 1) * WaveMixed() / Ground > Spawned * WaveMixed() / Ground;
     // Each position on the spawn spiral can have a different terrain height.
     // Ignore pawns so a previous spawn cannot become the next enemy's floor.
     FCollisionObjectQueryParams FloorTypes;
@@ -143,15 +151,17 @@ void AEnemySpawnPoint::SpawnOne()
     SpawnRetries = 0;
     Enemy->bBossEncounter = bBoss;
     Enemy->MakeEnemy(Difficulty, Flying);
-    Enemy->SetEnemyType(Flying ? FlyingType : GroundType);
+    Enemy->SetEnemyType(Flying ? FlyingType : Mixed ? MixType : GroundType);
     Enemy->HomePosition = GetActorLocation();
     Enemy->EncounterSite = this;
     Enemy->bGuardHome = bInstantGroup && bGroupGuardsHome;
     if (!bBoss && EnemyScale != 1.f) Enemy->SetActorScale3D(FVector(EnemyScale));
     if (bBoss)
     {
-        Enemy->MaxHealth = Enemy->Health = 1350.f;
-        Enemy->AttackDamage = 28.f;
+        // The Frog King is a mini-boss: less health and a lighter hand than a real boss.
+        const bool MiniBoss = Enemy->EnemyType == EHellgirlEnemyType::FrogKing;
+        Enemy->MaxHealth = Enemy->Health = MiniBoss ? EnemyTuning::FrogKingHealth : 1350.f;
+        Enemy->AttackDamage = MiniBoss ? 18.f : 28.f;
         Enemy->AttackRange = 240.f;
         Enemy->SetActorScale3D(FVector(1.5f));
     }

@@ -149,7 +149,7 @@ void AArenaGameMode::BuildSwampScenery()
 {
     using namespace SwampRoom;
     UWorld* World = GetWorld();
-    const FPlan Plan = Make(SwampSeed, SwampRoomNumber);
+    const FPlan Plan = Make(SwampSeed, SwampRoomNumber, SwampRooms, bSwampKingRoom);
     FRandomStream Dice(SwampSeed * 29 + SwampRoomNumber * 11);
 
     ForestArt::Ground(World, Half + 2500.f, 420.f, SwampArt::Material(TEXT("MI_SwampGround")), [](FVector2D P) { return SwampArt::GroundHeight(P); });

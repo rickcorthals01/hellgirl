@@ -90,6 +90,21 @@ public:
     TArray<FSwampRipple> SwampRipples;
     float SwampWaterStart = 0.f, SwampWaterEnd = 0.f, SwampClock = 0.f, SwampStepClock = 0.f, SwampHurtClock = 0.f, SwampLastSpeed = 0.f;
     bool bSwampWasFalling = false;
+    // World II's stages (URL option Stage=1..3 with Swamp=1; 0 is the map preview), see Levels/SwampStages.cpp.
+    int32 SwampStage = 0, SwampRooms = 4;
+    bool bSwampKingRoom = true;
+    void StartSwampStage(int32 Stage);
+    void BuildSwampWaves();
+    // Runs the stage's waves, conversations and exit portal; true while the light at the end stays shut.
+    bool TickSwampStage(float Dt, class AArenaFighter* Hero);
+    // Queues a conversation and says whether it has been played (always true without the story, in checks).
+    bool SwampSaid(FName Conversation);
+    void RunSwampStageCheck(float Dt);
+    int32 SwampWave = 0, SwampWaveCount = 0;
+    float SwampWaveClock = 0.f, SwampIntroClock = 0.f;
+    TArray<int32> SwampWaveOfSite;     // which wave each spawn site belongs to
+    TArray<FName> SwampWaveAfter;      // the conversation after each wave
+    UPROPERTY() TObjectPtr<class ACameraActor> SwampCamera;
     // World I Stages 2 and 3 and the endless mode follow the scripts in Levels/GoblinWaves.cpp:
     // waves, conversations and soul portals in order, then the exit portal.
     bool bEndless = false;
@@ -100,6 +115,7 @@ public:
     bool RunEndlessCheck();
     void RunNaturalWavesCheck(float Dt);
     void RunQuickSlashCheck(float Dt);
+    void RunSwampEnemyCheck(float Dt);
     void RunEnemyModelPreview(float Dt);
     // -HellgirlOutfitPreview=<Outfit>: a lit showcase of one outfit (front, three-quarter, back), see Checks/EnemyModelPreview.cpp.
     void RunOutfitPreview(float Dt);

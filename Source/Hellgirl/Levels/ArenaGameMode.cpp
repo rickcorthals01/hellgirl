@@ -276,7 +276,8 @@ void AArenaGameMode::RestartMap()
     // A forest run ends at camp, whether Hellgirl died or finished it (a new run gets a new seed).
     if (bForestRun) { if (GetUnlockedLevel()>=2) TravelToHub(); else StartForestRun(); return; }
     if (bGraveyard) { TravelToGraveRoom(GraveSeed, GraveRoomNumber); return; }
-    if (bSwamp) { TravelToSwampRoom(SwampSeed, SwampRoomNumber); return; }
+    // A Stage II run ends at camp (like the forest run); other swamp rooms restart where they are.
+    if (bSwamp) { if (SwampStage == 2) TravelToHub(); else TravelToSwampRoom(SwampSeed, SwampRoomNumber); return; }
     // An endless run is over once Hellgirl falls (or restarts): back to camp.
     if (bEndless) { TravelToHub(); return; }
     if (bForestHub) { TravelToHub(); return; } if (bSuccubusCourt) { TravelToSuccubusCourt(); return; } if (bLegacyMap) Travel(MapNumber); else TravelToCampaign(CampaignLevel); }
@@ -341,6 +342,7 @@ void AArenaGameMode::Tick(float Dt)
     }
     RunMapShot(Dt);
     RunQuickSlashCheck(Dt);
+    RunSwampEnemyCheck(Dt);
     RunEnemyModelPreview(Dt);
     RunOutfitPreview(Dt);
     RunMiniSuccubusCheck(Dt);
@@ -360,7 +362,7 @@ void AArenaGameMode::Tick(float Dt)
     if (bSuccubusCourt) { TickSuccubusCourt(Dt); return; }
     if (bForestRun) { RunForestRunCheck(); TickForestRun(Dt); return; }
     if (bGraveyard) { RunGraveyardCheck(Dt); TickGraveyard(Dt); return; }
-    if (bSwamp) { RunSwampCheck(Dt); TickSwamp(Dt); return; }
+    if (bSwamp) { RunSwampCheck(Dt); RunSwampStageCheck(Dt); TickSwamp(Dt); return; }
     RunGoblinStageCheck();
     if (!bLegacyMap && CampaignLevel==1) { TickGoblinPrelude(Dt); return; }
     if (!bLegacyMap && CampaignLevel<=3) { RunCampaignCheck(Dt); RunMapVisualCheck(Dt); RunTerrainCheck(Dt); RunMapCheck(Dt); TickGoblinWaves(Dt); return; }

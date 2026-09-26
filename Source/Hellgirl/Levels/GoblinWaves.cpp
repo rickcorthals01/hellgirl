@@ -124,14 +124,16 @@ void AArenaGameMode::CompleteLevel()
     if (bLevelCompleted) return;
     bLevelCompleted = true;
     // Winning Stage 2 unlocks endless goblins; winning Stage 3 brings the goblin (and his shop) to camp.
-    if (!bLegacyMap && !bForestRun && !bEndless && (CampaignLevel == 2 || CampaignLevel == 3))
+    // World II: each swamp stage won unlocks the next (Stage I itself opens once World I is won).
+    if (bSwamp && SwampStage > 0) HellgirlProgress::SetFlag(*FString::Printf(TEXT("SwampStage%dWon"), SwampStage));
+    else if (!bLegacyMap && !bForestRun && !bEndless && (CampaignLevel == 2 || CampaignLevel == 3))
         HellgirlProgress::SetFlag(CampaignLevel == 2 ? TEXT("Stage2Won") : TEXT("Stage3Won"));
     // Won: every Soul earned in the level plus the speed, combo and energy bonuses become Soul Coins. Automated
     // checks work the reward out but never touch the player's real wallet or progress.
     const bool bAutomated = FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl"));
     if (auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance())) Wallet->FinishLevel(!bAutomated);
     if (bAutomated) return;
-    if (!bForestRun && !bEndless && !bLegacyMap && GetUnlockedLevel() < CampaignLevel + 1)
+    if (!bForestRun && !bEndless && !bLegacyMap && !bSwamp && GetUnlockedLevel() < CampaignLevel + 1)
     {
         GConfig->SetInt(TEXT("HellgirlCampaign"), TEXT("UnlockedLevel"), CampaignLevel + 1, GGameUserSettingsIni);
         GConfig->Flush(false, GGameUserSettingsIni);

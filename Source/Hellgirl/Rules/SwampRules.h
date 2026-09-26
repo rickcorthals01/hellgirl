@@ -191,13 +191,15 @@ inline bool TryAdd(FPlan& Plan, const FItem& Item)
     return true;
 }
 
-inline FPlan Make(int32 Seed, int32 Room)
+// Rooms: how many rooms the run has (the map preview has RoomsPerRun, World II Stage II ten, Stages I and III one);
+// KingAtEnd: whether its last room is the Frog King's.
+inline FPlan Make(int32 Seed, int32 Room, int32 Rooms = RoomsPerRun, bool KingAtEnd = true)
 {
     FRandomStream Dice(static_cast<int32>(HashCombine(GetTypeHash(Seed), GetTypeHash(Room * 4099 + 71))));
     FPlan Plan;
     Plan.Seed = Seed;
-    Plan.Room = FMath::Clamp(Room, 1, RoomsPerRun);
-    Plan.bFrogKing = Plan.Room == RoomsPerRun;
+    Plan.Room = FMath::Clamp(Room, 1, Rooms);
+    Plan.bFrogKing = KingAtEnd && Plan.Room == Rooms;
     Plan.WaterStart = -Half + 2500.f + Dice.FRandRange(-400.f, 400.f);
     Plan.WaterEnd = -Half + 10000.f + Dice.FRandRange(-400.f, 400.f);
     auto InWaterPoint = [&](float Margin) { return FVector2D(Dice.FRandRange(Plan.WaterStart + Margin, Plan.WaterEnd - Margin), Dice.FRandRange(-HalfWidth + 350.f, HalfWidth - 350.f)); };

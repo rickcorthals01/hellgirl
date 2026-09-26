@@ -1,0 +1,13 @@
+{
+  "_help": "The rat enemy's clips, fitted by Tools/Animations/prepare_clips.py onto its Meshy rig and imported by import_swamp_enemies.py as /Game/Enemies/Swamp/Rat/Animations/<Clip>. File paths are relative to 'Animations Mixamo' (the run is the model's own Meshy clip). Rebuild with Tools/Enemies/swamp_enemies.ps1.",
+  "outfits": { "Rat": "Meshy Models/Enemies/Rat enemy model/708224fc-5282-47cd-85ad-340047a604f7/Meshy_AI_Character_output.fbx" },
+  "clips": {
+    "RatIdle":   { "file": "Standing Idle.fbx" },
+    "RatRun":    { "file": "../Meshy Models/Enemies/Rat enemy model/708224fc-5282-47cd-85ad-340047a604f7/Meshy_AI_Animation_Running_withSkin.fbx" },
+    "RatBite":   { "file": "Headbutt.fbx", "trim": [4, 34], "contact": 17 },
+    "RatPunch":  { "file": "RightPunch.fbx", "strike": "RightHand", "trim": [5, 30] },
+    "RatPunch2": { "file": "LeftPunch.fbx", "mirror_of": "RatPunch", "strike": "LeftHand" },
+    "RatRoll":   { "file": "Stand To Roll.fbx", "trim": [3, 26] },
+    "RatHit":    { "file": "Hit To Body.fbx", "trim": [3, 29] }
+  }
+}
