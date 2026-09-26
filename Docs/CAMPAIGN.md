@@ -160,3 +160,28 @@ Replaces the carried-souls rules above.
   - A short "ACHIEVEMENT" notice shows when one unlocks. The full achievement system comes later.
 
 **Ultimate tip (2026-09-25):** in Stage 3, the how-to after "I'll show you!" is now a dialogue box (`[L3_UltimateTip]`), not on-screen text. Its `%UltimateKey%` is replaced with the ultimate's key on the device in use: "Q" on keyboard, "Right Thumbstick" on a controller. Braces don't work as placeholders, because the config reader strips `{ }` from lines.
+
+**The goblin's shop: moves and permanent upgrades (2026-09-26):** the shop sells the energy moves and permanent stat upgrades for Soul Coins, next to the outfit. The prices and rules are in `Rules/ShopUpgrades.h`; purchases are kept in the wallet save (and copied into save slots).
+
+| Moves (bought once) | Price |
+|---|---|
+| Charge (hold heavy) | 500 |
+| Sky Slam (heavy in the air) | 500 |
+| Dodge + Slam (heavy right after a dodge) | 700 |
+| Leg Sweep (the heavy combo's 4th hit) | 300 |
+| Crash Kick (the air combo's 4th hit) | 300 |
+| Whirlwind (the sword combo's 4th hit) | 1500 |
+
+- **Locked moves** fall back to a basic hit, with a "LOCKED: BUY IT AT THE GOBLIN'S SHOP" note under the move name. A held heavy does not charge; an air heavy and the air combo's last hit are an air kick; dodge + heavy and the ground combos' last hits are a plain heavy. The ultimates are never locked.
+- **Permanent upgrades** (each level at the same price):
+
+| Upgrade | Per level | Cap | Price |
+|---|---|---|---|
+| Vitality | +10 max health | +1000 (100 levels) | 3000 |
+| Soul Harvest | +2.5% Souls for the first two levels, then +1% | +30% (27 levels) | 2500 |
+| Strength | +1% damage | +50% (50 levels) | 4000 |
+| Agility | +2% attack and movement speed | +40% (20 levels) | 3000 |
+
+- Soul Harvest raises every drop: the fraction is a chance of one more Soul (a 3-Soul drop at +10% gives 3.3 on average).
+- Automated checks have every move and no stat upgrades, so they don't depend on the player's wallet; `-HellgirlShopCheck` (in the swamp map) tests the shop itself.
+- The shop only opens after World I (the goblin follows her after Stage 3), so World I is played without the energy moves.

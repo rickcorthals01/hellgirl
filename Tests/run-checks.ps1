@@ -40,6 +40,7 @@ $checks = @(
     @('Court',          '/Engine/Maps/Entry?SuccubusCourt=1', 60),
     @('Swamp',          '/Engine/Maps/Entry?Swamp=1?Seed=4242?Room=1', 60), @('Swamp', '/Engine/Maps/Entry?Swamp=1?Seed=9?Room=4', 60, $null, 'Swamp4'),
     @('SwampEnemy',     '/Engine/Maps/Entry?Swamp=1?Seed=4242?Room=1', 60),
+    @('Shop',           '/Engine/Maps/Entry?Swamp=1?Seed=4242?Room=1', 60),
     @('SwampStage',     '/Engine/Maps/Entry?Swamp=1?Stage=1?Seed=1101?Room=1', 60, $null, 'SwampStage1'),
     @('SwampStage',     '/Engine/Maps/Entry?Swamp=1?Stage=2?Seed=77?Room=3', 60, $null, 'SwampStage2'),
     @('SwampStage',     '/Engine/Maps/Entry?Swamp=1?Stage=2?Seed=77?Room=10', 60, $null, 'SwampStage2King'),
