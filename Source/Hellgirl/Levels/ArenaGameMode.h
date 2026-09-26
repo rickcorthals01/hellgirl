@@ -101,6 +101,8 @@ public:
     void RunNaturalWavesCheck(float Dt);
     void RunQuickSlashCheck(float Dt);
     void RunEnemyModelPreview(float Dt);
+    // -HellgirlOutfitPreview=<Outfit>: a lit showcase of one outfit (front, three-quarter, back), see Checks/EnemyModelPreview.cpp.
+    void RunOutfitPreview(float Dt);
     void RunMiniSuccubusCheck(float Dt);
     void RunCourtFlyersCheck(float Dt);
     void RescueStragglers(class AArenaFighter* Hero, float Dt);

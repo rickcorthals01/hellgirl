@@ -110,3 +110,32 @@ The script:
 **Checks:**
 - `QuickSlash`: each goblin slash plays its own clip.
 - `-HellgirlGoblinPreview` (windowed): each clip from start to end on five goblins, saved to `Saved/Screenshots/Goblin_*.png`.
+
+## High-quality outfit models
+
+`Tools\Animations\upgrade_outfit.ps1` swaps an outfit for a new, unrigged high-quality Meshy model. It keeps the outfit's skeleton, so every animation still works. Close the editor first.
+
+```
+powershell -ExecutionPolicy Bypass -File Tools\Animations\upgrade_outfit.ps1 -Outfit Rags -Model "<path to the new .fbx>"
+```
+
+1. **Rig (Blender, `rig_hq_outfit.py`).**
+   - The new model is reduced to about 250k triangles (`-TargetTris`); the textures carry the detail.
+   - It is scaled to the old model's height and stood on the same spot.
+   - It is turned whichever way lies closer to the old surface; the mean fit error is printed.
+   - It takes the old model's skin weights (nearest point on the old surface, at most 4 bones, normalised) and is bound to the old skeleton.
+   - It becomes the outfit's open-handed original. The old files are kept in `<outfit>\lowpoly`.
+2. **Textures (Unreal, `import_outfit_textures.py`).**
+   - The new base, metallic and roughness maps replace the old ones in place, so `M_<Outfit>` keeps using them.
+   - The normal map is added and wired in.
+   - Every sampler is matched to its texture's type; a colour sampler on a mask texture makes the material fail to compile and fall back to grey.
+3. **Fists and clips.** `fist_hands.ps1` bakes the fists, re-imports the mesh onto the skeleton and rebuilds the outfit's clips.
+
+Add `-Preview <folder>` to only render the fit (old in red, new in grey) and a posed test.
+
+`-HellgirlOutfitPreview=<Outfit>` (at camp, windowed) shows the outfit on its own, lit, from the front, three-quarters, behind and close on the face. The images go to `Saved/Screenshots/Outfit`.
+
+**Rags (2026-09-26):**
+- Meshy's "hellgirl human form" high-quality model: 1.95M triangles reduced to 250k.
+- It fits the old model to 0.8 cm on average.
+- All 27 clips rebuilt with a 0° fit error.

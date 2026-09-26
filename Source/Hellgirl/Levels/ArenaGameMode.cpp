@@ -342,6 +342,7 @@ void AArenaGameMode::Tick(float Dt)
     RunMapShot(Dt);
     RunQuickSlashCheck(Dt);
     RunEnemyModelPreview(Dt);
+    RunOutfitPreview(Dt);
     RunMiniSuccubusCheck(Dt);
     RunCourtFlyersCheck(Dt);
     // Falling ends the level: nothing it earned becomes Soul Coins.

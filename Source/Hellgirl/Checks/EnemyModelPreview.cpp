@@ -5,6 +5,8 @@
 #include "Animation/SkeletalMeshActor.h"
 #include "Animation/AnimSequence.h"
 #include "Camera/CameraActor.h"
+#include "Components/PointLightComponent.h"
+#include "Engine/PointLight.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -232,6 +234,73 @@ void AArenaGameMode::RunCourtFlyersCheck(float Dt)
         if (!Replaced) { Finish(false, TEXT("the killed flyer was not replaced")); return; }
         if (Hero->Health < Hero->MaxHealth) { Finish(false, TEXT("they hurt Hellgirl")); return; }
         Finish(true, TEXT("five flew and dived at Hellgirl for no damage; a killed one was replaced"));
+    }
+#endif
+}
+
+// -HellgirlOutfitPreview=<Outfit> (at camp, with a GPU): the outfit alone on the camp's edge, frozen a moment into its
+// idle, lit by a key and a fill light, photographed from the front, three-quarters and behind, and close on the face,
+// to Saved/Screenshots/Outfit/<Outfit>_<n>.png.
+void AArenaGameMode::RunOutfitPreview(float Dt)
+{
+#if WITH_DEV_AUTOMATION_TESTS
+    FString Outfit;
+    if (!FParse::Value(FCommandLine::Get(), TEXT("HellgirlOutfitPreview="), Outfit)) return;
+    static float Clock = 0.f;
+    static int32 Shot = -1;
+    static TWeakObjectPtr<ACameraActor> Camera;
+    Clock += Dt;
+    auto* PC = UGameplayStatics::GetPlayerController(this, 0);
+    if (!PC || Clock < 1.f) return;
+    const FVector Spot(-600.f, -300.f, 0.f); // open ground west of the campfire
+    if (Shot < 0)
+    {
+        Shot = 0;
+        if (APawn* Hero = PC->GetPawn()) Hero->SetActorLocation(FVector(600.f, 900.f, 110.f));
+        const FString Folder = FString::Printf(TEXT("/Game/Hellgirl/Outfits/%s/"), *Outfit);
+        auto* Mesh = LoadObject<USkeletalMesh>(nullptr, *(Folder + Outfit + TEXT(".") + Outfit));
+        auto* Idle = LoadObject<UAnimSequence>(nullptr, *(Folder + TEXT("Animations/Idle.Idle")));
+        if (!Mesh || !Idle) { UE_LOG(LogTemp, Error, TEXT("OUTFIT PREVIEW FAILED: no mesh or idle for %s"), *Outfit); FPlatformMisc::RequestExitWithStatus(false, 1); return; }
+        // Facing +X like the enemy rows (the models face +Y in their own space).
+        auto* Actor = GetWorld()->SpawnActor<ASkeletalMeshActor>(Spot, FRotator(0.f, -90.f, 0.f));
+        auto* Comp = Actor->GetSkeletalMeshComponent();
+        Comp->SetSkeletalMesh(Mesh);
+        Comp->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+        Comp->PlayAnimation(Idle, false);
+        Comp->Stop();
+        Comp->SetPosition(Idle->GetPlayLength() * .3f, false);
+        auto Light = [&](FVector At, float Intensity, FLinearColor Color)
+        {
+            auto* L = GetWorld()->SpawnActor<APointLight>(At, FRotator::ZeroRotator);
+            L->PointLightComponent->SetMobility(EComponentMobility::Movable);
+            L->PointLightComponent->SetIntensity(Intensity);
+            L->PointLightComponent->SetLightColor(Color);
+            L->PointLightComponent->SetAttenuationRadius(900.f);
+        };
+        Light(Spot + FVector(260.f, -200.f, 230.f), 30000.f, FLinearColor(1.f, .92f, .85f));
+        Light(Spot + FVector(200.f, 260.f, 150.f), 9000.f, FLinearColor(.75f, .82f, 1.f));
+        Light(Spot + FVector(-250.f, 0.f, 220.f), 12000.f, FLinearColor(.9f, .9f, 1.f));
+        Camera = GetWorld()->SpawnActor<ACameraActor>();
+        PC->SetViewTarget(Camera.Get());
+        return;
+    }
+    struct FView { FVector Eye; FVector Look; };
+    const FView Views[] = {
+        {Spot + FVector(330.f, 0.f, 100.f), Spot + FVector(0.f, 0.f, 90.f)},          // front
+        {Spot + FVector(240.f, -230.f, 110.f), Spot + FVector(0.f, 0.f, 90.f)},       // three-quarters
+        {Spot + FVector(-330.f, 0.f, 100.f), Spot + FVector(0.f, 0.f, 90.f)},         // back
+        {Spot + FVector(95.f, -25.f, 158.f), Spot + FVector(0.f, 0.f, 150.f)},        // face
+    };
+    if (!Camera.IsValid() || Shot >= static_cast<int32>(UE_ARRAY_COUNT(Views))) return;
+    Camera->SetActorLocationAndRotation(Views[Shot].Eye, (Views[Shot].Look - Views[Shot].Eye).Rotation());
+    if (Clock > 2.5f + Shot * 1.2f)
+    {
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/Outfit/%s_%d.png"), *Outfit, Shot), false, false);
+        if (++Shot >= static_cast<int32>(UE_ARRAY_COUNT(Views)))
+        {
+            UE_LOG(LogTemp, Display, TEXT("OUTFIT PREVIEW DONE"));
+            FPlatformMisc::RequestExitWithStatus(false, 0);
+        }
     }
 #endif
 }
