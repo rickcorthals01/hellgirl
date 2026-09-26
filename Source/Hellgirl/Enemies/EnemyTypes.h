@@ -23,6 +23,8 @@ struct FEnemyModelSlot
     UPROPERTY(EditAnywhere, Category="Animation") TSoftObjectPtr<UAnimSequence> Idle;
     UPROPERTY(EditAnywhere, Category="Animation") TSoftObjectPtr<UAnimSequence> Move;
     UPROPERTY(EditAnywhere, Category="Animation") TSoftObjectPtr<UAnimSequence> Attack;
+    // The goblins' quick slash; Attack plays when this is empty.
+    UPROPERTY(EditAnywhere, Category="Animation") TSoftObjectPtr<UAnimSequence> QuickAttack;
     UPROPERTY(EditAnywhere, Category="Animation") TSoftObjectPtr<UAnimSequence> Hit;
     UPROPERTY(EditAnywhere, Category="Animation") TSoftObjectPtr<UAnimSequence> Death;
     UPROPERTY(EditAnywhere, Category="Model") FVector Offset = FVector(0,0,-88);

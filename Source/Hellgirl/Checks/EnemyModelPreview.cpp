@@ -14,68 +14,124 @@
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
 
-// -HellgirlMiniSuccubusPreview (at camp, with a GPU): the mini succubus at her game size, five times in a row in the
-// air, each frozen in one of her flying clips (hover, fly, attack at contact, hit, end of death), with Hellgirl at the
-// end of the row for scale; photographed wide and close up to Saved/Screenshots/MiniSuccubus_*.png.
+// Preview modes (at camp, with a GPU): pages of five enemy models in a row, each frozen in a clip at a fraction of its
+// length, with Hellgirl near the row for scale; each page is photographed to Saved/Screenshots/<Name>_<Page>.png.
+//   -HellgirlMiniSuccubusPreview: the mini succubus in the air (hover, fly, attack at contact, hit, end of death),
+//    wide and close up.
+//   -HellgirlGoblinPreview: goblins on the ground, each page one clip from start to end: the dagger slash, the quick
+//    slash, the Goblin Queen's slash and the hit.
 void AArenaGameMode::RunEnemyModelPreview(float Dt)
 {
 #if WITH_DEV_AUTOMATION_TESTS
-    if (!FParse::Param(FCommandLine::Get(), TEXT("HellgirlMiniSuccubusPreview"))) return;
+    struct FShot { EHellgirlEnemyType Type; const TCHAR* Clip; float At; };
+    struct FPage { const TCHAR* Label; FShot Shots[5]; };
+    const bool bGoblins = FParse::Param(FCommandLine::Get(), TEXT("HellgirlGoblinPreview"));
+    if (!bGoblins && !FParse::Param(FCommandLine::Get(), TEXT("HellgirlMiniSuccubusPreview"))) return;
+    const TCHAR* Name = bGoblins ? TEXT("Goblin") : TEXT("MiniSuccubus");
     static float Clock = 0.f;
-    static int32 Step = 0;
+    static int32 Page = -1;
+    static float PageClock = 0.f;
+    static bool bPosed = false, bTaken = false;
+    static TArray<TWeakObjectPtr<ASkeletalMeshActor>> Actors;
     static TWeakObjectPtr<ACameraActor> Camera;
     Clock += Dt;
     auto* PC = UGameplayStatics::GetPlayerController(this, 0);
     if (!PC || Clock < 1.f) return;
-    const FString Folder = TEXT("/Game/Enemies/MiniSuccubus/");
-    const FEnemyModelSlot& Model = GetDefault<UHellgirlEnemyModels>()->ForType(EHellgirlEnemyType::MiniSuccubus);
-    if (Step == 0)
+    auto Fail = [Name](const FString& Why)
     {
-        Step = 1;
-        auto* Mesh = Model.Mesh.LoadSynchronous();
-        if (!Mesh) { UE_LOG(LogTemp, Error, TEXT("MINI SUCCUBUS PREVIEW FAILED: no mesh")); FPlatformMisc::RequestExitWithStatus(false, 1); return; }
+        UE_LOG(LogTemp, Error, TEXT("%s PREVIEW FAILED: %s"), Name, *Why);
+        FPlatformMisc::RequestExitWithStatus(false, 1);
+    };
+    using T = EHellgirlEnemyType;
+    const FShot Flyers[5] = {{T::MiniSuccubus, TEXT("Hover"), .25f}, {T::MiniSuccubus, TEXT("Fly"), .5f},
+        {T::MiniSuccubus, TEXT("Attack"), .6f}, {T::MiniSuccubus, TEXT("Hit"), .25f}, {T::MiniSuccubus, TEXT("Death"), 1.f}};
+    auto Sweep = [](T Type, const TCHAR* Clip, float A, float B, float C, float D, float E)
+    {
+        FPage Result{Clip, {{Type, Clip, A}, {Type, Clip, B}, {Type, Clip, C}, {Type, Clip, D}, {Type, Clip, E}}};
+        return Result;
+    };
+    TArray<FPage> Pages;
+    if (bGoblins)
+    {
+        // Each sweep passes through the clip's contact point (GoblinSlash .29, GoblinQuickSlash .57).
+        Pages.Add(Sweep(T::Goblins, TEXT("GoblinSlash"), 0.f, .15f, .2895f, .5f, .85f));
+        Pages.Add(Sweep(T::Goblins, TEXT("GoblinQuickSlash"), 0.f, .3f, .5714f, .75f, .95f));
+        Pages.Add(Sweep(T::GoblinQueen, TEXT("GoblinSlash"), 0.f, .15f, .2895f, .5f, .85f));
+        Pages.Add(Sweep(T::Goblins, TEXT("GoblinHit"), 0.f, .2f, .4f, .6f, .9f));
+        Pages[2].Label = TEXT("QueenSlash");
+    }
+    else
+    {
+        Pages.Add({TEXT("Row"), {Flyers[0], Flyers[1], Flyers[2], Flyers[3], Flyers[4]}});
+        Pages.Add({TEXT("Close"), {Flyers[0], Flyers[1], Flyers[2], Flyers[3], Flyers[4]}});
+    }
+    // Flyers hang in the air in a wide row; goblins stand on the ground (their capsule centre is 110, the model 88
+    // below it) in a tighter row.
+    const float Height = bGoblins ? 22.f : 120.f;
+    const float Spacing = bGoblins ? 150.f : 230.f;
+    const float First = bGoblins ? -300.f : -520.f;
+    if (Page == -2) return; // done
+    if (Page < 0)
+    {
         if (APawn* Hero = PC->GetPawn()) Hero->SetActorLocationAndRotation(FVector(250.f, 560.f, 110.f), FRotator::ZeroRotator);
-        struct FShot { const TCHAR* Clip; float At; };
-        const FShot Shots[] = {{TEXT("Hover"), .25f}, {TEXT("Fly"), .5f}, {TEXT("Attack"), .6f}, {TEXT("Hit"), .25f}, {TEXT("Death"), 1.f}};
-        for (int32 I = 0; I < UE_ARRAY_COUNT(Shots); ++I)
+        for (int32 I = 0; I < 5; ++I)
+            // Facing +X (the model slot's -90 yaw), toward the camera.
+            Actors.Add(GetWorld()->SpawnActor<ASkeletalMeshActor>(FVector(250.f, First + I * Spacing, Height), FRotator(0.f, -90.f, 0.f)));
+        Camera = GetWorld()->SpawnActor<ACameraActor>(FVector::ZeroVector, FRotator::ZeroRotator);
+        PC->SetViewTarget(Camera.Get());
+        Page = 0;
+    }
+    if (Page >= Pages.Num())
+    {
+        PageClock += Dt;
+        if (PageClock > .8f)
         {
-            // In the air in a row across the camp, facing +X (the model slot's -90 yaw), at her game scale.
-            auto* Actor = GetWorld()->SpawnActor<ASkeletalMeshActor>(FVector(250.f, -520.f + I * 230.f, 120.f), FRotator(0.f, -90.f, 0.f));
-            auto* Comp = Actor->GetSkeletalMeshComponent();
+            UE_LOG(LogTemp, Display, TEXT("%s PREVIEW DONE"), Name);
+            FPlatformMisc::RequestExitWithStatus(false, 0);
+            Page = -2;
+        }
+        return;
+    }
+    if (!Camera.IsValid()) return;
+    if (!bPosed)
+    {
+        // Pose this page's five models and aim the camera.
+        const FPage& P = Pages[Page];
+        for (int32 I = 0; I < 5; ++I)
+        {
+            const FEnemyModelSlot& Model = GetDefault<UHellgirlEnemyModels>()->ForType(P.Shots[I].Type);
+            auto* Mesh = Model.Mesh.LoadSynchronous();
+            if (!Mesh || !Actors[I].IsValid()) { Fail(TEXT("no mesh")); return; }
+            auto* Comp = Actors[I]->GetSkeletalMeshComponent();
             Comp->SetSkeletalMesh(Mesh);
-            Actor->SetActorScale3D(Model.Scale);
-            auto* Clip = LoadObject<UAnimSequence>(nullptr, *(Folder + TEXT("Animations/") + Shots[I].Clip + TEXT(".") + Shots[I].Clip));
-            if (!Clip) { UE_LOG(LogTemp, Error, TEXT("MINI SUCCUBUS PREVIEW FAILED: no clip %s"), Shots[I].Clip); FPlatformMisc::RequestExitWithStatus(false, 1); return; }
+            Actors[I]->SetActorScale3D(Model.Scale);
+            const FString Folder = FPaths::GetPath(Model.Mesh.ToSoftObjectPath().GetLongPackageName()) / TEXT("Animations/");
+            auto* Clip = LoadObject<UAnimSequence>(nullptr, *(Folder + P.Shots[I].Clip + TEXT(".") + P.Shots[I].Clip));
+            if (!Clip) { Fail(FString::Printf(TEXT("no clip %s"), P.Shots[I].Clip)); return; }
             Comp->SetAnimationMode(EAnimationMode::AnimationSingleNode);
             Comp->PlayAnimation(Clip, false);
             Comp->Stop();
-            Comp->SetPosition(Clip->GetPlayLength() * FMath::Min(Shots[I].At, .999f), false);
+            Comp->SetPosition(Clip->GetPlayLength() * FMath::Min(P.Shots[I].At, .999f), false);
         }
-        Camera = GetWorld()->SpawnActor<ACameraActor>(FVector(900.f, 20.f, 230.f), (FVector(250.f, 20.f, 130.f) - FVector(900.f, 20.f, 230.f)).Rotation());
-        PC->SetViewTarget(Camera.Get());
-        return;
+        const bool bClose = bGoblins || Page == 1;
+        const float Across = bGoblins ? 0.f : bClose ? -290.f : 20.f;
+        const FVector Eye(bGoblins ? 760.f : bClose ? 560.f : 900.f, Across, Height + (bGoblins ? 90.f : bClose ? 80.f : 110.f));
+        Camera->SetActorLocationAndRotation(Eye, (FVector(250.f, Across, Height + (bGoblins ? 45.f : bClose ? 30.f : 10.f)) - Eye).Rotation());
+        bPosed = true;
+        bTaken = false;
+        PageClock = 0.f;
     }
-    if (Step == 1 && Clock > 3.f)
+    PageClock += Dt;
+    if (!bTaken && PageClock > 1.2f)
     {
-        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / TEXT("Screenshots/MiniSuccubus_Row.png"), false, false);
-        Step = 2;
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/%s_%s.png"), Name, Pages[Page].Label), false, false);
+        bTaken = true;
     }
-    if (Step == 2 && Clock > 3.6f && Camera.IsValid())
+    if (bTaken && PageClock > 1.8f)
     {
-        // Close up on the hover, the fly and the attack.
-        Camera->SetActorLocationAndRotation(FVector(560.f, -290.f, 200.f), (FVector(250.f, -290.f, 150.f) - FVector(560.f, -290.f, 200.f)).Rotation());
-        Step = 3;
-    }
-    if (Step == 3 && Clock > 4.6f)
-    {
-        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / TEXT("Screenshots/MiniSuccubus_Close.png"), false, false);
-        Step = 4;
-    }
-    if (Step == 4 && Clock > 5.4f)
-    {
-        UE_LOG(LogTemp, Display, TEXT("MINI SUCCUBUS PREVIEW DONE"));
-        FPlatformMisc::RequestExitWithStatus(false, 0);
-        Step = 5;
+        ++Page;
+        bPosed = false;
+        PageClock = 0.f;
     }
 #endif
 }

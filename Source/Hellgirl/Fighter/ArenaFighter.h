@@ -90,6 +90,9 @@ public:
     float FilterEnemyDamage(float Damage);
     void UpdateGoblinTactics(float Dt, AArenaFighter* Player);
     EEnemyMove GetEnemyMove() const { return EnemyMove; }
+    // Checks only: the clip an enemy shows now, and the time left in its current attack.
+    const UAnimSequence* GetEnemyActiveAnimation() const { return EnemyActiveAnimation; }
+    float GetAttackClock() const { return AttackClock; }
     // Energy Hellgirl spends counts toward the level's Soul Coin bonus (Rules/SoulRewards.h).
     void NoteEnergySpent(float Amount);
     // Checks only: whether a perfect dodge right now would counter Enemy.
@@ -220,6 +223,7 @@ private:
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyIdleAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyMoveAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyAttackAnimation;
+    UPROPERTY() TObjectPtr<UAnimSequence> EnemyQuickAttackAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyHitAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyDeathAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyActiveAnimation;

@@ -357,6 +357,7 @@ void AArenaFighter::SetEnemyType(EHellgirlEnemyType Type)
             EnemyIdleAnimation = Model.Idle.LoadSynchronous();
             EnemyMoveAnimation = Model.Move.LoadSynchronous();
             EnemyAttackAnimation = Model.Attack.LoadSynchronous();
+            EnemyQuickAttackAnimation = Model.QuickAttack.LoadSynchronous();
             EnemyHitAnimation = Model.Hit.LoadSynchronous();
             EnemyDeathAnimation = Model.Death.LoadSynchronous();
             EnemyActiveAnimation = nullptr;
@@ -1073,7 +1074,8 @@ void AArenaFighter::UpdateEnemyAnimation(float Dt)
     const float Speed = GetVelocity().Size2D();
     const bool Moving = !Dead && !Attacking && !Hurt && Speed > 10.f && KnockdownClock <= 0.f;
     if (Dead && EnemyDeathAnimation) Clip = EnemyDeathAnimation.Get();
-    else if (Attacking) Clip = EnemyAttackAnimation.Get();
+    else if (Attacking)
+        Clip = EnemyMove == EEnemyMove::GoblinQuickSlash && EnemyQuickAttackAnimation ? EnemyQuickAttackAnimation.Get() : EnemyAttackAnimation.Get();
     else if (Hurt) Clip = EnemyHitAnimation.Get();
     else if (Moving && EnemyMoveAnimation) Clip = EnemyMoveAnimation.Get();
     if (EnemyActiveAnimation != Clip)
@@ -1086,8 +1088,9 @@ void AArenaFighter::UpdateEnemyAnimation(float Dt)
     const float Length = FMath::Max(Clip->GetPlayLength(), .01f);
     if (Attacking)
     {
-        // The authored claw contact is at 60%, matching EnemyClaw's damage event.
-        EnemyAnimationTime = FMath::Clamp(1.f - AttackClock / CurrentAttack.Duration, 0.f, 1.f) * Length;
+        // Clips with a recorded contact point (the goblins' Mixamo slashes) land it on the damage moment; the others
+        // are authored with their claw contact at 60%, matching EnemyClaw's damage event, and simply span the attack.
+        EnemyAnimationTime = AttackClipPosition(1.f - AttackClock / CurrentAttack.Duration, Clip);
     }
     else if (Hurt) EnemyAnimationTime = EnemyHitAnimationTime;
     else

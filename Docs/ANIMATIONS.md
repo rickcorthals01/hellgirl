@@ -87,3 +87,26 @@ The mini succubus is World III's mass enemy: small and flying only. She came fro
 - `MiniSuccubus` (headless, at camp): three of them take off, dive and hurt Hellgirl, and die when hit.
 - `-HellgirlMiniSuccubusPreview` (windowed): her clips in game, with Hellgirl for scale, saved to `Saved/Screenshots/MiniSuccubus_*.png`.
 - Blender renders of clips moved onto another armature are misleading. Judge animations in game.
+## Goblins (enemy)
+
+The Goblin and the Goblin Queen enemies use Hellgirl's 24-bone rig, so Mixamo clips fit them through the same Blender step. `Tools\Enemies\goblin_clips.ps1` rebuilds their combat clips from `Tools\Enemies\goblin_clips.json`:
+
+| Clip | Source | Used for |
+|---|---|---|
+| `GoblinSlash` | Great Sword Pack, `great sword slash` | The dagger slash (1.3 s); the Queen's attacks |
+| `GoblinQuickSlash` | Great Sword Pack, `great sword slash (3)`, frames 6–34 | The quick slash (0.5 s) |
+| `GoblinHit` | `Hit To Body`, frames 3–29 | Flinch when hit |
+
+The script:
+1. Fits the clips onto both rigs with `Tools\Animations\prepare_clips.py`.
+2. Writes each clip's contact point to `[HellgirlAnimationContact]` in `Config/DefaultGame.ini`.
+3. Imports the clips as `/Game/Enemies/Goblins/<Goblin|GoblinQueen>/Animations/<Clip>` (`import_goblin_clips.py`).
+
+**In game:**
+- The model slot's `Attack` clip plays for the dagger slash. `QuickAttack` plays for the quick slash; when it is empty, `Attack` plays instead.
+- An enemy attack clip with a recorded contact point is timed so that point lands on the damage moment. Other enemy clips simply span the attack.
+- Enemies ragdoll on death, so no death clip is needed.
+
+**Checks:**
+- `QuickSlash`: each goblin slash plays its own clip.
+- `-HellgirlGoblinPreview` (windowed): each clip from start to end on five goblins, saved to `Saved/Screenshots/Goblin_*.png`.

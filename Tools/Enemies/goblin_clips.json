@@ -1,0 +1,12 @@
+{
+  "_help": "Goblin enemy clips, fitted by Tools/Animations/prepare_clips.py onto the goblin rigs (same 24 bones as Hellgirl) and imported by import_goblin_clips.py as /Game/Enemies/Goblins/<Outfit>/Animations/<Clip>. Same options as Tools/Animations/clips.json. Rebuild with Tools/Enemies/goblin_clips.ps1.",
+  "outfits": {
+    "Goblin": "Animation Testing/GoblinEnemies/Goblin/Goblin.fbx",
+    "GoblinQueen": "Animation Testing/GoblinEnemies/GoblinQueen/GoblinQueen.fbx"
+  },
+  "clips": {
+    "GoblinSlash":      { "file": "Great Sword Pack/great sword slash.fbx", "strike": "RightHand" },
+    "GoblinQuickSlash": { "file": "Great Sword Pack/great sword slash (3).fbx", "strike": "RightHand", "trim": [6, 34] },
+    "GoblinHit":        { "file": "Hit To Body.fbx", "trim": [3, 29] }
+  }
+}

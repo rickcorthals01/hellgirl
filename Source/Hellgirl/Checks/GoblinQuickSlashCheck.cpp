@@ -1,6 +1,7 @@
 #include "Levels/ArenaGameMode.h"
 #include "Fighter/ArenaFighter.h"
 #include "Rules/EnemyTuning.h"
+#include "Animation/AnimSequence.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 #include "Misc/CommandLine.h"
@@ -8,7 +9,7 @@
 
 // -HellgirlQuickSlashCheck (at camp): one goblin next to a still Hellgirl. It must open with the quick slash, which
 // a perfect dodge cannot counter and which deals low damage; then use its dagger slash, and quick-slash again only
-// after its 6 s cooldown.
+// after its 6 s cooldown. Each slash must play its own clip (GoblinQuickSlash, GoblinSlash).
 void AArenaGameMode::RunQuickSlashCheck(float Dt)
 {
 #if WITH_DEV_AUTOMATION_TESTS
@@ -43,6 +44,18 @@ void AArenaGameMode::RunQuickSlashCheck(float Dt)
     if (Move != LastMove && Move != EEnemyMove::None) { Moves.Add({Move, Now}); if (Move == EEnemyMove::GoblinQuickSlash && QuickDamage < 0.f) HealthAtQuick = Hero->Health; }
     if (LastMove == EEnemyMove::GoblinQuickSlash && Move != EEnemyMove::GoblinQuickSlash && QuickDamage < 0.f) QuickDamage = HealthAtQuick - Hero->Health;
     if (Move == EEnemyMove::GoblinQuickSlash) bCounterable |= Hero->CouldCounter(Goblin.Get());
+    // Each move plays its own clip while it winds up and strikes (from the frame after it began).
+    if (Move == LastMove && Goblin->GetAttackClock() > 0.f && (Move == EEnemyMove::GoblinQuickSlash || Move == EEnemyMove::GoblinSlash))
+    {
+        const UAnimSequence* Clip = Goblin->GetEnemyActiveAnimation();
+        const TCHAR* Want = Move == EEnemyMove::GoblinQuickSlash ? TEXT("GoblinQuickSlash") : TEXT("GoblinSlash");
+        if (!Clip || Clip->GetName() != Want)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Quick slash check: playing %s during %s"), Clip ? *Clip->GetName() : TEXT("nothing"), Want);
+            Finish(false, TEXT("a goblin attack played the wrong clip"));
+            return;
+        }
+    }
     LastMove = Move;
     if (Now < 14.f) return;
     int32 Quick = 0, Slash = 0;
