@@ -74,6 +74,7 @@ public:
     void RunQuickSlashCheck(float Dt);
     void RunEnemyModelPreview(float Dt);
     void RunMiniSuccubusCheck(float Dt);
+    void RunCourtFlyersCheck(float Dt);
     void RescueStragglers(class AArenaFighter* Hero, float Dt);
     void StartEndless();
     // Soul portal menu choices: continue to the next wave, stock the Souls as Soul Coins, or (endless / exit) leave.
@@ -153,6 +154,10 @@ private:
     void TrackLevelSouls(float Dt);
     int32 ScriptStep = -1;
     int32 EndlessWaveStart = 0; // first spawn site of the current endless wave
+    // Succubus Court: mini succubi flying about for reviewing their animations (harmless, respawning).
+    TArray<TWeakObjectPtr<class AArenaFighter>> CourtFlyers;
+    TArray<float> CourtFlyerRespawn;
+    void TickCourtFlyers(float Dt);
     bool bWave50Tried = false;
     TArray<int32> UpgradeLevels, PortalOffers;
     TArray<bool> OfferSold;

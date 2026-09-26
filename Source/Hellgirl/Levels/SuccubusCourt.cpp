@@ -269,15 +269,49 @@ void AArenaGameMode::TickSuccubusCourt(float Dt)
     RunSuccubusCourtCheck();
     auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
     if (!Hero || !Hero->IsAlive()) return;
-    Objective = TEXT("THE SUCCUBUS COURT / Map preview: no enemies yet");
+    Objective = TEXT("THE SUCCUBUS COURT / Mini succubi for review: they attack but do no harm");
     Prompt.Empty();
     PromptAction = 0;
+    TickCourtFlyers(Dt);
     if (Hero->GetCharacterMovement()->IsMovingOnGround()) LastSafePosition = Hero->GetActorLocation() + FVector(0, 0, 10);
     // Safety net only: the walls and wards keep the player inside.
     if (Hero->GetActorLocation().Z < -600.f)
     {
         Hero->SetActorLocation(Court::PlayerStart, false, nullptr, ETeleportType::TeleportPhysics);
         Hero->ResetAfterRecovery();
+    }
+}
+
+// For reviewing the mini succubus's animations: five fly about the court, hover and dive at Hellgirl but deal no
+// damage (their attacks carry none). One that is killed ragdolls like any enemy and a fresh one comes a few seconds
+// later. (The court's own map check runs without them.)
+void AArenaGameMode::TickCourtFlyers(float Dt)
+{
+    if (FParse::Param(FCommandLine::Get(), TEXT("HellgirlCourtCheck"))) return;
+    constexpr int32 Count = 5;
+    constexpr float RespawnSeconds = 4.f;
+    CourtFlyers.SetNum(Count);
+    CourtFlyerRespawn.SetNum(Count);
+    for (int32 I = 0; I < Count; ++I)
+    {
+        AArenaFighter* Flyer = CourtFlyers[I].Get();
+        if (Flyer && Flyer->IsAlive()) continue;
+        CourtFlyerRespawn[I] += Dt;
+        // The first ones arrive at once; a killed one after its ragdoll has had a moment on the floor.
+        if (Flyer && CourtFlyerRespawn[I] < RespawnSeconds) continue;
+        if (Flyer) Flyer->Destroy();
+        CourtFlyerRespawn[I] = 0.f;
+        // Across the court between the entrance and the pool, in the air.
+        const FVector At(-1700.f + (I % 2) * 350.f, -700.f + I * 350.f, 320.f);
+        FActorSpawnParameters Params;
+        Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+        auto* Fresh = GetWorld()->SpawnActor<AArenaFighter>(At, FRotator(0.f, 180.f, 0.f), Params);
+        if (!Fresh) continue;
+        Fresh->MakeEnemy(1, false);
+        Fresh->SetEnemyType(EHellgirlEnemyType::MiniSuccubus);
+        Fresh->AttackDamage = 0.f;  // harmless: every attack of hers is sized from this
+        Fresh->HomePosition = At;
+        CourtFlyers[I] = Fresh;
     }
 }
 

@@ -138,3 +138,44 @@ void AArenaGameMode::RunMiniSuccubusCheck(float Dt)
     Finish(true, FString::Printf(TEXT("three flew (highest %.0f cm), dived, dealt %.0f damage, half scale, died when hit"), Highest, Hurt));
 #endif
 }
+
+// -HellgirlCourtFlyersCheck (Succubus Court): the five review mini succubi fly about and dive at Hellgirl without
+// taking any health, and one that is killed is replaced a few seconds later.
+void AArenaGameMode::RunCourtFlyersCheck(float Dt)
+{
+#if WITH_DEV_AUTOMATION_TESTS
+    if (!bSuccubusCourt || !FParse::Param(FCommandLine::Get(), TEXT("HellgirlCourtFlyersCheck"))) return;
+    static float Clock = 0.f;
+    static bool bDived = false, bKilled = false;
+    static TWeakObjectPtr<AArenaFighter> Victim;
+    Clock += Dt;
+    auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
+    if (!Hero) return;
+    auto Finish = [](bool Passed, const FString& Why)
+    {
+        if (Passed) { UE_LOG(LogTemp, Display, TEXT("COURT FLYERS CHECK PASSED: %s"), *Why); }
+        else { UE_LOG(LogTemp, Error, TEXT("COURT FLYERS CHECK FAILED: %s"), *Why); }
+        FPlatformMisc::RequestExitWithStatus(false, Passed ? 0 : 1);
+    };
+    for (const auto& Flyer : CourtFlyers)
+        if (Flyer.IsValid() && Flyer->IsAlive()) bDived |= Flyer->GetEnemyMove() == EEnemyMove::FlyingDive;
+    if (Clock > 12.f && !bKilled)
+    {
+        int32 Alive = 0;
+        for (const auto& Flyer : CourtFlyers) Alive += Flyer.IsValid() && Flyer->IsAlive() && Flyer->bFlyingEnemy;
+        if (Alive != 5) { Finish(false, FString::Printf(TEXT("%d of 5 flyers"), Alive)); return; }
+        if (!bDived) { Finish(false, TEXT("none dived at Hellgirl")); return; }
+        if (Hero->Health < Hero->MaxHealth) { Finish(false, FString::Printf(TEXT("they hurt Hellgirl (%.0f health)"), Hero->Health)); return; }
+        Victim = CourtFlyers[0];
+        Victim->ApplyPhysicsDamage(1000000.f, FVector::ZeroVector);
+        bKilled = true;
+    }
+    if (bKilled && Clock > 18.f)
+    {
+        const bool Replaced = CourtFlyers[0].IsValid() && CourtFlyers[0] != Victim && CourtFlyers[0]->IsAlive();
+        if (!Replaced) { Finish(false, TEXT("the killed flyer was not replaced")); return; }
+        if (Hero->Health < Hero->MaxHealth) { Finish(false, TEXT("they hurt Hellgirl")); return; }
+        Finish(true, TEXT("five flew and dived at Hellgirl for no damage; a killed one was replaced"));
+    }
+#endif
+}

@@ -337,6 +337,7 @@ void AArenaGameMode::Tick(float Dt)
     RunQuickSlashCheck(Dt);
     RunEnemyModelPreview(Dt);
     RunMiniSuccubusCheck(Dt);
+    RunCourtFlyersCheck(Dt);
     // Falling ends the level: nothing it earned becomes Soul Coins.
     if (const auto* Hero=Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this,0)); Hero && !Hero->IsAlive() && !bPlayerDeathHandled && !bForestHub)
     {
