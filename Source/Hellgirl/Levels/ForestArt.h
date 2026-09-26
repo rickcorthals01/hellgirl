@@ -24,6 +24,8 @@ AStaticMeshActor* Stand(UWorld* World, UStaticMesh* Mesh, FVector2D Where, float
 // Height of the forest floor (flat inside the clearing, rising behind the tree line).
 float GroundHeight(FVector2D P);
 void Ground(UWorld* World, float Extent, float TileSize, UMaterialInterface* Material);
+// The same with another map's height function.
+void Ground(UWorld* World, float Extent, float TileSize, UMaterialInterface* Material, TFunctionRef<float(FVector2D)> Height);
 void NightSky(UWorld* World, FVector MoonDirection);
 // Moon, fill and sky light, volumetric fog and colour grading for a moonlit night.
 void Moonlight(UWorld* World, FRotator MoonLight, float Fog);

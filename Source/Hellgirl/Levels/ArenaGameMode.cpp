@@ -47,15 +47,16 @@ void AArenaGameMode::BeginPlay()
     CampaignLevel = FMath::Clamp(UGameplayStatics::GetIntOption(OptionsString,TEXT("CampaignLevel"),1),1,4);
     bSuccubusCourt = UGameplayStatics::GetIntOption(OptionsString,TEXT("SuccubusCourt"),0)==1;
     bForestRun = !bSuccubusCourt && UGameplayStatics::GetIntOption(OptionsString,TEXT("ForestRun"),0)==1;
-    bForestHub = !bSuccubusCourt && !bForestRun && (UGameplayStatics::GetIntOption(OptionsString,TEXT("ForestHub"),0)==1
+    bGraveyard = !bSuccubusCourt && !bForestRun && UGameplayStatics::GetIntOption(OptionsString,TEXT("Graveyard"),0)==1;
+    bForestHub = !bSuccubusCourt && !bForestRun && !bGraveyard && (UGameplayStatics::GetIntOption(OptionsString,TEXT("ForestHub"),0)==1
         || (GetUnlockedLevel()>=2 && !UGameplayStatics::HasOption(OptionsString,TEXT("StageMap")) && !UGameplayStatics::HasOption(OptionsString,TEXT("CampaignLevel"))));
-    bEndless = !bForestHub && !bLegacyMap && !bSuccubusCourt && !bForestRun && CampaignLevel==2 && UGameplayStatics::GetIntOption(OptionsString,TEXT("Endless"),0)==1;
-    bStoryEnabled=!bForestHub && !bLegacyMap && !bSuccubusCourt && !bForestRun && !bEndless && CampaignLevel<=3
+    bEndless = !bForestHub && !bLegacyMap && !bSuccubusCourt && !bForestRun && !bGraveyard && CampaignLevel==2 && UGameplayStatics::GetIntOption(OptionsString,TEXT("Endless"),0)==1;
+    bStoryEnabled=!bForestHub && !bLegacyMap && !bSuccubusCourt && !bForestRun && !bGraveyard && !bEndless && CampaignLevel<=3
         && (!FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl")) || FParse::Param(FCommandLine::Get(),TEXT("HellgirlStoryCheck")));
     // Souls picked up in a level count toward it (Rules/SoulRewards.h); at camp pickups are Soul Coins.
     if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance())) Wallet->bInLevel=!bForestHub;
     if (bForestHub) BuildForestHub(); else BuildArena();
-    LastSafePosition = bForestHub ? FVector(-550.f,0.f,110.f) : bSuccubusCourt ? FVector(-2600.f,0.f,115.f) : bForestRun ? FVector(-2150.f,0.f,115.f)
+    LastSafePosition = bForestHub ? FVector(-550.f,0.f,110.f) : bSuccubusCourt ? FVector(-2600.f,0.f,115.f) : bForestRun ? FVector(-2150.f,0.f,115.f) : bGraveyard ? FVector(-4900.f,0.f,115.f)
         : ((CampaignLevel==2 && !bLegacyMap) || IsImpArena() ? FVector(0.f,0.f,115.f) : FVector(-5000.f,0.f,115.f));
     if (APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0))
     {
@@ -65,7 +66,7 @@ void AArenaGameMode::BeginPlay()
     }
     const bool ExplicitDestination=UGameplayStatics::HasOption(OptionsString,TEXT("StageMap"))
         || UGameplayStatics::HasOption(OptionsString,TEXT("CampaignLevel")) || UGameplayStatics::HasOption(OptionsString,TEXT("ForestHub"))
-        || bSuccubusCourt || bForestRun;
+        || bSuccubusCourt || bForestRun || bGraveyard;
     bShowStartupMenu=!ExplicitDestination && (!FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl")) || FParse::Param(FCommandLine::Get(),TEXT("HellgirlMainMenuCheck")));
 }
 AStaticMeshActor* AArenaGameMode::Prop(FVector Position, FVector Scale, FLinearColor Color, bool Sphere)
@@ -134,6 +135,7 @@ void AArenaGameMode::BuildArena()
     // The Court builds its own lighting and atmosphere.
     if (bSuccubusCourt) { BuildSuccubusCourt(); return; }
     if (bForestRun) { BuildForestRun(); return; }
+    if (bGraveyard) { BuildGraveyard(); return; }
     if (IsImpArena()) BuildImpArena();
     else if (MapNumber == 1)
     {
@@ -271,6 +273,7 @@ void AArenaGameMode::RestartMap()
 {
     // A forest run ends at camp, whether Hellgirl died or finished it (a new run gets a new seed).
     if (bForestRun) { if (GetUnlockedLevel()>=2) TravelToHub(); else StartForestRun(); return; }
+    if (bGraveyard) { TravelToGraveRoom(GraveSeed, GraveRoomNumber); return; }
     // An endless run is over once Hellgirl falls (or restarts): back to camp.
     if (bEndless) { TravelToHub(); return; }
     if (bForestHub) { TravelToHub(); return; } if (bSuccubusCourt) { TravelToSuccubusCourt(); return; } if (bLegacyMap) Travel(MapNumber); else TravelToCampaign(CampaignLevel); }
@@ -352,6 +355,7 @@ void AArenaGameMode::Tick(float Dt)
     if (bForestHub) { TickForestHub(Dt); return; }
     if (bSuccubusCourt) { TickSuccubusCourt(Dt); return; }
     if (bForestRun) { RunForestRunCheck(); TickForestRun(Dt); return; }
+    if (bGraveyard) { RunGraveyardCheck(Dt); TickGraveyard(Dt); return; }
     RunGoblinStageCheck();
     if (!bLegacyMap && CampaignLevel==1) { TickGoblinPrelude(Dt); return; }
     if (!bLegacyMap && CampaignLevel<=3) { RunCampaignCheck(Dt); RunMapVisualCheck(Dt); RunTerrainCheck(Dt); RunMapCheck(Dt); TickGoblinWaves(Dt); return; }

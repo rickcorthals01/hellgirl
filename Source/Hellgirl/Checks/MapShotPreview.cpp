@@ -22,7 +22,7 @@ void AArenaGameMode::RunMapShot(float Dt)
     Clock += Dt;
     auto* PC = UGameplayStatics::GetPlayerController(this, 0);
     if (!PC || Shot > 2) return;
-    const FString Name = bForestHub ? TEXT("Hub") : bForestRun ? TEXT("ForestRun") : bSuccubusCourt ? TEXT("Court")
+    const FString Name = bForestHub ? TEXT("Hub") : bForestRun ? TEXT("ForestRun") : bGraveyard ? TEXT("Graveyard") : bSuccubusCourt ? TEXT("Court")
         : IsImpArena() ? TEXT("ImpArena") : FString::Printf(TEXT("Stage%d_Level%d"), MapNumber, CampaignLevel);
     // -MapShotEmitters=/Game/A.A;/Game/B.B: plays each particle effect in front of Hellgirl, captured shortly after.
     FString EmitterList;

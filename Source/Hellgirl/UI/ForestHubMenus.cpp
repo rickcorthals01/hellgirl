@@ -76,7 +76,8 @@ public:
         // World III: the court can be walked; its fight comes later.
         AddStage(3,CourtPreview,TEXT("THE COURT  /  MAP PREVIEW"),TEXT("Walk the court · no enemies yet"),true);
         AddStage(3,ComingLater,TEXT("THE SUCCUBUS QUEEN  /  COMING LATER"),TEXT("Succubi · the Succubus Queen"),false);
-        // World IV: the lower circles of hell (to be designed).
+        // World IV: the ghosts' graveyard can be walked (random rooms); the ghosts come later.
+        AddStage(4,GraveyardPreview,TEXT("THE GRAVEYARD  /  MAP PREVIEW"),TEXT("Four random rooms under the full moon · no enemies yet"),true);
         AddStage(4,ComingLater,TEXT("THE LOWER CIRCLES  /  COMING LATER"),TEXT("Ghosts · the Ghost King"),false);
         // World V: the Imp arena (campaign level 4).
         AddStage(5,4,TEXT("STAGE I  /  TORTURE ARENA"),TEXT("Five Imp waves · Imp Commander"),Unlocked>=4);
@@ -186,6 +187,7 @@ private:
                     if (!Owner.IsValid()) return FReply::Handled();
                     if (Level==CourtPreview) { Owner->ResumeGame(); if (GM) GM->TravelToSuccubusCourt(); }
                     else if (Level==ForestRun) { Owner->ResumeGame(); if (GM) GM->StartForestRun(); }
+                    else if (Level==GraveyardPreview) { Owner->ResumeGame(); if (GM) GM->StartGraveyard(); }
                     else if (Level==Endless) { Owner->ResumeGame(); if (GM) GM->StartEndless(); }
                     else if (Level>=1 && Level<=Unlocked && Level<=4) { Owner->ResumeGame(); if (GM) GM->TravelToCampaign(Level); }
                     return FReply::Handled(); })[Card]];
@@ -207,6 +209,7 @@ private:
     static constexpr int32 CourtPreview=100;  // World III's court, a map preview
     static constexpr int32 ForestRun=101;     // the random-rooms forest run (out of the game for now)
     static constexpr int32 Endless=102;       // endless goblin waves in the Stage 2 arena
+    static constexpr int32 GraveyardPreview=103; // World IV's graveyard, a map preview (random rooms)
     static constexpr int32 ComingLater=-1;    // a stage still to be designed
     TSharedPtr<SButton> BackButton;
 };

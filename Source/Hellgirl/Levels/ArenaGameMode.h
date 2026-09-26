@@ -62,6 +62,16 @@ public:
     void ShowForestExit(bool Open);
     void RunMapShot(float Dt);
     void RunForestRunCheck();
+    // World IV graveyard (URL option Graveyard=1?Seed=N?Room=R): randomised rooms, see Levels/Graveyard.cpp. Map only for now.
+    bool bGraveyard = false;
+    int32 GraveSeed = 1, GraveRoomNumber = 1;
+    void StartGraveyard();
+    void TravelToGraveRoom(int32 Seed, int32 Room);
+    void BuildGraveyard();
+    void BuildGraveyardScenery();
+    // Returns true once Hellgirl steps into the crypt (and travels on, except in the check).
+    bool TickGraveyard(float Dt);
+    void RunGraveyardCheck(float Dt);
     // World I Stages 2 and 3 and the endless mode follow the scripts in Levels/GoblinWaves.cpp:
     // waves, conversations and soul portals in order, then the exit portal.
     bool bEndless = false;
@@ -169,4 +179,5 @@ private:
     TArray<FVector4> ForestThorns; // X, Y, radius
     UPROPERTY() TObjectPtr<AStaticMeshActor> ForestExitMarker;
     UPROPERTY() TObjectPtr<class APointLight> ForestExitLight;
+    UPROPERTY() TObjectPtr<class APointLight> GraveExitLight;
 };

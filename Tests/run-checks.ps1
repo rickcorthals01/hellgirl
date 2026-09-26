@@ -38,6 +38,7 @@ $checks = @(
     @('MiniSuccubus', '/Engine/Maps/Entry?ForestHub=1', 60),
     @('CourtFlyers',  '/Engine/Maps/Entry?SuccubusCourt=1', 60),
     @('Court',          '/Engine/Maps/Entry?SuccubusCourt=1', 60),
+    @('Graveyard',      '/Engine/Maps/Entry?Graveyard=1?Seed=4242?Room=1', 60), @('Graveyard', '/Engine/Maps/Entry?Graveyard=1?Seed=77?Room=4', 60, $null, 'Graveyard4'),
     # Random forest rooms: the planner over many seeds, then one fight room and the boss room as built.
     @('Combo',          '/Engine/Maps/Entry?ForestRun=1?Seed=5?Room=1', 60),
     @('ForestRun',      '/Engine/Maps/Entry?ForestRun=1?Seed=4242?Room=2', 60), @('ForestRun', '/Engine/Maps/Entry?ForestRun=1?Seed=4242?Room=4', 60),

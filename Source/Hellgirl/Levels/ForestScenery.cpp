@@ -89,6 +89,11 @@ float GroundHeight(FVector2D P)
 
 void Ground(UWorld* World, float Extent, float TileSize, UMaterialInterface* Material)
 {
+    Ground(World, Extent, TileSize, Material, [](FVector2D P) { return GroundHeight(P); });
+}
+
+void Ground(UWorld* World, float Extent, float TileSize, UMaterialInterface* Material, TFunctionRef<float(FVector2D)> HeightAt)
+{
     auto* Actor = World->SpawnActor<AActor>();
     auto* Mesh = NewObject<UProceduralMeshComponent>(Actor);
     Actor->SetRootComponent(Mesh);
@@ -104,9 +109,9 @@ void Ground(UWorld* World, float Extent, float TileSize, UMaterialInterface* Mat
         for (int32 X = 0; X <= Cells; ++X)
         {
             const FVector2D P(-Extent + X * Step, -Extent + Y * Step);
-            Vertices.Add(FVector(P.X, P.Y, GroundHeight(P)));
-            const float DX = GroundHeight(P + FVector2D(20.f, 0.f)) - GroundHeight(P - FVector2D(20.f, 0.f));
-            const float DY = GroundHeight(P + FVector2D(0.f, 20.f)) - GroundHeight(P - FVector2D(0.f, 20.f));
+            Vertices.Add(FVector(P.X, P.Y, HeightAt(P)));
+            const float DX = HeightAt(P + FVector2D(20.f, 0.f)) - HeightAt(P - FVector2D(20.f, 0.f));
+            const float DY = HeightAt(P + FVector2D(0.f, 20.f)) - HeightAt(P - FVector2D(0.f, 20.f));
             Normals.Add(FVector(-DX, -DY, 40.f).GetSafeNormal());
             UVs.Add(P / TileSize);
         }
