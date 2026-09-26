@@ -103,7 +103,12 @@ public:
     int32 SwampWave = 0, SwampWaveCount = 0;
     float SwampWaveClock = 0.f, SwampIntroClock = 0.f;
     TArray<int32> SwampWaveOfSite;     // which wave each spawn site belongs to
-    TArray<FName> SwampWaveAfter;      // the conversation after each wave
+    TArray<FName> SwampWaveAfter;      // the conversation after each wave (with a blue portal: when she steps into it)
+    TArray<bool> SwampWavePortal;      // whether a blue portal opens after each wave
+    // The fixed point (in the room's five areas, west to east) that a swamp wave comes from.
+    FVector SwampAreaPoint(int32 Area, int32 Side) const;
+    // Where a blue portal can stand near Hellgirl, clear of the zombie arms.
+    FVector SwampPortalSpot(const FVector& Near) const;
     UPROPERTY() TObjectPtr<class ACameraActor> SwampCamera;
     // World I Stages 2 and 3 and the endless mode follow the scripts in Levels/GoblinWaves.cpp:
     // waves, conversations and soul portals in order, then the exit portal.
@@ -192,6 +197,7 @@ private:
     UPROPERTY() TObjectPtr<class AWavePortal> ExitGate;
     FName OpenPortalId;          // the soul portal step now standing (its id is added to PlayedStory on Continue)
     FName OpenPortalIntro;       // its help text, which plays before the portal can be used
+    bool bPortalIntroOnEnter = false; // the help text waits until she steps into the portal (the swamp's)
     bool bPortalMenuDeclined = false;
     bool bLevelCompleted = false;
     bool bPlayerDeathHandled = false;

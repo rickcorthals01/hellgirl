@@ -173,7 +173,8 @@ void AArenaGameMode::TickPortalMenus(AArenaFighter* Hero)
     auto* PC = Cast<AHellgirlPlayerController>(Hero->GetController());
     const FVector Where = Hero->GetActorLocation();
     AWavePortal* Near = SoulPortal && SoulPortal->IsNear(Where) ? SoulPortal.Get() : ExitGate && ExitGate->IsNear(Where) ? ExitGate.Get() : nullptr;
-    // A portal with help text waits until it has been read.
+    // A portal with help text waits until it has been read. The swamp's portals speak once she steps into them.
+    if (Near == SoulPortal && IsPortalIntroPending() && bPortalIntroOnEnter) QueueStory(OpenPortalIntro);
     if (!Near || (Near == SoulPortal && IsPortalIntroPending())) { bPortalMenuDeclined = false; return; }
     Prompt = TEXT("E / Y  open the portal");
     // Walking into the portal opens its menu; after closing it, E / Y opens it again.

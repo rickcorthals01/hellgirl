@@ -54,7 +54,7 @@ constexpr float FrogHopUp = 720.f, FrogHopForward = 520.f;  // launch speeds (cm
 constexpr float FrogPunchSeconds = .45f, FrogPunchDamageScale = .6f, FrogPunchReach = 175.f;
 constexpr float FrogAirPunchSeconds = .4f, FrogAirPunchDamageScale = .6f;
 constexpr float FrogSlamSeconds = 1.1f, FrogSlamDamageScale = 1.4f, FrogSlamRadius = 320.f, FrogSlamBlast = 520.f;
-constexpr float FrogSlamCooldown = 5.f, FrogSlamEnemyDamage = 6.f, FrogSlamEnemyPush = 420.f;
+constexpr float FrogSlamCooldown = 6.f, FrogSlamEnemyDamage = 6.f, FrogSlamEnemyPush = 420.f;
 constexpr int32 FrogAttackSlots = 3;
 // The Frog King (the swamp run's mini-boss): a bigger frog that hops higher and slams more often and wider.
 constexpr float FrogKingHealth = 750.f, FrogKingSlamCooldown = 2.8f, FrogKingSlamRadius = 460.f;
