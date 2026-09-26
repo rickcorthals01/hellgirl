@@ -1,6 +1,6 @@
 // World II's stages in the swamp (Developer idea folder, "Dialog and Story/05, 06 and 07 Swamps Stage ..."):
 //   Stage I: a six-second camera overview of the swamp, the Goblin Queen's intro, ten waves of rats and frogs. Blue
-//     portals open after waves 2, 6 and 9; each plays her conversation when Hellgirl steps in, then its menu
+//     portals open after waves 2, 5, 7 and 9; all but wave 7's play her conversation when Hellgirl steps in, then its menu
 //     (continue, stock Souls, upgrades). After wave 10, the purple portal.
 //   Stage II: a run of ten swamp rooms; her lines at rooms 1, 5, 7 and 10. Room 10 is the Frog King's (the mini-boss,
 //     on his giant lily pad, with a guard of rats and frogs); beating it brings her last line and the purple portal.
@@ -36,8 +36,8 @@ struct FWave { int32 Area; int32 Side; int32 Rats; int32 Frogs; const TCHAR* Aft
 const FWave StageOne[] = {
     {0, 0, 3, 0, nullptr, false}, {0, 1, 4, 0, TEXT("S1_Portal1"), true},   // the first mud: rats
     {1, 0, 3, 1, nullptr, false}, {1, 1, 4, 2, nullptr, false},             // the start of the water: mostly rats
-    {2, 0, 0, 3, nullptr, false}, {2, 1, 0, 4, TEXT("S1_Portal2"), true},   // the middle of the water: frogs
-    {3, 0, 2, 4, nullptr, false}, {3, 1, 2, 5, nullptr, false},             // nearing the mud: mostly frogs
+    {2, 0, 0, 3, TEXT("S1_Portal2"), true}, {2, 1, 0, 4, nullptr, false},   // the middle of the water: frogs
+    {3, 0, 2, 4, nullptr, true}, {3, 1, 2, 5, nullptr, false},              // nearing the mud: mostly frogs
     {4, 0, 4, 4, TEXT("S1_Portal3"), true}, {4, 1, 6, 5, nullptr, false}};  // the last mud: rats and frogs
 const FWave StageThree[] = {{1, 0, 5, 2, nullptr, false}, {3, 1, 4, 4, TEXT("S3_Doorway"), false}};
 constexpr int32 RunRooms = 10;
@@ -347,7 +347,7 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
     }
     const int32 Expected = SwampStage == 1 ? UE_ARRAY_COUNT(StageOne) : SwampStage == 3 ? UE_ARRAY_COUNT(StageThree) : SwampWaveCount;
     const bool WantLight = SwampStage == 2 && SwampRoomNumber < RunRooms;
-    const TArray<int32> WantPortals = SwampStage == 1 ? TArray<int32>{2, 6, 9} : TArray<int32>{};
+    const TArray<int32> WantPortals = SwampStage == 1 ? TArray<int32>{2, 5, 7, 9} : TArray<int32>{};
     UE_LOG(LogTemp, Display, TEXT("Swamp stage check: stage %d room %d: %d waves, %d blue portals, light %d, portal %d"), SwampStage, SwampRoomNumber, Waves,
         PortalsAfter.Num(), LightOpen, ExitGate && ExitGate->IsOpen());
     if (Waves != Expected || (SwampStage == 2 && (Waves < 3 || Waves > 5 || (King && Waves != 5))))
@@ -355,7 +355,7 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
     if (PortalsAfter != WantPortals) { Finish(false, FString::Printf(TEXT("%d blue portals, not after the right waves"), PortalsAfter.Num())); return; }
     if (WantLight != LightOpen || (!WantLight && !(ExitGate && ExitGate->IsOpen()))) { Finish(false, TEXT("the way out did not open")); return; }
     Finish(true, FString::Printf(TEXT("stage %d room %d: %d waves of rats and frogs from their points%s%s, then %s"), SwampStage, SwampRoomNumber, Waves,
-        King ? TEXT(" with the Frog King") : TEXT(""), PortalsAfter.Num() ? TEXT(", blue portals after waves 2, 6 and 9") : TEXT(""),
+        King ? TEXT(" with the Frog King") : TEXT(""), PortalsAfter.Num() ? TEXT(", blue portals after waves 2, 5, 7 and 9") : TEXT(""),
         WantLight ? TEXT("the light to the next room") : TEXT("the purple portal")));
 #endif
 }
