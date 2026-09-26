@@ -126,13 +126,13 @@ void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
         Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::RatPunchSeconds,.6f,AttackDamage*EnemyTuning::RatPunchDamageScale,EnemyTuning::RatPunchReach,160.f,0.f,0};
         Recovery=EnemyTuning::RatPunchRecovery; Label=Move==EEnemyMove::RatPunch ? TEXT("RAT / PUNCH") : TEXT("RAT / SECOND PUNCH"); break;
     case EEnemyMove::FrogPunch:
-        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::FrogPunchSeconds,.6f,AttackDamage*EnemyTuning::FrogPunchDamageScale,EnemyTuning::FrogPunchReach,90.f,0.f,0};
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::FrogPunchSeconds,.6f,AttackDamage*EnemyTuning::FrogDamage*EnemyTuning::FrogPunchDamageScale,EnemyTuning::FrogPunchReach,90.f,0.f,0};
         Recovery=.3f; Label=TEXT("FROG / PUNCH"); break;
     case EEnemyMove::FrogAirPunch:
-        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::FrogAirPunchSeconds,.6f,AttackDamage*EnemyTuning::FrogAirPunchDamageScale,200.f,120.f,0.f,0};
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::FrogAirPunchSeconds,.6f,AttackDamage*EnemyTuning::FrogDamage*EnemyTuning::FrogAirPunchDamageScale,200.f,120.f,0.f,0};
         Recovery=.25f; Label=TEXT("FROG / AIR PUNCH"); break;
     case EEnemyMove::FrogSlam:
-        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::FrogSlamSeconds,.6f,AttackDamage*EnemyTuning::FrogSlamDamageScale,
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::FrogSlamSeconds,.6f,AttackDamage*EnemyTuning::FrogDamage*EnemyTuning::FrogSlamDamageScale,
             EnemyType==EHellgirlEnemyType::FrogKing ? EnemyTuning::FrogKingSlamRadius : EnemyTuning::FrogSlamRadius,EnemyTuning::FrogSlamBlast,0.f,0};
         Recovery=.5f; Label=TEXT("FROG / SLAM"); break;
     case EEnemyMove::QueenMelee:

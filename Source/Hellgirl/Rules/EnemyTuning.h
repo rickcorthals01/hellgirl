@@ -49,6 +49,8 @@ constexpr int32 RatAttackSlots = 4;
 // World II, the frog: always hopping, fast and high. On the ground a quick punch (0.45 s, low damage); in the air a
 // punch when level with Hellgirl, or a slam straight down onto her from high up: medium damage in a circle, a small
 // blast that pushes her back, and a smaller hit and push for other enemies caught in it.
+// Every frog hit on Hellgirl (punch, air punch, slam; the Frog King too) is scaled by FrogDamage: 15% less, playtest 2026-09-26.
+constexpr float FrogDamage = .85f;
 constexpr float FrogHopMin = .3f, FrogHopMax = .75f;       // pause on the ground between hops
 constexpr float FrogHopUp = 720.f, FrogHopForward = 520.f;  // launch speeds (cm/s)
 constexpr float FrogPunchSeconds = .45f, FrogPunchDamageScale = .6f, FrogPunchReach = 175.f;
