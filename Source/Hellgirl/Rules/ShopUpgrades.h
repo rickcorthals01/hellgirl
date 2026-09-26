@@ -5,7 +5,7 @@
 // The goblin's shop at camp (2026-09-26 design): Soul Coins buy the energy moves and permanent stat upgrades. Unlike
 // the soul portal upgrades (Rules/PortalUpgrades.h) these are kept for good, in the wallet save.
 // - Energy moves start locked (the ultimates do not). A locked move falls back to a basic hit: a held heavy does not
-//   charge, an air heavy or the air combo's last hit is a plain air kick, dodge + heavy and the ground combos' last
+//   charge, air + heavy does nothing, the air combo's last hit is a plain air kick, dodge + heavy and the ground combos' last
 //   hits are a plain heavy.
 // - Stat upgrades are bought one level at a time, each at the same price, up to a cap.
 namespace HellgirlShop

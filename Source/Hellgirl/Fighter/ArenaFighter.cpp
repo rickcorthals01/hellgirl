@@ -515,10 +515,17 @@ void AArenaFighter::StartAttack(bool Heavy)
         const auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance());
         const bool Owned = !Wallet || Wallet->OwnsMove(RequestedAttack.Type);
         bShopLocked = !Owned;
+        // Air + heavy does nothing at all until Sky Slam is bought.
+        if (RequestedAttack.Type == FistCombat::Move::AirSlam && !Owned)
+        {
+            BufferClock = 0.f;
+            MoveLabel = TEXT("SKY SLAM  ·  LOCKED: BUY IT AT THE GOBLIN'S SHOP");
+            MoveLabelClock = 1.5f;
+            return;
+        }
         // Normal input stays useful even when the aerial combo reaches its
         // area finisher without enough energy. Repeat a basic kick instead.
-        if ((RequestedAttack.Type == FistCombat::Move::AirCrashKick && (!Owned || Energy < HellgirlEnergy::Cost(RequestedAttack.Type)))
-            || (RequestedAttack.Type == FistCombat::Move::AirSlam && !Owned))
+        if (RequestedAttack.Type == FistCombat::Move::AirCrashKick && (!Owned || Energy < HellgirlEnergy::Cost(RequestedAttack.Type)))
         {
             RequestedAttack = FistCombat::Select(false, 2, true, false);
             RequestedAttack.NextCombo = 0;

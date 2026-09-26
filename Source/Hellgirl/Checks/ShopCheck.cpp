@@ -12,7 +12,8 @@
 // -HellgirlShopCheck (in the swamp map, where attacks are on): the goblin's shop (Rules/ShopUpgrades.h).
 // - Prices, caps and Soul Harvest's steps (2.5%, 2.5%, then 1% up to 30%); a harvested drop rounds by chance.
 // - Buying takes the price, stops at the cap and needs the coins (in memory only: checks never write the wallet).
-// - With nothing bought each energy move falls back to a basic hit and a held heavy does not charge; once bought,
+// - With nothing bought each energy move falls back to a basic hit (air + heavy does nothing) and a held heavy does
+//   not charge; once bought,
 //   each comes out as itself.
 // - Stat levels give Hellgirl more health, damage and speed when she spawns; enemies never get them.
 struct FShopCheck
@@ -101,7 +102,8 @@ struct FShopCheck
         Wallet->ShopLevels.Reset();
         if (!Wallet->OwnsMove(Move::RightPunch)) return TEXT("a free move counts as locked");
         for (const Move M : EnergyMoves)
-            if (const Move Got = Swing(Hero, M); Got == M || Got == Move::EnemyClaw) return FString::Printf(TEXT("locked move %d did not fall back to a basic hit"), static_cast<int32>(M));
+            // A locked Sky Slam does nothing at all; the others fall back to a basic hit.
+            if (const Move Got = Swing(Hero, M); M == Move::AirSlam ? Got != Move::EnemyClaw : (Got == M || Got == Move::EnemyClaw)) return FString::Printf(TEXT("locked move %d did not fall back to a basic hit"), static_cast<int32>(M));
         if (Charges(Hero)) return TEXT("a held heavy charged without Charge");
         // Bought moves.
         Wallet->ShopLevels.SetNumZeroed(Count);

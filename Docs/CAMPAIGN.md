@@ -172,7 +172,7 @@ Replaces the carried-souls rules above.
 | Crash Kick (the air combo's 4th hit) | 300 |
 | Whirlwind (the sword combo's 4th hit) | 1500 |
 
-- **Locked moves** fall back to a basic hit, with a "LOCKED: BUY IT AT THE GOBLIN'S SHOP" note under the move name. A held heavy does not charge; an air heavy and the air combo's last hit are an air kick; dodge + heavy and the ground combos' last hits are a plain heavy. The ultimates are never locked.
+- **Locked moves** fall back to a basic hit, with a "LOCKED: BUY IT AT THE GOBLIN'S SHOP" note under the move name. A held heavy does not charge; air + heavy does nothing; the air combo's last hit is an air kick; dodge + heavy and the ground combos' last hits are a plain heavy. The ultimates are never locked.
 - **Permanent upgrades** (each level at the same price):
 
 | Upgrade | Per level | Cap | Price |
