@@ -41,7 +41,7 @@ FString UHellgirlWallet::SaveSlot(int32 Slot)
     auto* Hero=Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this,0));
     auto* PC=Cast<AHellgirlPlayerController>(UGameplayStatics::GetPlayerController(this,0));
     if (Slot<1 || Slot>3 || !GM || !Hero || !Hero->IsAlive() || bLoadFailed || GM->bLegacyMap) return TEXT("Cannot save here.");
-    if (GM->bEndless || GM->bForestRun || GM->bGraveyard) return TEXT("Runs cannot be saved.");
+    if (GM->bEndless || GM->bForestRun || GM->bGraveyard || GM->bSwamp) return TEXT("Runs cannot be saved.");
     if (Hero->GetUltimateTime()>0.f || !Hero->GetCharacterMovement()->IsMovingOnGround() || (PC && PC->IsDialogueOpen())
         || GM->SurrenderedQueen.IsValid() || !GM->PendingStory.IsEmpty()) return TEXT("Finish the current action before saving.");
     for (auto Site:GM->GetSpawnSites()) if (Site->bActivated && !Site->bCleared) return TEXT("Finish this wave before saving.");

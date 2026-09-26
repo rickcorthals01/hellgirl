@@ -119,7 +119,7 @@ void Strip(UWorld* World, FVector2D From, FVector2D To, float HalfWidth, float T
 }
 
 // A flat sheet of drifting mist at height Z (M_GraveMist, see import_graveyard.py).
-void MistSheet(UWorld* World, float Z, float Extent, float TileSize, float Opacity, float Speed)
+void MistSheet(UWorld* World, float Z, float Extent, float TileSize, float Opacity, float Speed, FLinearColor Color)
 {
     auto* Actor = World->SpawnActor<AActor>();
     auto* Mesh = NewObject<UProceduralMeshComponent>(Actor);
@@ -141,6 +141,7 @@ void MistSheet(UWorld* World, float Z, float Extent, float TileSize, float Opaci
         Mist->SetScalarParameterValue(TEXT("Opacity"), Opacity);
         Mist->SetScalarParameterValue(TEXT("Speed0"), Speed);
         Mist->SetScalarParameterValue(TEXT("Speed1"), Speed * 1.3f);
+        Mist->SetVectorParameterValue(TEXT("MistColor"), Color);
         Mesh->SetMaterial(0, Mist);
     }
 }

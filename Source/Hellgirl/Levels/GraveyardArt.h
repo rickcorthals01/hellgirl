@@ -21,4 +21,8 @@ UMaterialInterface* Material(const TCHAR* Name);
 UHierarchicalInstancedStaticMeshComponent* Batch(UWorld* World, UStaticMesh* Mesh, bool Collide, float Sway, float CullDistance = 0.f);
 // Height of the ground: flat inside the wall, rising into wooded hills outside it.
 float GroundHeight(FVector2D P);
+// A flat strip of a tiling material from From to To with ragged edges (world-space UVs).
+void Strip(UWorld* World, FVector2D From, FVector2D To, float HalfWidth, float TileSize, UMaterialInterface* Material, float Z, int32 Seed);
+// A flat sheet of drifting mist at height Z (M_GraveMist).
+void MistSheet(UWorld* World, float Z, float Extent, float TileSize, float Opacity, float Speed, FLinearColor Color = FLinearColor(.16f, .19f, .24f));
 }

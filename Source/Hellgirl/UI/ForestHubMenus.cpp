@@ -71,8 +71,9 @@ public:
             *FString::Printf(TEXT("Waves that never stop · best wave %d"),HellgirlProgress::EndlessBest()),true);
         // The forest run (random rooms, Levels/ForestRun.cpp) is out of the game for now; its code stays for later:
         // AddStage(1,ForestRun,TEXT("FOREST RUN  /  RANDOM ROOMS"),TEXT("Three random clearings, then the Queen · dying ends the run"),true);
-        // World II: the swamp (to be designed).
-        AddStage(2,ComingLater,TEXT("THE SWAMP  /  COMING LATER"),TEXT("Rats and frogs · the Rat Queen and the Frog King"),false);
+        // World II: the swamp can be walked (random corridors); the Rat Queen's own boss area comes later.
+        AddStage(2,SwampPreview,TEXT("THE SWAMP  /  MAP PREVIEW"),TEXT("Four random stretches of swamp · the Frog King's lily pad · no enemies yet"),true);
+        AddStage(2,ComingLater,TEXT("THE RAT QUEEN  /  COMING LATER"),TEXT("Rats · the Rat Queen's lair"),false);
         // World III: the court can be walked; its fight comes later.
         AddStage(3,CourtPreview,TEXT("THE COURT  /  MAP PREVIEW"),TEXT("Walk the court · no enemies yet"),true);
         AddStage(3,ComingLater,TEXT("THE SUCCUBUS QUEEN  /  COMING LATER"),TEXT("Succubi · the Succubus Queen"),false);
@@ -188,6 +189,7 @@ private:
                     if (Level==CourtPreview) { Owner->ResumeGame(); if (GM) GM->TravelToSuccubusCourt(); }
                     else if (Level==ForestRun) { Owner->ResumeGame(); if (GM) GM->StartForestRun(); }
                     else if (Level==GraveyardPreview) { Owner->ResumeGame(); if (GM) GM->StartGraveyard(); }
+                    else if (Level==SwampPreview) { Owner->ResumeGame(); if (GM) GM->StartSwamp(); }
                     else if (Level==Endless) { Owner->ResumeGame(); if (GM) GM->StartEndless(); }
                     else if (Level>=1 && Level<=Unlocked && Level<=4) { Owner->ResumeGame(); if (GM) GM->TravelToCampaign(Level); }
                     return FReply::Handled(); })[Card]];
@@ -210,6 +212,7 @@ private:
     static constexpr int32 ForestRun=101;     // the random-rooms forest run (out of the game for now)
     static constexpr int32 Endless=102;       // endless goblin waves in the Stage 2 arena
     static constexpr int32 GraveyardPreview=103; // World IV's graveyard, a map preview (random rooms)
+    static constexpr int32 SwampPreview=104;     // World II's swamp, a map preview (random corridors)
     static constexpr int32 ComingLater=-1;    // a stage still to be designed
     TSharedPtr<SButton> BackButton;
 };

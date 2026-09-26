@@ -72,6 +72,24 @@ public:
     // Returns true once Hellgirl steps into the crypt (and travels on, except in the check).
     bool TickGraveyard(float Dt);
     void RunGraveyardCheck(float Dt);
+    // World II swamp (URL option Swamp=1?Seed=N?Room=R): randomised corridors, see Levels/Swamp.cpp. Map only for now.
+    bool bSwamp = false;
+    int32 SwampSeed = 1, SwampRoomNumber = 1;
+    void StartSwamp();
+    void TravelToSwampRoom(int32 Seed, int32 Room);
+    void BuildSwamp();
+    void BuildSwampScenery();
+    // Returns true once Hellgirl reaches the light at the end (and travels on, except in the check).
+    bool TickSwamp(float Dt);
+    void RunSwampCheck(float Dt);
+    // A ripple ring (Size 1 is a footstep) and Droplets flung up at Where on the water.
+    void SwampSplash(FVector Where, float Size, int32 Droplets);
+    struct FSwampArm { TWeakObjectPtr<AStaticMeshActor> Actor; TWeakObjectPtr<class APointLight> Light; FVector2D P = FVector2D::ZeroVector; float Phase = 0.f, Rate = 1.f, Yaw = 0.f, Scale = 1.f, Rise = 0.f; };
+    struct FSwampRipple { TWeakObjectPtr<AStaticMeshActor> Actor; TWeakObjectPtr<class UMaterialInstanceDynamic> Material; FVector Velocity = FVector::ZeroVector; float Age = 0.f, Life = 0.f, Size = 1.f; bool bDroplet = false; };
+    TArray<FSwampArm> SwampArms;
+    TArray<FSwampRipple> SwampRipples;
+    float SwampWaterStart = 0.f, SwampWaterEnd = 0.f, SwampClock = 0.f, SwampStepClock = 0.f, SwampHurtClock = 0.f, SwampLastSpeed = 0.f;
+    bool bSwampWasFalling = false;
     // World I Stages 2 and 3 and the endless mode follow the scripts in Levels/GoblinWaves.cpp:
     // waves, conversations and soul portals in order, then the exit portal.
     bool bEndless = false;
