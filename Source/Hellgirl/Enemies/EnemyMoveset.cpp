@@ -326,8 +326,6 @@ void AArenaFighter::DrawEnemyMoveTelegraph()
     }
     else
         DrawDebugDirectionalArrow(GetWorld(),GetActorLocation(),GetActorLocation()+GetActorForwardVector()*CurrentAttack.Range,35.f,Cue,false,-1.f,0,4.f);
-    DrawDebugString(GetWorld(),GetActorLocation()+FVector(0,0,GetCapsuleComponent()->GetScaledCapsuleHalfHeight()+90.f),
-        WindingUp ? MoveLabel : TEXT("RECOVERING"),nullptr,Cue,0.f,true,1.f);
 }
 
 bool AArenaFighter::UpdateImpTactics(float Dt, AArenaFighter* Player)

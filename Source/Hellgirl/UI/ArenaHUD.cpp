@@ -86,7 +86,7 @@ void AArenaHUD::DrawHUD()
     }
 
     // ---- Top left: where you are and what to do. ----
-    Wash(0.f, 14.f, 520.f, GM->Prompt.IsEmpty() ? 70.f : 94.f);
+
     Say(GM->MapTitle, Gold, 28.f, 20.f, 1.35f);
     Say(GM->Objective, Parchment, 28.f, 50.f);
     if (!GM->Prompt.IsEmpty()) Say(GM->Prompt, Ember, 28.f, 74.f);
@@ -165,9 +165,9 @@ void AArenaHUD::DrawHUD()
             break;
         }
 
-    // ---- Bottom left: health, energy tubes, stamina, and what the energy can buy. ----
+    // ---- Bottom left: health, energy tubes and stamina, with no box behind them. ----
     const float VX = 28.f, VW = FMath::Min(360.f, W - 56.f), VY = H - 112.f;
-    Wash(0.f, VY - 12.f, VW + 140.f, 108.f);
+
     const float Life = Player->Health / FMath::Max(Player->MaxHealth, 1.f);
     const FLinearColor LifeColor = Life < .3f ? FLinearColor(1.f, .2f, .12f) * (.8f + .2f * FMath::Sin(Now * 9.0)) : Blood;
     Bar(VX, VY, VW, 18.f, Life, LifeColor);
@@ -178,14 +178,6 @@ void AArenaHUD::DrawHUD()
     for (int32 Tube = 0; Tube < 4; ++Tube)
         Bar(VX + Tube * (TubeW + Gap), VY + 28.f, TubeW, 9.f, EnergyAmount / (EnergyCapacity / 4.f) - Tube, Ember);
     Bar(VX, VY + 45.f, VW, 4.f, Player->Stamina / 100.f, Teal);
-    auto Ability = [&](const TCHAR* Name, float Cost, float X)
-    {
-        const bool Ready = EnergyAmount >= Cost;
-        Say(Name, Ready ? Ember : Ash, X, VY + 58.f, .85f, Ready ? 1.f : .7f);
-    };
-    Ability(TEXT("CHARGE"), HellgirlEnergy::ChargeCost, VX);
-    Ability(TEXT("SLAM"), HellgirlEnergy::SlamCost, VX + 80.f);
-    Say(Player->GetWeapon() == 1 ? TEXT("SWORD") : TEXT("FISTS"), Ash, VX + 140.f, VY + 58.f, .85f);
     if (Player->GetUltimateTime() > 0.f)
         Say(FString::Printf(TEXT("ULTIMATE  %.1f"), Player->GetUltimateTime()), FLinearColor(.85f, .6f, 1.f), VX, VY - 28.f, 1.15f);
     else if (Player->HasUltimate() && EnergyAmount >= EnergyCapacity)

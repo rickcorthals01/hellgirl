@@ -154,10 +154,6 @@ void AArenaFighter::UpdateCombatPhysics(float Dt)
                 KnockdownClock=FMath::Max(KnockdownClock,.5f);
             }
         }
-        // A shared area budget can be partly or fully spent; don't display
-        // the uncapped raw damage as if it had been dealt again.
-        DrawDebugString(GetWorld(),Impact.Hit.ImpactPoint+FVector(0,0,80),Impact.Budget.IsValid() ? TEXT("IMPACT")
-            : FString::Printf(TEXT("IMPACT +%d"),FMath::RoundToInt(Damage)),nullptr,FColor(255,190,90),.65f,true);
     }
     if (bCombatLaunched)
     {

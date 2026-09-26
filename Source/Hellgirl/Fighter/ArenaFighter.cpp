@@ -1059,8 +1059,6 @@ void AArenaFighter::Tick(float Dt)
             const bool WindingUp = !bHitResolved;
             const FColor Cue = WindingUp ? FColor::Orange : FColor::Red;
             DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation() + GetActorForwardVector() * CurrentAttack.Range, 35.f, Cue, false, -1.f, 0, 4.f);
-            if (WindingUp)
-                DrawDebugString(GetWorld(), GetActorLocation() + FVector(0.f, 0.f, 165.f), TEXT("ATTACK INCOMING"), nullptr, Cue, 0.f, true, 1.2f);
         }
         if (bFlyingEnemy && KnockdownClock <= 0.f && !bCombatLaunched) GetCharacterMovement()->SetMovementMode(MOVE_Flying);
         AArenaFighter* Player = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
