@@ -136,6 +136,7 @@ private:
     UPROPERTY() TObjectPtr<UBossBehavior> BossBehavior;
     // Boss behaviours drive the enemy move state (clocks, moves, cooldowns) directly.
     friend class UGoblinQueenBehavior;
+    friend struct FShopCheck;
     friend class UImpCommanderBehavior;
     int32 ActiveUltimate = -1;
     float UltimateClock = 0.f;

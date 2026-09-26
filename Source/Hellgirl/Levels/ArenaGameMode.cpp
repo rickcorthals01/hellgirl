@@ -344,6 +344,7 @@ void AArenaGameMode::Tick(float Dt)
     }
     RunMapShot(Dt);
     RunQuickSlashCheck(Dt);
+    RunShopCheck(Dt);
     RunSwampEnemyCheck(Dt);
     RunEnemyModelPreview(Dt);
     RunOutfitPreview(Dt);
