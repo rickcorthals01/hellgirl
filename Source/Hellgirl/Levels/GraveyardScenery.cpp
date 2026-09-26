@@ -157,11 +157,14 @@ void Night(UWorld* World, float MoonYaw, float Mist)
         if (auto* Sky = UMaterialInstanceDynamic::Create(Material(TEXT("M_GraveSky")) ? Material(TEXT("M_GraveSky"))
                 : LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Environment/Materials/M_ForestSky.M_ForestSky")), Dome))
         {
-            Sky->SetVectorParameterValue(TEXT("MoonDir"), FLinearColor(-MoonLight.Vector()));
+            // The disc sits lower than the light comes from (10 degrees up), so the huge moon rises over the tree line
+            // behind the crypt inside the normal play view; the light keeps a steeper angle for readable shadows.
+            Sky->SetVectorParameterValue(TEXT("MoonDir"), FLinearColor(FRotator(10.f, MoonYaw, 0.f).Vector()));
             Sky->SetVectorParameterValue(TEXT("Zenith"), FLinearColor(.003f, .005f, .014f));
             Sky->SetVectorParameterValue(TEXT("Horizon"), FLinearColor(.025f, .036f, .06f));
             Sky->SetVectorParameterValue(TEXT("MoonColor"), FLinearColor(.86f, .92f, 1.f));
             Sky->SetScalarParameterValue(TEXT("MoonBrightness"), 9.f);
+            Sky->SetScalarParameterValue(TEXT("MoonSize"), .085f); // radians: a huge, storybook moon (the real one is .0045)
             Dome->GetStaticMeshComponent()->SetMaterial(0, Sky);
         }
     }

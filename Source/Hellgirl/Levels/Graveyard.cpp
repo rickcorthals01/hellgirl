@@ -138,6 +138,7 @@ void AArenaGameMode::RunGraveyardCheck(float Dt)
             {FVector(700.f, -700.f, 700.f), FVector(2800.f, -2800.f, 0.f)},
             {FVector(3600.f, -500.f, 380.f), FVector(Half, 0.f, 250.f)},            // the crypt
             {FVector(-2000.f, 600.f, 350.f), FVector(1500.f, -300.f, 150.f)},       // a low view across the yard to the moon
+            {FVector(-5350.f, 0.f, 330.f), FVector(-5350.f, 0.f, 330.f) + FRotator(-20.f, 0.f, 0.f).Vector() * 1000.f}, // the play camera at the gate
         };
         const FView& View = Views[FMath::Min(Shot, static_cast<int32>(UE_ARRAY_COUNT(Views)) - 1)];
         Camera->SetActorLocationAndRotation(View.Eye, (View.Look - View.Eye).Rotation());
