@@ -54,3 +54,22 @@ The outfits have no finger bones, so the hands can't be posed by animations. `To
 If you re-run `flatten_feet.ps1` on an outfit, run `fist_hands.ps1` for it again afterwards (delete its `openhands` copy first so the new flat-footed model becomes the source).
 
 To check feet in game: `... -game -HellgirlFeetPreview` films the equipped outfit side-on and logs its stored sole heights (`FEET MESH` line in the log).
+
+## Mini succubus (enemy)
+
+The mini succubus (World III's mass enemy) came from Meshy as an unrigged T-pose mesh. `Tools\Enemies\rig_mini_succubus.ps1` rigs her and brings her into the game in three steps:
+
+1. **Rig (Blender, `rig_mini_succubus.py`).** Hellgirl's 24-bone skeleton is fitted onto her, so the Mixamo clips above fit her unchanged.
+   - Joint heights, the arm line and the depth of each joint are measured from her mesh.
+   - Her legs are modelled together. The mesh is cut along the centre line below the crotch and each leg's cut side is closed, and each side follows only its own leg, so a stride doesn't stretch a web between them.
+   - Her wings sit behind her arms. They are cut out by position (the arm is the tube in front of the wing membrane) and get three bones per side (`LeftWing1`–`3`, `RightWing1`–`3`) on her upper back.
+   - The rest of the body gets Blender's automatic weights.
+2. **Clips (Blender, `Tools/Animations/prepare_clips.py` with `mini_succubus_clips.json`).** Idle, Walk, Run, Attack (the right punch), Hit and Death. The wing bones are listed under `follow_parent_bones`: the clips have no wing bones, so the wings keep their pose on her back. A flap animation can be added later.
+3. **Import (Unreal, `import_mini_succubus.py`).** Creates `/Game/Enemies/MiniSuccubus/MiniSuccubus` with its own skeleton and physics asset, and `M_MiniSuccubus`: her Meshy textures with normal and emission maps, two-sided for the wing membrane, plus an `EmissiveStrength` parameter. The clips go to `/Game/Enemies/MiniSuccubus/Animations`.
+
+**Checking the result:**
+- `-Preview <folder>` renders a weight map (one colour per bone) and a test pose from Blender.
+- `/Engine/Maps/Entry?ForestHub=1 -game -windowed -HellgirlMiniSuccubusPreview` shows her six clips in game and saves `Saved/Screenshots/MiniSuccubus_Row.png` and `_Close.png`.
+- Blender renders of clips moved onto another armature are misleading: they show the arms straight out, even for Hellgirl. Trust the in-game preview.
+
+She isn't an enemy type in the game yet.

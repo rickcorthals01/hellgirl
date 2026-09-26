@@ -69,7 +69,9 @@ def retarget(target, name, parts, mirrored, out_path, strike=None, contact=None,
     scene = bpy.context.scene
     bones = sorted(target.data.bones, key=depth)
     root = bones[0].name
-    src_names = {b.name: (mirror_name(b.name) if mirrored else b.name) for b in bones}
+    # Bones the clips have no counterpart for (e.g. an enemy's wings) keep their rest pose relative to their parent.
+    follow = set(cfg.get("follow_parent_bones", []))
+    src_names = {b.name: (mirror_name(b.name) if mirrored else b.name) for b in bones if b.name not in follow}
     T_world = target.matrix_world
     T_world_rot_inv = rot3(T_world).inverted()
     T_world_inv = T_world.inverted()
@@ -91,6 +93,8 @@ def retarget(target, name, parts, mirrored, out_path, strike=None, contact=None,
         S_world = source.matrix_world
         src_rest = {}
         for b in bones:
+            if b.name in follow:
+                continue
             r = rot3(S_world @ source.data.bones[src_names[b.name]].matrix_local)
             src_rest[b.name] = MIRROR @ r @ MIRROR if mirrored else r
         src_root_head = (S_world @ source.data.bones[src_names[root]].matrix_local).translation
@@ -105,7 +109,10 @@ def retarget(target, name, parts, mirrored, out_path, strike=None, contact=None,
         for f in frames:
             scene.frame_set(f)
             delta = {}
-            for b in bones:
+            for b in bones:  # parents first, so a following bone can take its parent's change
+                if b.name in follow:
+                    delta[b.name] = delta[b.parent.name]
+                    continue
                 r = rot3(S_world @ source.pose.bones[src_names[b.name]].matrix)
                 delta[b.name] = (MIRROR @ r @ MIRROR if mirrored else r) @ src_rest[b.name].inverted()
             hips = (S_world @ source.pose.bones[src_names[root]].matrix).translation
