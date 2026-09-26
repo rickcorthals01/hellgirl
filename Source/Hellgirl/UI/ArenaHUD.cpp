@@ -222,15 +222,8 @@ void AArenaHUD::DrawHUD()
         else if (Combo.IsSpamming()) Say(TEXT("VARY YOUR MOVES"), Ember, CX, CY + 36.f, .85f, .75f + .25f * FMath::Sin(Now * 7.0));
     }
 
-    // ---- Centre: move callouts pop up and fade. ----
-    if (Player->MoveLabel != ShownLabel) { ShownLabel = Player->MoveLabel; LabelShownAt = Now; }
-    const float LabelAge = static_cast<float>(Now - LabelShownAt);
-    if (!ShownLabel.IsEmpty() && LabelAge < 1.4f)
-    {
-        const float Fade = LabelAge < 1.f ? 1.f : 1.f - (LabelAge - 1.f) / .4f;
-        const bool Loud = ShownLabel.Contains(TEXT("CRITICAL")) || ShownLabel.Contains(TEXT("THORNS")) || ShownLabel.Contains(TEXT("BLOCKED"));
-        Centered(ShownLabel, Loud ? Ember : Parchment, H * .68f - FMath::Min(LabelAge, .3f) * 30.f, Loud ? 1.3f : 1.05f, Fade);
-    }
+    // Move callouts (the fighter's MoveLabel: move names, "LOCKED", "NEED ENERGY" ...) are no longer shown
+    // (2026-09-26); the fighter still sets them for the checks.
 
     // ---- A story tip (e.g. the ultimate unlocking), in a band across the upper screen. ----
     if (FPlatformTime::Seconds() < GM->TipUntil && !GM->Tip.IsEmpty())

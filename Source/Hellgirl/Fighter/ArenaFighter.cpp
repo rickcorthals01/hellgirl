@@ -347,7 +347,7 @@ void AArenaFighter::SetEnemyType(EHellgirlEnemyType Type)
     SetActorLabel(Name);
 #endif
     EnemyNameLabel->SetText(FText::FromString(Name));
-    EnemyNameLabel->SetVisibility(true);
+    // The name floating above enemies is no longer shown (2026-09-26).
     const FEnemyModelSlot& Model = GetDefault<UHellgirlEnemyModels>()->ForType(Type);
     if (USkeletalMesh* EnemyMesh = Model.Mesh.LoadSynchronous())
     {
