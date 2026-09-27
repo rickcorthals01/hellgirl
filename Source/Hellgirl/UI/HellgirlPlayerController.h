@@ -25,6 +25,8 @@ public:
     // The soul portal between waves (continue / stock souls / upgrades) or the exit portal (leave for camp?).
     void OpenPortalMenu(bool bExit);
     void OpenSaveMenu();
+    // After Hellgirl falls: TRY AGAIN or RETURN TO CAMP (UI/DeathMenu.cpp).
+    void OpenDeathMenu(const FString& Title, const FString& Detail);
     // While the open menu stays up, keeps gamepad focus on a usable button: when the focused one is disabled (bought,
     // sold) or hidden (a list swapped for another), focus moves to the menu's first usable button.
     void KeepMenuFocus();

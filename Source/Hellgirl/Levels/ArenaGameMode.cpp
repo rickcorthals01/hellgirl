@@ -355,8 +355,18 @@ void AArenaGameMode::Tick(float Dt)
     if (const auto* Hero=Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this,0)); Hero && !Hero->IsAlive() && !bPlayerDeathHandled && !bForestHub)
     {
         bPlayerDeathHandled=true;
+        DeathMenuClock=1.5f;
         if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance())) Wallet->LoseLevel();
     }
+    // A moment after she falls, the death menu (not in automated checks, which go on after a fall).
+    if (bPlayerDeathHandled && DeathMenuClock>0.f && (DeathMenuClock-=Dt)<=0.f && !HellgirlProgress::IsAutomated())
+        if (auto* PC=Cast<AHellgirlPlayerController>(UGameplayStatics::GetPlayerController(this,0)))
+        {
+            if (PC->IsPauseMenuOpen()) DeathMenuClock=.2f;
+            else if (bEndless) PC->OpenDeathMenu(TEXT("THE HORDE WINS"),FString::Printf(TEXT("Wave %d  ·  best %d"),EndlessWave,HellgirlProgress::EndlessBest()));
+            else PC->OpenDeathMenu(TEXT("YOU FELL"),bForestRun || (bSwamp && SwampStage==2) ? TEXT("The run is over. Trying again starts a new run.")
+                : TEXT("The Souls you carried are lost."));
+        }
     TrackLevelSouls(Dt);
     if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance()); Wallet && Wallet->PendingLoad) Wallet->RestorePending();
     if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance()); Wallet && Wallet->RunSaveCheck()) return;
@@ -506,4 +516,12 @@ void AArenaGameMode::EndPlay(const EEndPlayReason::Type Reason)
         Wallet->bInLevel=false;
     }
     Super::EndPlay(Reason);
+}
+void AArenaGameMode::TryAgain()
+{
+    // A run that ended with her starts over from its first room; anything else restarts where she fell.
+    if (bSwamp && SwampStage == 2) { StartSwampStage(2); return; }
+    if (bEndless) { StartEndless(); return; }
+    if (bForestRun) { StartForestRun(); return; }
+    RestartMap();
 }

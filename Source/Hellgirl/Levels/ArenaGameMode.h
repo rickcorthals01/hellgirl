@@ -35,6 +35,9 @@ public:
     bool IsEndlessQueenStoryWave() const;
     bool TickStory(float Dt);
     void TravelToHub();
+    // The death menu's TRY AGAIN: the same level again, or a fresh run where a run ends with her (swamp Stage II,
+    // endless, the forest run).
+    void TryAgain();
     void BuildForestHub();
     void BuildForestHubDetails();
     void TickForestHub(float Dt);
@@ -214,6 +217,7 @@ private:
     bool bPortalMenuDeclined = false;
     bool bLevelCompleted = false;
     bool bPlayerDeathHandled = false;
+    float DeathMenuClock = 0.f;   // counts down from her fall to the death menu
     bool bKeepLevelSouls = false; // set when moving on to the next forest room (a run is one level)
     // Bonus measures for the level being played (Rules/SoulRewards.h).
     void TrackLevelSouls(float Dt);
