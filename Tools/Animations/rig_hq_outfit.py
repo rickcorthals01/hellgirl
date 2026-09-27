@@ -9,16 +9,25 @@
 # fist_hands.ps1 then bakes the fists into it, re-imports it into Unreal and rebuilds the clips.
 #   blender -b --factory-startup -P rig_hq_outfit.py -- <game root> <Outfit> <hq.fbx> <target tris> [preview folder]
 # With a preview folder it renders an overlay of old and new and a posed test there, and writes nothing else.
+# Any other rigged Meshy model (an enemy) works the same way, written to a new file instead:
+#   ... -- <game root> <rigged.fbx> <hq.fbx> <target tris> <out.fbx> [preview folder]
 import bpy, json, math, os, shutil, sys
 from mathutils import Matrix, Vector
 
 args = sys.argv[sys.argv.index("--") + 1:]
 game_root, outfit, hq_path, target_tris = args[0], args[1], args[2], int(args[3])
-preview_dir = args[4] if len(args) > 4 else None
-clips = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "clips.json")))
-source = os.path.join(game_root, clips["outfits"][outfit])
-folder = os.path.dirname(source)
-original = os.path.join(folder, "openhands", outfit + ".fbx")
+out_path = None
+if outfit.lower().endswith(".fbx"):
+    # An enemy: its rigged model gives the skeleton; the result is written to out.fbx.
+    original, out_path = outfit, args[4]
+    outfit = os.path.splitext(os.path.basename(out_path))[0]
+    preview_dir = args[5] if len(args) > 5 else None
+else:
+    preview_dir = args[4] if len(args) > 4 else None
+    clips = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "clips.json")))
+    source = os.path.join(game_root, clips["outfits"][outfit])
+    folder = os.path.dirname(source)
+    original = os.path.join(folder, "openhands", outfit + ".fbx")
 
 
 def bounds(obj):
@@ -163,12 +172,16 @@ if preview_dir:
     print("HQ RIG PREVIEW DONE")
     sys.exit(0)
 
-# 4. Export as the new open-handed original; keep the old files.
-keep = os.path.join(folder, "lowpoly")
-os.makedirs(keep, exist_ok=True)
-for path, name in ((original, outfit + "_openhands.fbx"), (source, outfit + ".fbx")):
-    if os.path.exists(path) and not os.path.exists(os.path.join(keep, name)):
-        shutil.copy2(path, os.path.join(keep, name))
+# 4. Export as the new open-handed original (keeping the old files), or, for an enemy, as out.fbx.
+if out_path:
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    original = out_path
+else:
+    keep = os.path.join(folder, "lowpoly")
+    os.makedirs(keep, exist_ok=True)
+    for path, name in ((original, outfit + "_openhands.fbx"), (source, outfit + ".fbx")):
+        if os.path.exists(path) and not os.path.exists(os.path.join(keep, name)):
+            shutil.copy2(path, os.path.join(keep, name))
 bpy.ops.object.select_all(action="DESELECT")
 arm.select_set(True)
 new.select_set(True)

@@ -1,9 +1,14 @@
-# Builds the swamp enemies (World II: the rat and the frog) from their rigged Meshy models. Close Unreal Editor first.
-#   1. Blender (Tools/Animations/prepare_clips.py): fits each enemy's clips (rat_clips.json, frog_clips.json) onto its rig.
+# Builds the swamp enemies (World II: the rat, the frog and the Rat Queen) from their rigged Meshy models. Close Unreal
+# Editor first.
+#   0. The Rat Queen: her HD model is rigged onto the old Rat Queen's skeleton (Tools/Animations/rig_hq_outfit.py) if
+#      that has not been done yet, and her HD textures are copied beside it at 2048 px under Meshy's usual names.
+#   1. Blender (Tools/Animations/prepare_clips.py): fits each enemy's clips (<name>_clips.json) onto its rig.
 #   2. Their contact points go to [HellgirlAnimationContact] in Config/DefaultGame.ini.
 #   3. Unreal (import_swamp_enemies.py): model, textures, material, physics asset and clips into /Game/Enemies/Swamp/<Name>.
-#   powershell -ExecutionPolicy Bypass -File Tools\Enemies\swamp_enemies.ps1
+#   powershell -ExecutionPolicy Bypass -File Tools\Enemies\swamp_enemies.ps1 [-Only RatQueen]
+param([string[]]$Only = @('Rat', 'Frog', 'RatQueen'))
 $ErrorActionPreference = 'Stop'
+$Only = @($Only | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
 $project = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $gameRoot = Split-Path $project -Parent
 $outRoot = Join-Path $gameRoot 'Animation Testing\SwampEnemies'
@@ -12,7 +17,28 @@ New-Item -ItemType Directory -Force $outRoot, $logDir | Out-Null
 $blender = 'C:\Program Files (x86)\Steam\steamapps\common\Blender\blender.exe'
 $enemies = [ordered]@{}
 $contact = [ordered]@{}
-foreach ($name in 'Rat', 'Frog') {
+# The Rat Queen's HD model and textures.
+$hdFolder = Join-Path $gameRoot 'Meshy Models\High Quality Models\Rat Queen HD'
+$hdStem = Join-Path $hdFolder 'Meshy_AI_rat_queen_enemy_0926133013_image-to-3d-texture_fbx\Meshy_AI_rat_queen_enemy_0926133013_image-to-3d-texture'
+$rigged = Join-Path $hdFolder 'rigged\RatQueen.fbx'
+if ($Only -contains 'RatQueen') {
+    if (-not (Test-Path $rigged)) {
+        Write-Host 'Rigging the HD Rat Queen onto her old skeleton in Blender...'
+        $old = Join-Path $gameRoot 'Meshy Models\Bosses\Rat Queen\Meshy_models_20260918_172739\c9f32cb2-4169-496e-a3cb-0f0d2becb976\Meshy_AI_Character_output.fbx'
+        & $blender -b --factory-startup -P (Join-Path $project 'Tools\Animations\rig_hq_outfit.py') -- $gameRoot $old "$hdStem.fbx" 150000 $rigged *> (Join-Path $logDir 'RatQueenRig.log')
+        if (-not (Test-Path $rigged)) { throw 'Rigging failed; see Logs\RatQueenRig.log' }
+    }
+    Add-Type -AssemblyName System.Drawing
+    foreach ($pair in @(@('', ''), @('_normal', '_normal'), @('_metallic', '_metallic'), @('_roughness', '_roughness'))) {
+        $source = [System.Drawing.Image]::FromFile("$hdStem$($pair[0]).png")
+        $size = [Math]::Min(2048, $source.Width)
+        $small = New-Object System.Drawing.Bitmap $size, $size
+        $g = [System.Drawing.Graphics]::FromImage($small); $g.InterpolationMode = 'HighQualityBicubic'; $g.DrawImage($source, 0, 0, $size, $size); $g.Dispose()
+        $small.Save((Join-Path (Split-Path $rigged) "Meshy_AI_texture_0$($pair[1]).png"), [System.Drawing.Imaging.ImageFormat]::Png)
+        $small.Dispose(); $source.Dispose()
+    }
+}
+foreach ($name in $Only) {
     $config = Join-Path $PSScriptRoot "$($name.ToLower())_clips.json"
     $out = Join-Path $outRoot $name
     New-Item -ItemType Directory -Force $out | Out-Null

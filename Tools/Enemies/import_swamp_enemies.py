@@ -22,9 +22,12 @@ for name, rel in enemies.items():
     dest = f"/Game/Enemies/Swamp/{name}"
     model = os.path.join(game_root, rel)
     folder = os.path.dirname(model)
-    # Textures: base colour, metallic and roughness (Meshy's texture set).
+    # Textures: base colour, metallic and roughness (Meshy's texture set), and a normal map where there is one (the HD
+    # Rat Queen).
     textures = {}
-    for suffix, key, kind in (("", "base", "color"), ("_metallic", "metal", "mask"), ("_roughness", "rough", "mask")):
+    for suffix, key, kind in (("", "base", "color"), ("_metallic", "metal", "mask"), ("_roughness", "rough", "mask"), ("_normal", "normal", "normal")):
+        if kind == "normal" and not os.path.exists(os.path.join(folder, f"Meshy_AI_texture_0{suffix}.png")):
+            continue
         task = u.AssetImportTask()
         task.filename = os.path.join(folder, f"Meshy_AI_texture_0{suffix}.png")
         task.destination_path = dest
@@ -37,6 +40,8 @@ for name, rel in enemies.items():
         tex.set_editor_property("srgb", kind == "color")
         if kind == "mask":
             tex.set_editor_property("compression_settings", u.TextureCompressionSettings.TC_MASKS)
+        if kind == "normal":
+            tex.set_editor_property("compression_settings", u.TextureCompressionSettings.TC_NORMALMAP)
         u.EditorAssetLibrary.save_loaded_asset(tex, False)
         textures[key] = tex
     # Material: the samplers match their textures' types (a colour sampler on a mask texture fails to compile).
@@ -49,13 +54,14 @@ for name, rel in enemies.items():
     material.set_editor_property("used_with_skeletal_mesh", True)
     for key, prop, sampler, y in (("base", u.MaterialProperty.MP_BASE_COLOR, u.MaterialSamplerType.SAMPLERTYPE_COLOR, -200),
                                   ("metal", u.MaterialProperty.MP_METALLIC, u.MaterialSamplerType.SAMPLERTYPE_MASKS, 100),
-                                  ("rough", u.MaterialProperty.MP_ROUGHNESS, u.MaterialSamplerType.SAMPLERTYPE_MASKS, 400)):
+                                  ("rough", u.MaterialProperty.MP_ROUGHNESS, u.MaterialSamplerType.SAMPLERTYPE_MASKS, 400),
+                                  ("normal", u.MaterialProperty.MP_NORMAL, u.MaterialSamplerType.SAMPLERTYPE_NORMAL, 700)):
         if key not in textures:
             continue
         node = lib.create_material_expression(material, u.MaterialExpressionTextureSample, -500, y)
         node.set_editor_property("texture", textures[key])
         node.set_editor_property("sampler_type", sampler)
-        lib.connect_material_property(node, "RGB" if key == "base" else "R", prop)
+        lib.connect_material_property(node, "RGB" if key in ("base", "normal") else "R", prop)
     lib.recompile_material(material)
     u.EditorAssetLibrary.save_loaded_asset(material, False)
 

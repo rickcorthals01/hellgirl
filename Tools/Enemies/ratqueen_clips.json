@@ -1,0 +1,15 @@
+{
+  "_help": "The Rat Queen's clips (World II's boss; see rat_clips.json). Her model is the HD Meshy model rigged onto the old Rat Queen's skeleton by Tools/Animations/rig_hq_outfit.py (swamp_enemies.ps1 does it). Right and left slash, a charged slash that dashes her forward (the sword slide attack), a jump slam, the rats' dodge roll, and a power-up for summoning her rats.",
+  "outfits": { "RatQueen": "Meshy Models/High Quality Models/Rat Queen HD/rigged/RatQueen.fbx" },
+  "clips": {
+    "RatQueenIdle":       { "file": "Standing Idle.fbx" },
+    "RatQueenRun":        { "file": "../Meshy Models/Bosses/Rat Queen/Meshy_models_20260918_172739/c9f32cb2-4169-496e-a3cb-0f0d2becb976/Meshy_AI_Animation_Running_withSkin.fbx" },
+    "RatQueenSlash":      { "file": "Great Sword Pack/great sword slash (3).fbx", "strike": "RightHand", "trim": [6, 34] },
+    "RatQueenSlash2":     { "file": "Great Sword Pack/great sword slash left.fbx", "mirror_of": "RatQueenSlash", "strike": "LeftHand" },
+    "RatQueenHeavySlash": { "file": "Great Sword Pack/great sword slide attack.fbx", "strike": "RightHand", "trim": [1, 56], "contact": 40 },
+    "RatQueenJumpSlam":   { "file": "Great Sword Pack/great sword jump attack.fbx", "strike": "RightHand", "trim": [1, 52], "contact": 34, "lift": 0 },
+    "RatQueenRoll":       { "file": "Stand To Roll.fbx", "trim": [3, 26] },
+    "RatQueenSummon":     { "file": "Great Sword Pack/great sword power up.fbx" },
+    "RatQueenHit":        { "file": "Hit To Body.fbx", "trim": [3, 29] }
+  }
+}
