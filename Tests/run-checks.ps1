@@ -50,6 +50,7 @@ $checks = @(
     @('Combo',          '/Engine/Maps/Entry?ForestRun=1?Seed=5?Room=1', 60),
     @('ForestRun',      '/Engine/Maps/Entry?ForestRun=1?Seed=4242?Room=2', 60), @('ForestRun', '/Engine/Maps/Entry?ForestRun=1?Seed=4242?Room=4', 60),
     @('Hub',            '/Engine/Maps/Entry?ForestHub=1', 60), @('Dialogue', '/Engine/Maps/Entry?ForestHub=1', 0),
+    @('MenuFocus',      '/Engine/Maps/Entry?ForestHub=1', 60),
     # Controller: roll into the level-select road holding B (and, Quick, press B the frame the menu opens).
     @('HubRoll',        '/Engine/Maps/Entry?ForestHub=1', 60), @('HubRoll', '/Engine/Maps/Entry?ForestHub=1', 60, '-RollQuickBack'),
     @('MainMenu',       '/Engine/Maps/Entry', 0)

@@ -132,6 +132,7 @@ public:
     void RunNaturalWavesCheck(float Dt);
     void RunQuickSlashCheck(float Dt);
     void RunShopCheck(float Dt);
+    void RunMenuFocusCheck(float Dt);
     void RunSwampEnemyCheck(float Dt);
     void RunEnemyModelPreview(float Dt);
     // -HellgirlOutfitPreview=<Outfit>: a lit showcase of one outfit (front, three-quarter, back), see Checks/EnemyModelPreview.cpp.
