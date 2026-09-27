@@ -377,7 +377,7 @@ void AArenaGameMode::Tick(float Dt)
     if (bSuccubusCourt) { TickSuccubusCourt(Dt); return; }
     if (bForestRun) { RunForestRunCheck(); TickForestRun(Dt); return; }
     if (bGraveyard) { RunGraveyardCheck(Dt); TickGraveyard(Dt); return; }
-    if (bSwamp) { RunSwampCheck(Dt); RunSwampStageCheck(Dt); TickSwamp(Dt); return; }
+    if (bSwamp) { RunSwampCheck(Dt); RunSwampStageCheck(Dt); RunRatQueenCheck(Dt); TickSwamp(Dt); return; }
     RunGoblinStageCheck();
     if (!bLegacyMap && CampaignLevel==1) { TickGoblinPrelude(Dt); return; }
     if (!bLegacyMap && CampaignLevel<=3) { RunCampaignCheck(Dt); RunMapVisualCheck(Dt); RunTerrainCheck(Dt); RunMapCheck(Dt); TickGoblinWaves(Dt); return; }

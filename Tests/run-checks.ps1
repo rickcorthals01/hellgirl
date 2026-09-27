@@ -45,6 +45,7 @@ $checks = @(
     @('SwampStage',     '/Engine/Maps/Entry?Swamp=1?Stage=2?Seed=77?Room=3', 60, $null, 'SwampStage2'),
     @('SwampStage',     '/Engine/Maps/Entry?Swamp=1?Stage=2?Seed=77?Room=10', 60, $null, 'SwampStage2King'),
     @('SwampStage',     '/Engine/Maps/Entry?Swamp=1?Stage=3?Seed=3303?Room=1', 60, $null, 'SwampStage3'),
+    @('RatQueen',       '/Engine/Maps/Entry?Swamp=1?Stage=3?Seed=3303?Room=1', 60),
     @('Graveyard',      '/Engine/Maps/Entry?Graveyard=1?Seed=4242?Room=1', 60), @('Graveyard', '/Engine/Maps/Entry?Graveyard=1?Seed=77?Room=4', 60, $null, 'Graveyard4'),
     # Random forest rooms: the planner over many seeds, then one fight room and the boss room as built.
     @('Combo',          '/Engine/Maps/Entry?ForestRun=1?Seed=5?Room=1', 60),
