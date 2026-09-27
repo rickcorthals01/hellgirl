@@ -23,7 +23,7 @@ void AArenaGameMode::RunRatQueenCheck(float Dt)
     if (!FParse::Param(FCommandLine::Get(), TEXT("HellgirlRatQueenCheck"))) return;
     auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
     if (!Hero) return;
-    static float Clock = 0.f, SwingClock = 0.f, StepClock = 0.f, LastRoll = -10.f, HealthBefore = 0.f;
+    static float Clock = 0.f, SwingClock = 0.f, StepClock = 0.f, LastRoll = -10.f, HealthBefore = 0.f, LastMoveClock = 0.f;
     static bool bStarted = false, bDoubleRoll = false, bCalled = false;
     static int32 Rolls = 0;
     static EEnemyMove Last = EEnemyMove::None;
@@ -66,7 +66,15 @@ void AArenaGameMode::RunRatQueenCheck(float Dt)
             LastRoll = Clock; ++Rolls;
         }
     }
+    // The second roll can start the same frame the first ends: the roll's clock starting over counts too.
+    if (Move == EEnemyMove::RatRoll && Last == EEnemyMove::RatRoll && Queen->GetAttackClock() > LastMoveClock + .1f)
+    {
+        Seen.Add(Move);
+        if (Clock - LastRoll < 1.2f) bDoubleRoll = true;
+        LastRoll = Clock; ++Rolls;
+    }
     Last = Move;
+    LastMoveClock = Queen->GetAttackClock();
     const FVector ToQueen = Queen->GetActorLocation() - Hero->GetActorLocation();
     if (Clock < 12.f)
     {
