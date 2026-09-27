@@ -43,7 +43,8 @@ public:
     {
         Owner=Args._Owner;
         const auto* GM=Owner.IsValid()?Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get())):nullptr;
-        Unlocked=GM?GM->GetUnlockedLevel():1;
+        Unlocked=HellgirlProgress::PlaytestUnlockAll() ? 4 : GM?GM->GetUnlockedLevel():1;
+        auto Won=[](const TCHAR* Flag) { return HellgirlProgress::PlaytestUnlockAll() || HellgirlProgress::Flag(Flag); };
         Frame.SetResourceObject(Args._Frame);
         Frame.ImageSize=FVector2D(400,640); Frame.DrawAs=ESlateBrushDrawType::Image;
         WorldRows=SNew(SVerticalBox);
@@ -67,15 +68,15 @@ public:
         if (Unlocked>=1) AddStage(1,2,TEXT("STAGE II  /  THE GOBLIN ARMY"),TEXT("Seven waves · soul portals"),Unlocked>=2);
         if (Unlocked>=2) AddStage(1,3,TEXT("STAGE III  /  THE QUEEN"),TEXT("Fourteen waves across the ruins, then the Goblin Queen"),Unlocked>=3);
         // Unlocked by beating Stage 2 (02.5).
-        if (HellgirlProgress::Flag(TEXT("Stage2Won"))) AddStage(1,Endless,TEXT("ENDLESS  /  GOBLIN WAVES"),
+        if (Won(TEXT("Stage2Won"))) AddStage(1,Endless,TEXT("ENDLESS  /  GOBLIN WAVES"),
             *FString::Printf(TEXT("Waves that never stop · best wave %d"),HellgirlProgress::EndlessBest()),true);
         // The forest run (random rooms, Levels/ForestRun.cpp) is out of the game for now; its code stays for later:
         // AddStage(1,ForestRun,TEXT("FOREST RUN  /  RANDOM ROOMS"),TEXT("Three random clearings, then the Queen · dying ends the run"),true);
         // World II: the swamp (Levels/SwampStages.cpp). Stage I opens once World I is won; each stage won opens the next.
         // The Rat Queen's own boss area comes later.
-        AddStage(2,SwampStageOne,TEXT("STAGE I  /  THE SWAMP OF SOULS"),TEXT("Ten waves of rats and frogs"),HellgirlProgress::Flag(TEXT("Stage3Won")));
-        AddStage(2,SwampStageTwo,TEXT("STAGE II  /  DEEPER IN"),TEXT("Ten swamp rooms, then the Frog King"),HellgirlProgress::Flag(TEXT("SwampStage1Won")));
-        AddStage(2,SwampStageThree,TEXT("STAGE III  /  THE DOORWAY"),TEXT("Two waves · the Rat Queen (coming later)"),HellgirlProgress::Flag(TEXT("SwampStage2Won")));
+        AddStage(2,SwampStageOne,TEXT("STAGE I  /  THE SWAMP OF SOULS"),TEXT("Ten waves of rats and frogs"),Won(TEXT("Stage3Won")));
+        AddStage(2,SwampStageTwo,TEXT("STAGE II  /  DEEPER IN"),TEXT("Ten swamp rooms, then the Frog King"),Won(TEXT("SwampStage1Won")));
+        AddStage(2,SwampStageThree,TEXT("STAGE III  /  THE DOORWAY"),TEXT("The boss arena · two waves · the Rat Queen (coming later)"),Won(TEXT("SwampStage2Won")));
         // World III: the court can be walked; its fight comes later.
         AddStage(3,CourtPreview,TEXT("THE COURT  /  MAP PREVIEW"),TEXT("Walk the court · no enemies yet"),true);
         AddStage(3,ComingLater,TEXT("THE SUCCUBUS QUEEN  /  COMING LATER"),TEXT("Succubi · the Succubus Queen"),false);

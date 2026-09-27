@@ -41,6 +41,14 @@ namespace HellgirlProgress
         GConfig->SetBool(Section, Name, Value, GGameUserSettingsIni);
         GConfig->Flush(false, GGameUserSettingsIni);
     }
+    // Playtesting: every level in the level select is open, whatever has been won. Set in Config/DefaultGame.ini,
+    // [HellgirlDev] UnlockAllLevels=True (turn it off for release). Automated checks ignore it.
+    inline bool PlaytestUnlockAll()
+    {
+        bool Value = false;
+        if (!IsAutomated()) GConfig->GetBool(TEXT("HellgirlDev"), TEXT("UnlockAllLevels"), Value, GGameIni);
+        return Value;
+    }
     // Automated checks (other than the story check) keep every move available.
     inline bool IsCheckRun()
     {

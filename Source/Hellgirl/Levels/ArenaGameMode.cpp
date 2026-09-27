@@ -296,7 +296,7 @@ int32 AArenaGameMode::GetUnlockedLevel() const
 }
 void AArenaGameMode::TravelToCampaign(int32 Level)
 {
-    if (Level < 1 || Level > 4 || (bForestHub && Level>GetUnlockedLevel())) return;
+    if (Level < 1 || Level > 4 || (bForestHub && Level>GetUnlockedLevel() && !HellgirlProgress::PlaytestUnlockAll())) return;
     FString Options=FString::Printf(TEXT("StageMap=1?CampaignLevel=%d"),Level);
     if (!bForestHub && Level > CampaignLevel)
         if (auto* Player=Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this,0)))
