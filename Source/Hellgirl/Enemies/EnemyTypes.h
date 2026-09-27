@@ -13,7 +13,10 @@ enum class EHellgirlEnemyType : uint8
     // World III's mass enemy: small and flying only (hovers and dives like the flying imps).
     MiniSuccubus,
     // World II (the swamp): rats (bite, punches, dodge roll), frogs (hopping, punches, air slam) and their mini-boss.
-    Rats, Frogs, FrogKing
+    Rats, Frogs, FrogKing,
+    // World II's boss: right, left and a charged dashing heavy slash, a jump slam, a double dodge roll; at half health
+    // she calls two waves of rats (Enemies/SwampCombat.cpp).
+    RatQueen
 };
 
 USTRUCT(BlueprintType)
@@ -61,6 +64,7 @@ public:
     UPROPERTY(Config, EditAnywhere, Category="Level 02") FEnemyModelSlot Rats;
     UPROPERTY(Config, EditAnywhere, Category="Level 02") FEnemyModelSlot Frogs;
     UPROPERTY(Config, EditAnywhere, Category="Level 02") FEnemyModelSlot FrogKing;
+    UPROPERTY(Config, EditAnywhere, Category="Level 02") FEnemyModelSlot RatQueen;
     const FEnemyModelSlot& ForType(EHellgirlEnemyType Type) const
     {
         switch (Type)
@@ -77,6 +81,7 @@ public:
         case EHellgirlEnemyType::Rats: return Rats;
         case EHellgirlEnemyType::Frogs: return Frogs;
         case EHellgirlEnemyType::FrogKing: return FrogKing;
+        case EHellgirlEnemyType::RatQueen: return RatQueen;
         default: return Imps;
         }
     }

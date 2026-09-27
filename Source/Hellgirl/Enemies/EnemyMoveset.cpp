@@ -15,7 +15,8 @@ bool UsesCastleMoves(const AArenaFighter* Fighter)
         || Fighter->EnemyType == EHellgirlEnemyType::FlyingImps || Fighter->EnemyType == EHellgirlEnemyType::MiniSuccubus
         || Fighter->EnemyType == EHellgirlEnemyType::ImpCommander
         || Fighter->EnemyType == EHellgirlEnemyType::Goblins || Fighter->EnemyType == EHellgirlEnemyType::GoblinQueen
-        || Fighter->EnemyType == EHellgirlEnemyType::Rats || Fighter->EnemyType == EHellgirlEnemyType::Frogs || Fighter->EnemyType == EHellgirlEnemyType::FrogKing);
+        || Fighter->EnemyType == EHellgirlEnemyType::Rats || Fighter->EnemyType == EHellgirlEnemyType::Frogs || Fighter->EnemyType == EHellgirlEnemyType::FrogKing
+        || Fighter->EnemyType == EHellgirlEnemyType::RatQueen);
 }
 
 bool FindEnemyFloor(const AArenaFighter* Fighter, const FVector& Position, FHitResult& Floor)
@@ -135,6 +136,15 @@ void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
         Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::FrogSlamSeconds,.6f,AttackDamage*EnemyTuning::FrogDamage*EnemyTuning::FrogSlamDamageScale,
             EnemyType==EHellgirlEnemyType::FrogKing ? EnemyTuning::FrogKingSlamRadius : EnemyTuning::FrogSlamRadius,EnemyTuning::FrogSlamBlast,0.f,0};
         Recovery=.5f; Label=TEXT("FROG / SLAM"); break;
+    case EEnemyMove::RatQueenSlash: case EEnemyMove::RatQueenSlash2:
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::RatQueenSlashSeconds,.57f,AttackDamage*EnemyTuning::RatQueenSlashDamageScale,EnemyTuning::RatQueenSlashReach,120.f,0.f,0};
+        Recovery=EnemyTuning::RatQueenSlashRecovery; Label=Move==EEnemyMove::RatQueenSlash ? TEXT("RAT QUEEN / RIGHT SLASH") : TEXT("RAT QUEEN / LEFT SLASH"); break;
+    case EEnemyMove::RatQueenHeavy:
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::RatQueenHeavySeconds,.71f,AttackDamage*EnemyTuning::RatQueenHeavyDamageScale,EnemyTuning::RatQueenHeavyReach,420.f,0.f,0};
+        Recovery=.6f; Label=TEXT("RAT QUEEN / HEAVY SLASH"); break;
+    case EEnemyMove::RatQueenJumpSlam:
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::RatQueenJumpSeconds,.65f,AttackDamage*EnemyTuning::RatQueenJumpDamageScale,EnemyTuning::RatQueenJumpRadius,380.f,0.f,0};
+        Recovery=.7f; Label=TEXT("RAT QUEEN / JUMP SLAM"); break;
     case EEnemyMove::QueenMelee:
         Spec = {FistCombat::Move::EnemyClaw,1.6f,.6f,20.f,250.f,200.f,0.f,0}; Recovery=.7f; Label=TEXT("QUEEN / SHADOW ATTACK"); break;
     case EEnemyMove::QueenClaw:
@@ -164,13 +174,27 @@ void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
     FVector Facing = Delta.GetSafeNormal2D();
     if (Facing.IsNearlyZero()) Facing = GetActorForwardVector();
     FVector Endpoint = Start;
-    const bool RatLunge = Move == EEnemyMove::RatBite || Move == EEnemyMove::RatPunch || Move == EEnemyMove::RatPunch2;
+    const bool RatLunge = Move == EEnemyMove::RatBite || Move == EEnemyMove::RatPunch || Move == EEnemyMove::RatPunch2
+        || Move == EEnemyMove::RatQueenSlash || Move == EEnemyMove::RatQueenSlash2;
+    const bool QueenJump = Move == EEnemyMove::RatQueenJumpSlam;
     const bool FrogAir = Move == EEnemyMove::FrogAirPunch || Move == EEnemyMove::FrogSlam;
     if (FrogAir) Endpoint = Player->GetActorLocation(); // the slam dives onto where she stands
-    else if (Move == EEnemyMove::ImpPounce || Move == EEnemyMove::CommanderRush || Move == EEnemyMove::FlyingDive || Move == EEnemyMove::CommanderJumpSlam || RatLunge)
+    else if (Move == EEnemyMove::RatQueenHeavy)
     {
-        const float StopDistance = Move == EEnemyMove::CommanderJumpSlam ? 0.f : Move == EEnemyMove::CommanderRush ? 175.f : RatLunge ? 105.f : (Move == EEnemyMove::FlyingDive ? 130.f : 125.f);
-        const float MaximumTravel = Move == EEnemyMove::CommanderJumpSlam ? 1000.f : Move == EEnemyMove::CommanderRush ? 650.f : RatLunge ? 140.f : (Move == EEnemyMove::FlyingDive ? 550.f : 360.f);
+        // The heavy slash dashes her through and past where Hellgirl stands, as far as the ground allows.
+        float Travel = FMath::Clamp(static_cast<float>(Delta.Size2D()) + 150.f, 300.f, EnemyTuning::RatQueenHeavyDash);
+        while (Travel > 150.f && !IsEnemyGroundAheadSafe(Facing, Travel + 35.f)) Travel -= 100.f;
+        if (Travel <= 150.f) return;
+        Endpoint += Facing * Travel;
+        FHitResult Floor;
+        if (!FindEnemyFloor(this, Endpoint, Floor)) return;
+        Endpoint.Z = Floor.ImpactPoint.Z + GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 6.f;
+    }
+    else if (Move == EEnemyMove::ImpPounce || Move == EEnemyMove::CommanderRush || Move == EEnemyMove::FlyingDive || Move == EEnemyMove::CommanderJumpSlam || RatLunge || QueenJump)
+    {
+        const bool QueenSlash = Move == EEnemyMove::RatQueenSlash || Move == EEnemyMove::RatQueenSlash2;
+        const float StopDistance = Move == EEnemyMove::CommanderJumpSlam || QueenJump ? 0.f : Move == EEnemyMove::CommanderRush ? 175.f : QueenSlash ? 120.f : RatLunge ? 105.f : (Move == EEnemyMove::FlyingDive ? 130.f : 125.f);
+        const float MaximumTravel = Move == EEnemyMove::CommanderJumpSlam || QueenJump ? 1000.f : Move == EEnemyMove::CommanderRush ? 650.f : QueenSlash ? 180.f : RatLunge ? 140.f : (Move == EEnemyMove::FlyingDive ? 550.f : 360.f);
         const float Travel = FMath::Clamp(static_cast<float>(Delta.Size2D()) - StopDistance, 0.f, MaximumTravel);
         if (!IsEnemyGroundAheadSafe(Facing, Travel + 35.f)) return;
         Endpoint += Facing * Travel;
@@ -228,6 +252,8 @@ void AArenaFighter::UpdateEnemyMoveMotion(float Dt)
     RatBiteClock = FMath::Max(0.f, RatBiteClock - Dt);
     RatRollClock = FMath::Max(0.f, RatRollClock - Dt);
     FrogSlamClock = FMath::Max(0.f, FrogSlamClock - Dt);
+    RatQueenJumpClock = FMath::Max(0.f, RatQueenJumpClock - Dt);
+    RatQueenHeavyClock = FMath::Max(0.f, RatQueenHeavyClock - Dt);
     EnemyDecisionClock = FMath::Max(0.f, EnemyDecisionClock - Dt);
     if (EnemyMove == EEnemyMove::None) return;
     if (!IsAlive() || bCombatLaunched || KnockdownClock > 0.f || HitClock > 0.f || AttackClock <= 0.f)
@@ -256,11 +282,12 @@ void AArenaFighter::UpdateEnemyMoveMotion(float Dt)
     ConsumeMovementInputVector();
     GetCharacterMovement()->StopMovementImmediately();
     if (bEnemyMoveMotionStopped) return;
-    if (EnemyMove == EEnemyMove::CommanderJumpSlam)
+    if (EnemyMove == EEnemyMove::CommanderJumpSlam || EnemyMove == EEnemyMove::RatQueenJumpSlam)
     {
         const float Progress=FMath::Clamp((CurrentAttack.Duration-AttackClock+Dt)/CurrentAttack.Duration,0.f,1.f);
         const float T=FMath::Clamp(Progress/CurrentAttack.ContactFraction,0.f,1.f);
-        const FVector Desired=FMath::Lerp(EnemyMoveStart,EnemyMoveTarget,T)+FVector(0,0,FMath::Sin(T*PI)*650.f);
+        const float Arc=EnemyMove == EEnemyMove::RatQueenJumpSlam ? 450.f : 650.f;
+        const FVector Desired=FMath::Lerp(EnemyMoveStart,EnemyMoveTarget,T)+FVector(0,0,FMath::Sin(T*PI)*Arc);
         FHitResult Hit; SetActorLocation(Desired,true,&Hit);
         GetCharacterMovement()->SetMovementMode(T<1.f ? MOVE_Flying : MOVE_Falling);
         return;
@@ -272,6 +299,8 @@ void AArenaFighter::UpdateEnemyMoveMotion(float Dt)
     case EEnemyMove::FlyingDive: StartFraction = .34f; EndFraction = .56f; break;
     case EEnemyMove::CommanderRush: StartFraction = .34f; EndFraction = .57f; break;
     case EEnemyMove::RatBite: case EEnemyMove::RatPunch: case EEnemyMove::RatPunch2: StartFraction = .25f; EndFraction = .55f; break;
+    case EEnemyMove::RatQueenSlash: case EEnemyMove::RatQueenSlash2: StartFraction = .2f; EndFraction = .55f; break;
+    case EEnemyMove::RatQueenHeavy: StartFraction = .3f; EndFraction = .74f; break;
     case EEnemyMove::RatRoll: StartFraction = 0.f; EndFraction = .8f; break;
     default: return;
     }
@@ -302,10 +331,10 @@ void AArenaFighter::DrawEnemyMoveTelegraph()
     if (EnemyMove == EEnemyMove::None || AttackClock <= 0.f || !IsAlive()) return;
     const bool WindingUp = !bHitResolved;
     const FColor Cue = WindingUp ? FColor(255,160,55) : FColor(150,170,180);
-    if (EnemyMove == EEnemyMove::CommanderJumpSlam)
+    if (EnemyMove == EEnemyMove::CommanderJumpSlam || EnemyMove == EEnemyMove::RatQueenJumpSlam)
     {
         const float UntilHit=AttackClock-CurrentAttack.Duration*(1.f-CurrentAttack.ContactFraction);
-        if (UntilHit>0.f && UntilHit<=(bBossEncounter ? .45f : 1.2f))
+        if (UntilHit>0.f && UntilHit<=(EnemyMove == EEnemyMove::RatQueenJumpSlam ? .8f : bBossEncounter ? .45f : 1.2f))
             DrawDebugCircle(GetWorld(),EnemyMoveTarget-FVector(0,0,GetCapsuleComponent()->GetScaledCapsuleHalfHeight()-8),CurrentAttack.Range,48,FColor::Red,false,-1.f,0,6.f,FVector::ForwardVector,FVector::RightVector,false);
     }
     else if (EnemyMove == EEnemyMove::FrogSlam)

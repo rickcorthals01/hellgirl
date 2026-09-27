@@ -71,8 +71,19 @@ inline const FVector2D Crypt = Sketch(316, 320);
 inline FVector2D CryptFacing() { return (FVector2D(-300.f, 300.f) - Crypt).GetSafeNormal(); }  // toward the arena
 inline FVector2D Exit() { return Crypt + CryptFacing() * 330.f; }                             // at the foot of its steps
 constexpr float CryptScale = 1.3f;
-// Where Stage III's two waves come from: the east mud between the lower streams, then the north-west mud by the crypt.
-inline FVector2D WavePoint(int32 Wave) { return Wave == 0 ? Sketch(720, 600) : Sketch(420, 420); }
+// Where Stage III's waves come from: the east mud between the lower streams, the south-west mud between the lower
+// streams, the north-west mud by the crypt (the ambush); then where the Rat Queen leaps in, in front of the crypt.
+constexpr int32 WavePoints = 4;
+inline FVector2D WavePoint(int32 Wave)
+{
+    switch (Wave)
+    {
+    case 0: return Sketch(720, 600);
+    case 1: return Sketch(200, 785);
+    case 2: return Sketch(420, 420);
+    default: return Crypt + CryptFacing() * 700.f;
+    }
+}
 
 struct FPlan
 {

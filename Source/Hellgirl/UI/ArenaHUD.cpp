@@ -160,11 +160,11 @@ void AArenaHUD::DrawHUD()
     for (TActorIterator<AArenaFighter> It(GetWorld()); It; ++It)
     {
         const UBossBehavior* Boss = It->GetBossBehavior();
-        const bool FrogKing = It->EnemyType == EHellgirlEnemyType::FrogKing;
-        if ((Boss || FrogKing) && It->bEnemy && It->bBossEncounter && It->IsAlive())
+        const bool FrogKing = It->EnemyType == EHellgirlEnemyType::FrogKing, RatQueen = It->EnemyType == EHellgirlEnemyType::RatQueen;
+        if ((Boss || FrogKing || RatQueen) && It->bEnemy && It->bBossEncounter && It->IsAlive())
         {
             const float BW = FMath::Min(620.f, W - 420.f), BX = (W - BW) * .5f, BY = 34.f;
-            const FString Name = Boss ? Boss->GetDisplayName() : FString(TEXT("THE FROG KING"));
+            const FString Name = Boss ? Boss->GetDisplayName() : FString(RatQueen ? TEXT("THE RAT QUEEN") : TEXT("THE FROG KING"));
             Centered(Name + (It->IsBossAttackArmored() ? TEXT("  ·  ARMORED") : TEXT("")), Gold, BY - 22.f, 1.1f);
             Bar(BX, BY + 4.f, BW, 12.f, It->Health / FMath::Max(1.f, It->MaxHealth), Blood);
             if (Boss && !Boss->GetHudStatus().IsEmpty()) Centered(Boss->GetHudStatus(), Ash, BY + 22.f);

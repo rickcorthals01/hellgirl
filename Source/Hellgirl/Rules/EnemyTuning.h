@@ -60,4 +60,17 @@ constexpr float FrogSlamCooldown = 6.f, FrogSlamEnemyDamage = 6.f, FrogSlamEnemy
 constexpr int32 FrogAttackSlots = 3;
 // The Frog King (the swamp run's mini-boss): a bigger frog that hops higher and slams more often and wider.
 constexpr float FrogKingHealth = 750.f, FrogKingSlamCooldown = 2.8f, FrogKingSlamRadius = 460.f;
+
+// World II's boss, the Rat Queen ("Levels , Enemies, Bosses.txt", 2026-09-27): very mobile, short cooldowns. A fast
+// right slash and left slash (low damage), then a charged heavy slash that dashes her far forward (heavy damage; the
+// charge-up gives time to dodge). Now and then a jump slam. A double dodge roll every 2 s when Hellgirl swings at her.
+// At half health she calls two medium waves of rats and keeps fighting (Levels/SwampStages.cpp).
+constexpr float RatQueenHealth = 1600.f, RatQueenDamage = 20.f, RatQueenSpeed = 520.f;
+constexpr float RatQueenSlashSeconds = .5f, RatQueenSlashDamageScale = .55f, RatQueenSlashReach = 230.f, RatQueenSlashRecovery = .12f;
+constexpr float RatQueenHeavySeconds = 1.5f, RatQueenHeavyDamageScale = 1.6f, RatQueenHeavyReach = 260.f, RatQueenHeavyDash = 750.f;
+constexpr float RatQueenHeavyCooldown = 3.5f;          // also the gap-closer from afar
+constexpr float RatQueenJumpSeconds = 1.5f, RatQueenJumpDamageScale = 1.3f, RatQueenJumpRadius = 340.f, RatQueenJumpCooldown = 7.f;
+constexpr float RatQueenRollCooldown = 2.f, RatQueenRollChance = .7f;
+constexpr float RatQueenSummonSeconds = 1.6f;
+constexpr int32 RatQueenGuardRats = 4;                 // each of her two rat waves, before the global wave scaling
 }

@@ -4,8 +4,9 @@
 //     (continue, stock Souls, upgrades). After wave 10, the purple portal.
 //   Stage II: a run of ten swamp rooms, each but the last ending on a blue portal; her lines at rooms 1, 5, 7 and 10. Room 10 is the Frog King's (the mini-boss,
 //     on his giant lily pad, with a guard of rats and frogs); beating it brings her last line and the purple portal.
-//   Stage III: two waves, then the doorway conversation; the Rat Queen's fight comes later (her own boss area), so
-//     for now the purple portal leads back to camp.
+//   Stage III (the boss arena, Rules/SwampArenaRules.h): three waves with blue portals after each (the doorway
+//     conversation once she continues through the second; the third wave is the ambush), then the Rat Queen, her
+//     after-fight conversation and the crypt entrance as the way out.
 // Every wave comes from a fixed point in one of the room's five areas, west to east, once Hellgirl gets near it:
 //   0 the first mud, 1 the start of the water, 2 its middle, 3 where it nears the mud again, 4 the last mud.
 // Stage I sets which enemies come from each area (rats first, then mostly rats, frogs, mostly frogs, both); Stage II
@@ -23,6 +24,7 @@
 #include "Camera/CameraActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
@@ -41,9 +43,10 @@ const FWave StageOne[] = {
     {2, 0, 0, 3, TEXT("S1_Portal2"), true}, {2, 1, 0, 4, nullptr, false},   // the middle of the water: frogs
     {3, 0, 2, 4, nullptr, true}, {3, 1, 2, 5, nullptr, false},              // nearing the mud: mostly frogs
     {4, 0, 4, 4, TEXT("S1_Portal3"), true}, {4, 1, 6, 5, nullptr, false}};  // the last mud: rats and frogs
-// Stage III (the boss arena): wave 1, a blue portal, the doorway conversation once she continues ("Watch out!"),
-// then wave 2 springs the ambush.
-const FWave StageThree[] = {{1, 0, 5, 2, TEXT("S3_Doorway"), true, true}, {3, 1, 4, 4, nullptr, false}};
+// Stage III (the boss arena; each wave comes from its own point, SwampArena::WavePoint): wave 1, a blue portal; a
+// bigger wave 2, a blue portal and the doorway conversation once she continues ("Watch out!"); wave 3 springs the
+// ambush, then a last blue portal, and the Rat Queen leaps in (built in BuildSwampWaves as the stage's last wave).
+const FWave StageThree[] = {{0, 0, 5, 2, nullptr, true}, {1, 0, 6, 5, TEXT("S3_Doorway"), true, true}, {2, 0, 4, 4, nullptr, true}};
 constexpr int32 RunRooms = 10;
 constexpr int32 Areas = 5;
 constexpr float OverviewSeconds = 6.f;
@@ -132,7 +135,7 @@ void AArenaGameMode::BuildSwampWaves()
     {
         const FWave& W = Waves[I];
         // In the boss arena the waves come from its own two points.
-        const FVector Point = bSwampArena ? FVector(SwampArena::WavePoint(I), 10.f) : SwampAreaPoint(W.Area, W.Side);
+        const FVector Point = bSwampArena ? FVector(SwampArena::WavePoint(W.Area), 10.f) : SwampAreaPoint(W.Area, W.Side);
         auto* S = Site(Point, FString::Printf(TEXT("WAVE %d"), I + 1), W.Rats + W.Frogs, 0, false);
         if (!S) continue;
         // The larger kind leads; the other is mixed in.
@@ -159,6 +162,19 @@ void AArenaGameMode::BuildSwampWaves()
             SwampWaveOfSite.Add(Waves.IndexOfByPredicate([](const FWave& W) { return W.Area == 2; }));
         }
     SwampWaveCount = Waves.Num();
+    // Stage III ends with the Rat Queen, leaping in before the crypt: the last wave, with her after-fight conversation.
+    if (bSwampArena)
+        if (auto* Queen = Site(FVector(SwampArena::WavePoint(3), 60.f), TEXT("THE RAT QUEEN"), 1, 0, false, true))
+        {
+            Queen->GroundType = EHellgirlEnemyType::RatQueen;
+            Queen->FlyingCount = 0;
+            Queen->Difficulty = 2;
+            SwampWaveOfSite.Add(SwampWaveCount);
+            SwampWaveAfter.Add(TEXT("S3_AfterRatQueen"));
+            SwampWavePortal.Add(false);
+            SwampWaveTalkAfter.Add(false);
+            ++SwampWaveCount;
+        }
     TotalSites = SpawnSites.Num();
     SoulPortal = GetWorld()->SpawnActor<AWavePortal>();
     bPortalIntroOnEnter = true;
@@ -225,8 +241,35 @@ bool AArenaGameMode::TickSwampStage(float Dt, AArenaFighter* Hero)
         }
         if (!Beaten)
         {
-            Objective = Counter + (Rooms && SwampRoomNumber >= RunRooms && Current.ContainsByPredicate([](const AEnemySpawnPoint* S) { return S->bBoss; })
-                ? TEXT(" — Defeat the Frog King") : TEXT(" — Rats and frogs"));
+            const bool BossWave = Current.ContainsByPredicate([](const AEnemySpawnPoint* S) { return S->bBoss; });
+            Objective = bSwampArena && BossWave ? FString(TEXT("THE RAT QUEEN — Defeat her"))
+                : Counter + (Rooms && SwampRoomNumber >= RunRooms && BossWave ? TEXT(" — Defeat the Frog King") : TEXT(" — Rats and frogs"));
+            // At half health the Rat Queen calls her soldiers: two waves of rats beside her, part of her wave.
+            if (bSwampArena && BossWave && !bRatQueenCalled)
+                for (TActorIterator<AArenaFighter> It(GetWorld()); It; ++It)
+                    if (It->bEnemy && It->EnemyType == EHellgirlEnemyType::RatQueen && It->IsAlive() && It->Health < It->MaxHealth * .5f)
+                    {
+                        if (!SwampSaid(TEXT("S3_RatSoldiers"))) return true;
+                        bRatQueenCalled = true;
+                        It->StartRatQueenSummon();
+                        const FVector At = It->GetActorLocation();
+                        const FVector Side = FVector(-It->GetActorForwardVector().Y, It->GetActorForwardVector().X, 0.f);
+                        for (const float Sign : {-1.f, 1.f})
+                        {
+                            const FVector2D P(FMath::Clamp(static_cast<float>(At.X + Side.X * 650.f * Sign), -SwampArena::Half + 500.f, SwampArena::Half - 500.f),
+                                              FMath::Clamp(static_cast<float>(At.Y + Side.Y * 650.f * Sign), -SwampArena::Half + 500.f, SwampArena::Half - 500.f));
+                            if (auto* Rats = Site(FVector(P, 10.f), TEXT("THE QUEEN'S RATS"), EnemyTuning::RatQueenGuardRats, 0, false))
+                            {
+                                Rats->GroundType = EHellgirlEnemyType::Rats;
+                                Rats->FlyingCount = 0;
+                                Rats->Difficulty = 2;
+                                Rats->bGroupGuardsHome = false;
+                                Rats->bEnabled = Rats->bActivated = true;
+                                SwampWaveOfSite.Add(SwampWave);
+                            }
+                        }
+                        break;
+                    }
             return true;
         }
         const FName After = SwampWaveAfter.IsValidIndex(SwampWave) ? SwampWaveAfter[SwampWave] : NAME_None;
@@ -264,11 +307,10 @@ bool AArenaGameMode::TickSwampStage(float Dt, AArenaFighter* Hero)
         return false;
     }
     if (SwampStage == 2 && !SwampSaid(TEXT("S2_Won"))) return true;
-    // Stage III's arena: the crypt entrance is the way out (Swamp.cpp takes her once she reaches it). The Rat Queen's
-    // fight comes before it once she is designed.
+    // Stage III's arena, the Rat Queen beaten: the crypt entrance is the way out (Swamp.cpp takes her once she reaches it).
     if (bSwampArena)
     {
-        Objective = TEXT("THE DOORWAY / Enter the crypt   ·   the Rat Queen's fight comes later");
+        Objective = TEXT("THE DOORWAY / Enter the crypt");
         return false;
     }
     // The purple portal, by the light at the end.
@@ -310,14 +352,15 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
     FConfigFile Script;
     Script.Read(FPaths::ProjectContentDir() / TEXT("Dialogue/LevelTwo.ini"));
     for (const TCHAR* Id : {TEXT("S1_Intro"), TEXT("S1_Portal1"), TEXT("S1_Portal2"), TEXT("S1_Portal3"), TEXT("S2_Room1"), TEXT("S2_Room5"),
-                            TEXT("S2_Room7"), TEXT("S2_Room10"), TEXT("S2_Won"), TEXT("S3_Doorway")})
+                            TEXT("S2_Room7"), TEXT("S2_Room10"), TEXT("S2_Won"), TEXT("S3_Doorway"), TEXT("S3_RatSoldiers"), TEXT("S3_AfterRatQueen")})
     {
         FString Line;
         if (!Script.GetString(Id, TEXT("Line0"), Line)) { Finish(false, FString::Printf(TEXT("conversation %s missing"), Id)); return; }
     }
     Hero->MaxHealth = Hero->Health = 1000000.f;
     for (auto S : SpawnSites)
-        if (S->GroundType != EHellgirlEnemyType::Rats && S->GroundType != EHellgirlEnemyType::Frogs && S->GroundType != EHellgirlEnemyType::FrogKing)
+        if (S->GroundType != EHellgirlEnemyType::Rats && S->GroundType != EHellgirlEnemyType::Frogs && S->GroundType != EHellgirlEnemyType::FrogKing
+            && S->GroundType != EHellgirlEnemyType::RatQueen)
         { Finish(false, TEXT("a wave with enemies other than rats and frogs")); return; }
     // Stage II: every room sends more enemies than the one before (counted after the global wave scaling).
     if (SwampStage == 2)
@@ -333,6 +376,9 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
     bool HasKing = false;
     for (auto S : SpawnSites) HasKing |= S->GroundType == EHellgirlEnemyType::FrogKing && S->bBoss;
     if (HasKing != King) { Finish(false, TEXT("the Frog King is in the wrong room")); return; }
+    int32 RatQueens = 0;
+    for (auto S : SpawnSites) RatQueens += S->GroundType == EHellgirlEnemyType::RatQueen && S->bBoss;
+    if (RatQueens != (bSwampArena ? 1 : 0)) { Finish(false, TEXT("the Rat Queen is not (only) in Stage III")); return; }
     // Stage III is in the boss arena, laid out by the swamp's rules: the mud holds only the dead tree (and the crypt),
     // everything else stands in a stream, arms keep clear of the boardwalk, and the way in, the crypt and the wave
     // points are on the mud.
@@ -353,7 +399,7 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
             Pads += Item.Piece == EPiece::GiantLily;
         }
         if (Arms != 9 || Pads != 4) { Finish(false, FString::Printf(TEXT("%d arms and %d big lily pads, expected 9 and 4"), Arms, Pads)); return; }
-        for (const FVector2D P : {Start, Exit(), WavePoint(0), WavePoint(1)})
+        for (const FVector2D P : {Start, Exit(), WavePoint(0), WavePoint(1), WavePoint(2), WavePoint(3)})
             if (InWater(P, -100.f)) { Finish(false, FString::Printf(TEXT("%s is in or by the water"), *P.ToString())); return; }
         if (!InWater(FVector2D(Start.X + 500.f, Start.Y), 50.f)) { Finish(false, TEXT("the boardwalk does not cross the southern stream")); return; }
     }
@@ -407,9 +453,9 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
         if (Started.Num() > 1) { Finish(false, TEXT("two waves started at once")); return; }
         Waves += Started.Num();
     }
-    const int32 Expected = SwampStage == 1 ? UE_ARRAY_COUNT(StageOne) : SwampStage == 3 ? UE_ARRAY_COUNT(StageThree) : SwampWaveCount;
+    const int32 Expected = SwampStage == 1 ? UE_ARRAY_COUNT(StageOne) : SwampStage == 3 ? UE_ARRAY_COUNT(StageThree) + 1 : SwampWaveCount; // Stage III: its waves and the Rat Queen
     const bool WantLight = (SwampStage == 2 && SwampRoomNumber < RunRooms) || bSwampArena;
-    const TArray<int32> WantPortals = SwampStage == 1 ? TArray<int32>{2, 5, 7, 9} : bSwampArena ? TArray<int32>{1} : WantLight ? TArray<int32>{Expected} : TArray<int32>{};
+    const TArray<int32> WantPortals = SwampStage == 1 ? TArray<int32>{2, 5, 7, 9} : bSwampArena ? TArray<int32>{1, 2, 3} : WantLight ? TArray<int32>{Expected} : TArray<int32>{};
     UE_LOG(LogTemp, Display, TEXT("Swamp stage check: stage %d room %d: %d waves, %d blue portals, light %d, portal %d"), SwampStage, SwampRoomNumber, Waves,
         PortalsAfter.Num(), LightOpen, ExitGate && ExitGate->IsOpen());
     if (Waves != Expected || (SwampStage == 2 && (Waves < 3 || Waves > 5 || (King && Waves != 5))))
@@ -417,7 +463,7 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
     if (PortalsAfter != WantPortals) { Finish(false, FString::Printf(TEXT("%d blue portals, not after the right waves"), PortalsAfter.Num())); return; }
     if (WantLight != LightOpen || (!WantLight && !(ExitGate && ExitGate->IsOpen()))) { Finish(false, TEXT("the way out did not open")); return; }
     Finish(true, FString::Printf(TEXT("stage %d room %d: %d waves of rats and frogs from their points%s%s, then %s"), SwampStage, SwampRoomNumber, Waves,
-        King ? TEXT(" with the Frog King") : TEXT(""), SwampStage == 1 ? TEXT(", blue portals after waves 2, 5, 7 and 9") : bSwampArena ? TEXT(", a blue portal after wave 1") : PortalsAfter.Num() ? TEXT(", a blue portal after the last") : TEXT(""),
+        King ? TEXT(" with the Frog King") : TEXT(""), SwampStage == 1 ? TEXT(", blue portals after waves 2, 5, 7 and 9") : bSwampArena ? TEXT(", blue portals after waves 1, 2 and 3, then the Rat Queen") : PortalsAfter.Num() ? TEXT(", a blue portal after the last") : TEXT(""),
         bSwampArena ? TEXT("the crypt entrance") : WantLight ? TEXT("the light to the next room") : TEXT("the purple portal")));
 #endif
 }

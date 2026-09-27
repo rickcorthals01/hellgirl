@@ -10,5 +10,8 @@ enum class EEnemyMove : unsigned char
     GoblinQuickSlash,
     // World II. The rat: a quick bite that cannot be countered, a fast punch (sometimes followed by a second), a
     // dodge roll. The frog: a quick punch, a punch in the air, and a slam down from the air.
-    RatBite, RatPunch, RatPunch2, RatRoll, FrogPunch, FrogAirPunch, FrogSlam
+    RatBite, RatPunch, RatPunch2, RatRoll, FrogPunch, FrogAirPunch, FrogSlam,
+    // The Rat Queen: right slash, left slash, a charged heavy slash that dashes her far forward, a jump slam, and the
+    // pose she strikes calling her rats (no hit).
+    RatQueenSlash, RatQueenSlash2, RatQueenHeavy, RatQueenJumpSlam, RatQueenSummon
 };

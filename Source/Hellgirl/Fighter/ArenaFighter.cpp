@@ -337,6 +337,7 @@ void AArenaFighter::SetEnemyType(EHellgirlEnemyType Type)
     if (Type == EHellgirlEnemyType::Rats) { WalkSpeed=EnemyTuning::RatSpeed; AttackDamage=10.f; }
     if (Type == EHellgirlEnemyType::Frogs) { WalkSpeed=380.f; AttackDamage=10.f; }
     if (Type == EHellgirlEnemyType::FrogKing) { WalkSpeed=420.f; AttackDamage=16.f; }
+    if (Type == EHellgirlEnemyType::RatQueen) { WalkSpeed=EnemyTuning::RatQueenSpeed; AttackDamage=EnemyTuning::RatQueenDamage; }
     // The mini succubus only flies, whatever the spawn site asked for.
     if (Type == EHellgirlEnemyType::MiniSuccubus) { bFlyingEnemy = true; GetCharacterMovement()->SetMovementMode(MOVE_Flying); }
     const FString Name = StaticEnum<EHellgirlEnemyType>()->GetNameStringByValue(static_cast<int64>(Type));
@@ -738,7 +739,8 @@ void AArenaFighter::ResolveAttack()
         FVector Delta = Other->GetActorLocation() - GetActorLocation();
         const bool bAirMove = FistCombat::IsAirStrike(CurrentAttack.Type);
         const bool bAreaAttack = (PlayerArea && !(SelectedWeapon == 1 && FistCombat::IsGroundImpact(CurrentAttack.Type)))
-            || (bEnemy && (EnemyMove == EEnemyMove::CommanderSlam || EnemyMove == EEnemyMove::CommanderJumpSlam || EnemyMove == EEnemyMove::FrogSlam));
+            || (bEnemy && (EnemyMove == EEnemyMove::CommanderSlam || EnemyMove == EEnemyMove::CommanderJumpSlam || EnemyMove == EEnemyMove::FrogSlam
+                || EnemyMove == EEnemyMove::RatQueenJumpSlam));
         const float Cone = bEnemy && EnemyMove == EEnemyMove::CommanderCleave ? -.1f : .25f;
         if (Delta.Size2D() > CurrentAttack.Range || FMath::Abs(Delta.Z) > (bAirMove ? 280.f : (bFlyingEnemy ? 200.f : 140.f))
             || (!bAreaAttack && FVector::DotProduct(GetActorForwardVector(), Delta.GetSafeNormal2D()) < Cone)) continue;
@@ -1069,6 +1071,7 @@ void AArenaFighter::Tick(float Dt)
             else if (EnemyType == EHellgirlEnemyType::Goblins) UpdateGoblinTactics(Dt,Player);
             else if (EnemyType == EHellgirlEnemyType::Rats) UpdateRatTactics(Dt,Player);
             else if (IsFrog()) UpdateFrogTactics(Dt,Player);
+            else if (EnemyType == EHellgirlEnemyType::RatQueen) UpdateRatQueenTactics(Dt,Player);
             else if (EnemyType == EHellgirlEnemyType::Imps || EnemyType == EHellgirlEnemyType::FlyingImps || EnemyType == EHellgirlEnemyType::MiniSuccubus) UpdateImpTactics(Dt,Player);
             else
             {
@@ -1120,6 +1123,10 @@ void AArenaFighter::UpdateEnemyAnimation(float Dt)
         case EEnemyMove::RatRoll: Own = EnemyDodgeAnimation.Get(); break;
         case EEnemyMove::FrogAirPunch: Own = EnemyAirAttackAnimation.Get(); break;
         case EEnemyMove::FrogSlam: Own = EnemyHeavyAttackAnimation.Get(); break;
+        case EEnemyMove::RatQueenSlash2: Own = EnemyAttack2Animation.Get(); break;
+        case EEnemyMove::RatQueenHeavy: Own = EnemyHeavyAttackAnimation.Get(); break;
+        case EEnemyMove::RatQueenJumpSlam: Own = EnemyAirAttackAnimation.Get(); break;
+        case EEnemyMove::RatQueenSummon: Own = EnemyQuickAttackAnimation.Get(); break;
         default: break;
         }
         return Own ? Own : EnemyAttackAnimation.Get();

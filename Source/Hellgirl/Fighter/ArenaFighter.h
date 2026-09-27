@@ -95,6 +95,9 @@ public:
     // World II (Enemies/SwampCombat.cpp).
     void UpdateRatTactics(float Dt, AArenaFighter* Player);
     void UpdateFrogTactics(float Dt, AArenaFighter* Player);
+    void UpdateRatQueenTactics(float Dt, AArenaFighter* Player);
+    // The Rat Queen calls her rats: a pose with no hit (the stage spawns them).
+    void StartRatQueenSummon();
     bool IsFrog() const { return EnemyType == EHellgirlEnemyType::Frogs || EnemyType == EHellgirlEnemyType::FrogKing; }
     // True while this fighter is winding up an attack that has not landed yet (rats roll away from it).
     bool IsWindingUpAttack() const { return AttackClock > 0.f && !bHitResolved; }
@@ -171,6 +174,12 @@ private:
     float RatBiteClock = 0.f, RatRollClock = 0.f, FrogSlamClock = 0.f, FrogHopClock = 0.f, EnemyAirTime = 0.f;
     int32 SplashHitsTaken = 0; // times a frog's slam splashed this enemy (checks)
     bool bRatPunchChain = false;
+    // The Rat Queen: where she is in her slash string (1: left slash next, 2: heavy slash next), her second roll, and
+    // her move clocks.
+    int32 RatQueenCombo = 0;
+    bool bRatQueenSecondRoll = false;
+    FVector RatQueenRollDir = FVector::ZeroVector;
+    float RatQueenJumpClock = 3.f, RatQueenHeavyClock = 0.f;
     void StartRatRoll(const FVector& Direction);
     // The frog's slam landed: its splash hits and pushes the other enemies caught in it.
     void FrogSlamSplash();

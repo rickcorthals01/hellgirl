@@ -160,8 +160,9 @@ void AEnemySpawnPoint::SpawnOne()
     {
         // The Frog King is a mini-boss: less health and a lighter hand than a real boss.
         const bool MiniBoss = Enemy->EnemyType == EHellgirlEnemyType::FrogKing;
-        Enemy->MaxHealth = Enemy->Health = MiniBoss ? EnemyTuning::FrogKingHealth : 1350.f;
-        Enemy->AttackDamage = MiniBoss ? 18.f : 28.f;
+        const bool RatQueen = Enemy->EnemyType == EHellgirlEnemyType::RatQueen;
+        Enemy->MaxHealth = Enemy->Health = MiniBoss ? EnemyTuning::FrogKingHealth : RatQueen ? EnemyTuning::RatQueenHealth : 1350.f;
+        Enemy->AttackDamage = MiniBoss ? 18.f : RatQueen ? EnemyTuning::RatQueenDamage : 28.f;
         Enemy->AttackRange = 240.f;
         Enemy->SetActorScale3D(FVector(1.5f));
     }

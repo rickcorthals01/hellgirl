@@ -4,6 +4,7 @@
 //   The frog: always hopping, fast and high. A quick punch on the ground, a punch in the air when level with her, and a
 //   slam straight down from high up: medium damage in a circle and a small blast that pushes her back; other enemies
 //   in the splash take a little damage and are pushed away too. The Frog King (mini-boss) does the same, bigger.
+//   The Rat Queen (the boss): slashes, a dashing heavy slash, a jump slam, a double dodge roll (at the end of the file).
 // Numbers are in Rules/EnemyTuning.h; the moves themselves in Enemies/EnemyMoveset.cpp.
 #include "Fighter/ArenaFighter.h"
 #include "Enemies/EnemyMovesetState.h"
@@ -161,4 +162,93 @@ void AArenaFighter::FrogSlamSplash()
     // A splash on the water (or the mud) where it landed.
     if (auto* Mode = Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(this)); Mode && Mode->bSwamp)
         Mode->SwampSplash(GetActorLocation(), EnemyType == EHellgirlEnemyType::FrogKing ? 3.2f : 2.4f, 14);
+}
+
+// The Rat Queen (World II's boss): a fast string of right slash, left slash, then a charged heavy slash that dashes
+// her far forward; a jump slam now and then; the heavy slash on its own to close the distance; and a double dodge roll
+// (every 2 s) when Hellgirl swings at her. Her rats are called by the stage at half health (StartRatQueenSummon).
+void AArenaFighter::UpdateRatQueenTactics(float Dt, AArenaFighter* Player)
+{
+    if (!Player) return;
+    // The second roll of her double roll follows straight on from the first, turned a little further away.
+    if (bRatQueenSecondRoll && EnemyMove == EEnemyMove::None && AttackClock <= 0.f)
+    {
+        bRatQueenSecondRoll = false;
+        StartRatRoll(RatQueenRollDir);
+        if (EnemyMove == EEnemyMove::RatRoll) return;
+    }
+    if (EnemyMove == EEnemyMove::RatRoll || EnemyMove == EEnemyMove::RatQueenSummon) return;
+    const FVector Delta = Player->GetActorLocation() - GetActorLocation();
+    const float Distance = Delta.Size2D();
+    const FVector Toward = Delta.GetSafeNormal2D().IsNearlyZero() ? GetActorForwardVector() : Delta.GetSafeNormal2D();
+    // Hellgirl winding up an attack at her: she rolls aside twice (giving up a slash that has not landed yet, but
+    // never the heavy slash once it is charging).
+    if (RatRollClock <= 0.f && Distance < 350.f && Player->IsWindingUpAttack() && EnemyMove != EEnemyMove::RatQueenHeavy
+        && EnemyMove != EEnemyMove::RatQueenJumpSlam && (AttackClock <= 0.f || IsWindingUpAttack())
+        && FVector::DotProduct(Player->GetActorForwardVector(), -Toward) > .5f)
+    {
+        const bool Rolls = FMath::FRand() < EnemyTuning::RatQueenRollChance;
+        RatRollClock = Rolls ? EnemyTuning::RatQueenRollCooldown : .5f;
+        if (Rolls)
+        {
+            CancelEnemyMove();
+            RatQueenCombo = 0;
+            const FVector Side = FVector(-Toward.Y, Toward.X, 0.f) * (FMath::RandBool() ? 1.f : -1.f);
+            StartRatRoll(Side - Toward * .35f);
+            if (EnemyMove == EEnemyMove::RatRoll)
+            {
+                bRatQueenSecondRoll = true;
+                RatQueenRollDir = (Side - Toward * .8f).GetSafeNormal2D();
+                return;
+            }
+        }
+    }
+    if (AttackClock > 0.f) return;
+    SetActorRotation(Toward.Rotation());
+    // Her slash string: each slash follows straight on from the one before.
+    if (RatQueenCombo > 0 && EnemyMove == EEnemyMove::None)
+    {
+        const EEnemyMove Next = RatQueenCombo == 1 ? EEnemyMove::RatQueenSlash2 : EEnemyMove::RatQueenHeavy;
+        RatQueenCombo = RatQueenCombo == 1 ? 2 : 0;
+        EnemyMoveCooldown = 0.f;
+        BeginEnemyMove(Next, Player);
+        if (EnemyMove == Next) { if (Next == EEnemyMove::RatQueenHeavy) RatQueenHeavyClock = EnemyTuning::RatQueenHeavyCooldown; return; }
+        RatQueenCombo = 0;
+    }
+    if (CanBeginEnemyMove(Player))
+    {
+        if (RatQueenJumpClock <= 0.f && Distance > 350.f && Distance < 1100.f && FMath::FRand() < .5f)
+        {
+            BeginEnemyMove(EEnemyMove::RatQueenJumpSlam, Player);
+            if (EnemyMove == EEnemyMove::RatQueenJumpSlam) { RatQueenJumpClock = EnemyTuning::RatQueenJumpCooldown; return; }
+        }
+        if (Distance < EnemyTuning::RatQueenSlashReach)
+        {
+            BeginEnemyMove(EEnemyMove::RatQueenSlash, Player);
+            if (EnemyMove == EEnemyMove::RatQueenSlash) { RatQueenCombo = 1; return; }
+        }
+        // From further off the heavy slash closes the distance in one dash.
+        if (RatQueenHeavyClock <= 0.f && Distance > 420.f && Distance < 750.f)
+        {
+            BeginEnemyMove(EEnemyMove::RatQueenHeavy, Player);
+            if (EnemyMove == EEnemyMove::RatQueenHeavy) { RatQueenHeavyClock = EnemyTuning::RatQueenHeavyCooldown; return; }
+        }
+    }
+    if (Distance > 170.f && IsEnemyGroundAheadSafe(Toward)) AddMovementInput(Toward, 1.f);
+}
+
+void AArenaFighter::StartRatQueenSummon()
+{
+    if (!IsAlive()) return;
+    CancelEnemyMove();
+    RatQueenCombo = 0;
+    bRatQueenSecondRoll = false;
+    EnemyMove = EEnemyMove::RatQueenSummon;
+    bEnemyMoveMotionStopped = true;
+    // A pose with no hit: its clock drives the clip.
+    CurrentAttack = {FistCombat::Move::EnemyClaw, EnemyTuning::RatQueenSummonSeconds, .99f, 0.f, 0.f, 0.f, 0.f, 0};
+    AttackClock = EnemyTuning::RatQueenSummonSeconds;
+    bHitResolved = bSecondHitResolved = true;
+    EnemyMoveCooldown = EnemyTuning::RatQueenSummonSeconds + .2f;
+    GetCharacterMovement()->StopMovementImmediately();
 }
