@@ -3,6 +3,7 @@
 #include "Levels/ArenaGameMode.h"
 #include "Levels/WavePortal.h"
 #include "Fighter/ArenaFighter.h"
+#include "Enemies/EnemySpawnPoint.h"
 #include "Particles/ParticleSystem.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -130,6 +131,10 @@ void AArenaGameMode::RunMapShot(float Dt)
         else if (PortalShot >= 3 && Clock > 5.5f) FPlatformMisc::RequestExitWithStatus(false, 0);
         return;
     }
+    // -MapShotBoss: the room's boss sites wake at once (to see a boss and its bar without fighting through the waves).
+    if (FParse::Param(FCommandLine::Get(), TEXT("MapShotBoss")) && Clock > 1.5f)
+        for (auto& Site : SpawnSites)
+            if (Site && Site->bBoss && !Site->bActivated) { Site->bEnabled = true; Site->bActivated = true; }
     // -MapShotCombo=Points holds the combo meter at that value, to see how it looks on the HUD.
     float ComboPoints = -1.f;
     if (FParse::Value(FCommandLine::Get(), TEXT("MapShotCombo="), ComboPoints))
