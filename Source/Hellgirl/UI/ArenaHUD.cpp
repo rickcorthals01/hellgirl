@@ -240,8 +240,8 @@ void AArenaHUD::DrawHUD()
     // ---- Death and victory. ----
     FString Message;
     // After a fall the banner shows until the death menu (TRY AGAIN / RETURN TO CAMP) opens over it.
-    const auto* Owner = Cast<AHellgirlPlayerController>(GetOwningPlayerController());
-    if (!Player->IsAlive() && !(Owner && Owner->IsPauseMenuOpen()))
+    const auto* ViewerPC = Cast<AHellgirlPlayerController>(GetOwningPlayerController());
+    if (!Player->IsAlive() && !(ViewerPC && ViewerPC->IsPauseMenuOpen()))
         Message = GM->bEndless ? FString::Printf(TEXT("THE HORDE WINS  ·  wave %d  ·  best %d"), GM->EndlessWave, HellgirlProgress::EndlessBest())
             : TEXT("YOU FELL");
     else if (GM->bWon) Message = TEXT("LEVEL COMPLETE");
