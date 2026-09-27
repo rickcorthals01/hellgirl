@@ -53,8 +53,10 @@ const TCHAR* RoomLine(int32 Room)
 {
     return Room == 1 ? TEXT("S2_Room1") : Room == 5 ? TEXT("S2_Room5") : Room == 7 ? TEXT("S2_Room7") : Room == 10 ? TEXT("S2_Room10") : nullptr;
 }
-// Stage II, room R: groups at three to five of the areas (all five in the Frog King's room), each one or two
-// enemies (more often two later in the run), rats and frogs at random. Every room but the last ends with a blue portal.
+// Stage II: how many enemies room R sends (before the global wave scaling), one more with every room.
+inline int32 RoomEnemies(int32 Room) { return 3 + FMath::Clamp(Room, 1, RunRooms); }
+// Stage II, room R: groups at three to five of the areas (all five in the Frog King's room) sharing the room's
+// enemies, rats and frogs at random. Every room but the last ends with a blue portal.
 TArray<FWave> RoomWaves(int32 Seed, int32 Room)
 {
     FRandomStream Dice(Seed * 131 + Room * 17);
@@ -64,7 +66,10 @@ TArray<FWave> RoomWaves(int32 Seed, int32 Room)
     TArray<FWave> Waves;
     for (const int32 Area : Picked)
     {
-        const int32 Size = Room >= RunRooms ? 2 : 1 + (Dice.FRand() < Room / 10.f);
+        // The room's enemies (3 + its number, before the global wave scaling), shared as evenly as possible between the
+        // groups, the larger shares last: every room brings more than the one before.
+        const int32 Index = Waves.Num(), Total = RoomEnemies(Room);
+        const int32 Size = Total / Groups + (Index >= Groups - Total % Groups ? 1 : 0);
         const int32 Frogs = Dice.RandRange(0, Size);
         Waves.Add({Area, Dice.RandRange(0, 1), Size - Frogs, Frogs, nullptr, false});
     }
@@ -314,6 +319,16 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
     for (auto S : SpawnSites)
         if (S->GroundType != EHellgirlEnemyType::Rats && S->GroundType != EHellgirlEnemyType::Frogs && S->GroundType != EHellgirlEnemyType::FrogKing)
         { Finish(false, TEXT("a wave with enemies other than rats and frogs")); return; }
+    // Stage II: every room sends more enemies than the one before (counted after the global wave scaling).
+    if (SwampStage == 2)
+        for (int32 Room = 1, Before = 0; Room <= RunRooms; ++Room)
+        {
+            int32 Count = 0;
+            for (const FWave& W : RoomWaves(SwampSeed, Room)) Count += EnemyTuning::WaveSize(W.Rats + W.Frogs);
+            UE_LOG(LogTemp, Display, TEXT("Swamp stage check: Stage II room %d sends %d enemies"), Room, Count);
+            if (Count <= Before) { Finish(false, FString::Printf(TEXT("Stage II room %d sends %d enemies, not more than room %d"), Room, Count, Room - 1)); return; }
+            Before = Count;
+        }
     const bool King = SwampStage == 2 && SwampRoomNumber >= RunRooms;
     bool HasKing = false;
     for (auto S : SpawnSites) HasKing |= S->GroundType == EHellgirlEnemyType::FrogKing && S->bBoss;
