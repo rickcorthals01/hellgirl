@@ -383,7 +383,7 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
     }
     const int32 Expected = SwampStage == 1 ? UE_ARRAY_COUNT(StageOne) : SwampStage == 3 ? UE_ARRAY_COUNT(StageThree) : SwampWaveCount;
     const bool WantLight = (SwampStage == 2 && SwampRoomNumber < RunRooms) || bSwampArena;
-    const TArray<int32> WantPortals = SwampStage == 1 ? TArray<int32>{2, 5, 7, 9} : WantLight ? TArray<int32>{Expected} : TArray<int32>{};
+    const TArray<int32> WantPortals = SwampStage == 1 ? TArray<int32>{2, 5, 7, 9} : WantLight && !bSwampArena ? TArray<int32>{Expected} : TArray<int32>{};
     UE_LOG(LogTemp, Display, TEXT("Swamp stage check: stage %d room %d: %d waves, %d blue portals, light %d, portal %d"), SwampStage, SwampRoomNumber, Waves,
         PortalsAfter.Num(), LightOpen, ExitGate && ExitGate->IsOpen());
     if (Waves != Expected || (SwampStage == 2 && (Waves < 3 || Waves > 5 || (King && Waves != 5))))
