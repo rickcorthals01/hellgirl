@@ -28,7 +28,7 @@ void AArenaGameMode::RunMenuFocusCheck(float Dt)
     Wallet->LevelSouls.Souls = 40;
     PC->OpenPortalMenu(false);
     // The game is paused while the menu is open, so the steps run on the core ticker.
-    struct FState { int32 Step = 0; float Time = 0.f; TSharedPtr<SWidget> First; };
+    struct FState { int32 Step = 0; float Time = 0.f; TSharedPtr<SWidget> First, Opening; };
     TSharedRef<FState> State = MakeShared<FState>();
     TWeakObjectPtr<AHellgirlPlayerController> WeakPC(PC);
     TWeakObjectPtr<UHellgirlWallet> WeakWallet(Wallet);
@@ -55,6 +55,7 @@ void AArenaGameMode::RunMenuFocusCheck(float Dt)
             if (State->Time < .5f) return true;
             if (!WeakPC->IsPauseMenuOpen()) return Finish(false, TEXT("the portal menu did not open"));
             if (!FocusedButton().IsValid()) return Finish(false, TEXT("the menu opened without a focused button"));
+            State->Opening = FocusedButton();
             // Down to the stock button, as a gamepad would.
             FSlateApplication::Get().ProcessKeyDownEvent(FKeyEvent(EKeys::Down, FModifierKeysState(), 0, false, 0, 0));
             FSlateApplication::Get().ProcessKeyUpEvent(FKeyEvent(EKeys::Down, FModifierKeysState(), 0, false, 0, 0));
@@ -64,6 +65,7 @@ void AArenaGameMode::RunMenuFocusCheck(float Dt)
             if (State->Time < .3f) return true;
             State->First = FocusedButton();
             if (!State->First.IsValid()) return Finish(false, TEXT("no button focused after moving down"));
+            if (State->First == State->Opening) return Finish(false, TEXT("moving down did not move the focus"));
             // Stock the Souls: the focused stock button disables.
             if (!WeakWallet->StockSouls(false)) return Finish(false, TEXT("could not stock the Souls"));
             State->Step = 1; State->Time = 0.f;
