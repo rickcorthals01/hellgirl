@@ -75,7 +75,7 @@ Open them from the forest road, under **World II**. Stage I opens once World I i
 |---|---|
 | **I, The Swamp of Souls** | One stretch of swamp (always seed 1101). A six-second camera flight from the far end back to Hellgirl, then the Goblin Queen's intro. Ten waves of rats and frogs from the areas' points (below). Blue portals open after waves 2, 5, 7 and 9: stepping in plays her conversation (none at wave 7), then the portal menu (continue, stock Souls, upgrades). After wave 10, the purple portal by the light at the end. |
 | **II, Deeper In** | A run of ten rooms (a new seed each run). Each room sends groups of random rats and frogs from three to five of the areas' points (all five in room 10). Once they are all beaten, a blue portal opens (not in room 10), and continuing through it opens the light. Health, energy and Souls carry over, and dying ends the run. Her lines play at rooms 1, 5, 7 and 10. Room 10 is the Frog King's: he waits on his giant lily pad, guarded by rats and frogs. Beating him brings "Up there! I can see it." and the purple portal. |
-| **III, The Doorway** | In the boss arena (see Boss arena below). Wave 1, then a blue portal; once she continues through it, the doorway conversation, ending "Watch out!", and wave 2 springs at once. Then the crypt entrance is the way out (walking in wins the level). The Rat Queen's fight comes later, between "Watch out!" and the crypt. Her after-fight conversation is already in `LevelTwo.ini` (`S3_AfterRatQueen`). |
+| **III, The Doorway** | In the boss arena (see Boss arena below). Wave 1 (5 rats + 2 frogs) → blue portal → a bigger wave 2 (6 + 5) → blue portal, and once she continues, the doorway conversation ending "Watch out!" → wave 3 springs the ambush (4 + 4) → blue portal → the Rat Queen leaps in before the crypt. Beaten, her after-fight conversation (`S3_AfterRatQueen`) plays, then the crypt entrance is the way out (walking in wins the level). |
 
 ### Where the waves come from
 
@@ -103,6 +103,7 @@ Both come from their rigged Meshy models, with Mixamo clips fitted onto their ri
 | **Rat** (fast, 470 cm/s) | **Bite:** a quick 0.45 s lunge for low damage, once every 4 s. A perfect dodge cannot counter it and it shows no counter flash; a normal dodge still avoids it. **Punch:** a very fast 0.55 s charge and release for medium damage, followed 55% of the time by a second punch with the other hand. **Dodge roll:** when Hellgirl winds up an attack at it, a 40% chance (at most every 3 s) to roll aside and away, untouchable while rolling, dropping its own attack if that has not landed yet. |
 | **Frog** | Always hopping, fast and high (a 0.3–0.75 s pause between hops): straight at her from afar, around her up close, and up and over her when its slam is ready. **Punch** on the ground (0.45 s, low damage). **Air punch** when level with her mid-hop. **Slam** from high up (every 6 s): a blue circle marks where it will land, then it dives. It deals medium damage (all frog hits are scaled by 0.85) in a 3.2 m circle with a small blast that pushes her back; other enemies in the splash take 6 damage and are pushed away. |
 | **Frog King** (mini-boss, 750 health, boss bar) | A bigger frog (1.25 × model, 1.5 × actor) that hops higher and slams every 2.8 s in a 4.6 m circle. |
+| **Rat Queen** (the boss, 1600 health, boss bar) | Her HD model, rigged onto her old skeleton, 1.5 × actor. Very mobile (520 cm/s), short cooldowns. A string of fast **right slash** and **left slash** (low damage), then a charged **heavy slash** that dashes her up to 7.5 m forward (heavy damage; the charge-up gives time to dodge); the heavy slash alone closes the distance from afar. A **jump slam** now and then (every 7 s at most), its landing circle shown before she hits. A **double dodge roll** when Hellgirl swings at her (every 2 s at most, 70%). At **half health**: "My soldiers! Aid me!" (`S3_RatSoldiers`), her summon pose, and two waves of rats (4 each before scaling) beside her; she keeps fighting, and her wave ends when she and her rats are down. |
 
 Their clips:
 - **Rat:** idle; its own Meshy run; bite (Headbutt); punch and second punch (RightPunch, mirrored); roll (Stand To Roll); hit.
@@ -123,5 +124,14 @@ Built from the user's sketch ("Developer idea folder lol/Swamp boss arena.png");
 - **Way in:** Hellgirl arrives at the south end of a boardwalk across the wide stream; its last two sections are broken.
 - **Way out:** the crypt entrance (the graveyard's `SM_CryptExit`) in the north-west corner, its doorway lit from inside.
 - **Pieces:** 9 zombie arms, 4 big dark lily pads to stand on where the upper streams bend, 2 drowned stumps, and one dead tree on the mud. Reeds, small lily pads and fireflies dress the streams. As in the corridor, the mud holds nothing but the tree (and the crypt).
-- **Waves:** wave 1 comes from the east mud, wave 2 from the north-west mud by the crypt.
+- **Waves:** wave 1 comes from the east mud, wave 2 from the south-west mud, wave 3 from the north-west mud by the crypt; the Rat Queen leaps in just in front of the crypt.
 - **Checks:** `SwampStage3` checks the rules above, the blue portal after wave 1 and the crypt opening. `-HellgirlSwampPreview` with `Stage=3` photographs the arena.
+
+### The Rat Queen's model and clips
+
+- **Model:** "Meshy Models/High Quality Models/Rat Queen HD" (1.9 million triangles) is reduced to 150k, fitted onto the old Rat Queen ("Meshy Models/Bosses/Rat Queen") and given its skeleton and skin weights by `Tools/Animations/rig_hq_outfit.py`. The rigged model goes to "Rat Queen HD/rigged/RatQueen.fbx".
+- **Textures:** 2048 px copies of the HD textures, including a normal map.
+- **Clips** (`Tools/Enemies/ratqueen_clips.json`): idle, her own Meshy run, the right slash (great sword slash), the left slash (the same, mirrored), the heavy slash (great sword slide attack, which hits at frame 40), the jump slam (great sword jump attack, which hits at frame 34), the rats' roll, the summon (great sword power up) and a hit.
+- **Rebuild:** with Unreal closed, `powershell -ExecutionPolicy Bypass -File Tools\Enemies\swamp_enemies.ps1 -Only RatQueen`.
+- **Portraits:** "Talkbox Images/Rat Queen" → `Portraits/RatQueen` (Angry, Neutral, Talk, Yelling).
+- **Check:** `RatQueen` (Stage III jumps to her wave). It checks the slash string, a double roll, her closing in, the summon with two rat waves at half health, and that her hits hurt.
