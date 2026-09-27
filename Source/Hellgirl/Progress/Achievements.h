@@ -12,14 +12,14 @@ namespace HellgirlAchievements
 {
 inline const TCHAR* Section = TEXT("HellgirlAchievements");
 inline const TCHAR* EndlessGoblins50 = TEXT("EndlessGoblins50");   // cleared wave 50 of endless Goblins
-inline const TCHAR* GoblinQueenOutfit = TEXT("GoblinQueenOutfit"); // bought the Goblin Queen outfit
+inline const TCHAR* GoblinQueenOutfit = TEXT("GoblinQueenOutfit"); // claimed the Goblin Queen outfit (free after wave 50)
 
 struct FInfo { const TCHAR* Id; const TCHAR* Title; };
 inline const TArray<FInfo>& All()
 {
     static const TArray<FInfo> List = {
         {EndlessGoblins50, TEXT("Beaten wave 50 · Goblins")},
-        {GoblinQueenOutfit, TEXT("Bought the Goblin Queen outfit")}};
+        {GoblinQueenOutfit, TEXT("Claimed the Goblin Queen outfit")}};
     return List;
 }
 inline const TCHAR* Title(const TCHAR* Id)

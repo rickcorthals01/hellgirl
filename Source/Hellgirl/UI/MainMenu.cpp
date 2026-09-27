@@ -86,7 +86,7 @@ void AHellgirlPlayerController::ShowMainMenu()
     EnsureGothicFrame();
     if (auto* Hero=Cast<AArenaFighter>(GetPawn())) Hero->PrepareForPause();
     FlushPressedKeys(); bMenuOpen=true; bShowMouseCursor=true;
-    auto Menu=SNew(SHellgirlMainMenu).Owner(this).Frame(FrameTexture); PauseWidget=Menu;
+    auto Menu=SNew(SHellgirlMainMenu).Owner(this).Frame(FrameTexture); PauseWidget=Menu; KeepMenuFocus();
     GetWorld()->GetGameViewport()->AddViewportWidgetContent(Menu,100);
     FInputModeUIOnly Mode; Mode.SetWidgetToFocus(Menu->PlayButton); Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock); SetInputMode(Mode);
     // Focus needs a registered Slate widget path; that is only guaranteed after layout.

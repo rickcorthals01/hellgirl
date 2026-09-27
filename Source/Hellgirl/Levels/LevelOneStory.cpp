@@ -1,4 +1,6 @@
 #include "Levels/ArenaGameMode.h"
+#include "Levels/WavePortal.h"
+#include "EngineUtils.h"
 #include "Fighter/ArenaFighter.h"
 #include "UI/HellgirlPlayerController.h"
 #include "Enemies/EnemySpawnPoint.h"
@@ -29,6 +31,8 @@ void AArenaGameMode::QueueStory(FName Moment)
 void AArenaGameMode::QueenSurrendered(AArenaFighter* Queen)
 {
     SurrenderedQueen=Queen;
+    // Endless wave 20: she begs to be spared (04).
+    if (bEndless) { EndlessTalk=TEXT("E_Wave20Defeat"); return; }
     QueueStory(TEXT("QueenDefeat"));
 }
 bool AArenaGameMode::HasPlayedStory(FName Moment) const { return PlayedStory.Contains(Moment); }
@@ -59,6 +63,21 @@ void AArenaGameMode::StoryFinished(FName Moment)
         if (Player) Player->Energy=Player->MaxEnergy;
         // The how-to follows in its own box (L3_UltimateTip; the key comes from the input settings).
         QueueStory(TEXT("L3_UltimateTip"));
+    }
+    // Endless: the Goblin Queen is spared. The run ends here: the rest of the wave is dismissed, the run is banked (its
+    // Soul Coins and best wave), and the way back to camp is offered (the purple portal stays open if she says no).
+    if (Moment==TEXT("E_Wave20Defeat") && bEndless)
+    {
+        HellgirlProgress::SetFlag(TEXT("EndlessQueenSpared"));
+        bEndlessQueenSpared=true;
+        for (TActorIterator<AArenaFighter> It(GetWorld()); It; ++It) if (It->bEnemy) It->Destroy();
+        for (auto Site : SpawnSites) { Site->bEnabled=false; Site->bCleared=true; }
+        SurrenderedQueen.Reset();
+        HellgirlProgress::RecordEndless(EndlessWave);
+        CompleteLevel();
+        if (Player && ExitGate) ExitGate->Open(Player->GetActorLocation()+Player->GetActorForwardVector()*500.f,Player->GetActorLocation(),true);
+        if (PC) PC->OpenPortalMenu(true);
+        return;
     }
     if (Moment==TEXT("QueenDefeat") && SurrenderedQueen.IsValid())
     {

@@ -174,6 +174,7 @@ void AHellgirlPlayerController::TogglePauseMenu()
     auto Menu=SNew(SHellgirlPause).Owner(this).Frame(FrameTexture);
     PauseWidget=Menu;
     GetWorld()->GetGameViewport()->AddViewportWidgetContent(Menu,100);
+    KeepMenuFocus();
     bShowMouseCursor=true;
     FInputModeUIOnly Mode; Mode.SetWidgetToFocus(bMainMenuActive?Menu->OptionsBack:Menu->PlayButton); Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
     SetInputMode(Mode);
@@ -354,4 +355,52 @@ FString AHellgirlPlayerController::KeysFor(FName Action) const
         if (Mapping.Key.IsGamepadKey() == bUsingGamepad) Keys += (Keys.IsEmpty() ? TEXT("") : TEXT(" / ")) + Name;
     }
     return Keys.IsEmpty() ? AnyDevice : Keys;
+}
+
+namespace
+{
+// Whether the focus is lost: nowhere, back on the game view, or on a disabled or hidden part of the menu. Focus in a
+// popup (an options dropdown) is left alone.
+bool IsFocusLost(const TSharedPtr<SWidget>& Focused, const TSharedPtr<SWidget>& Menu)
+{
+    if (!Focused.IsValid()) return true;
+    bool Unusable = false;
+    for (TSharedPtr<SWidget> W = Focused; W.IsValid(); W = W->GetParentWidget())
+    {
+        Unusable |= !W->IsEnabled() || !W->GetVisibility().IsVisible();
+        if (W == Menu) return Unusable;
+    }
+    const FName Type = Focused->GetType();
+    return Type == FName(TEXT("SViewport")) || Type == FName(TEXT("SGameLayerManager"));
+}
+TSharedPtr<SWidget> FirstUsableButton(const TSharedRef<SWidget>& Widget)
+{
+    if (!Widget->IsEnabled() || !Widget->GetVisibility().IsVisible()) return nullptr;
+    if (Widget->GetType() == FName(TEXT("SButton"))) return Widget;
+    FChildren* Children = Widget->GetChildren();
+    for (int32 I = 0; Children && I < Children->Num(); ++I)
+        if (TSharedPtr<SWidget> Found = FirstUsableButton(Children->GetChildAt(I))) return Found;
+    return nullptr;
+}
+}
+
+void AHellgirlPlayerController::KeepMenuFocus()
+{
+    TWeakObjectPtr<AHellgirlPlayerController> Weak(this);
+    TWeakPtr<SWidget> WeakMenu = PauseWidget;
+    FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([Weak, WeakMenu](float)
+    {
+        const TSharedPtr<SWidget> Menu = WeakMenu.Pin();
+        // Stops once this menu is closed or replaced.
+        if (!Weak.IsValid() || !Menu.IsValid() || Menu != Weak->PauseWidget || !FSlateApplication::IsInitialized()) return false;
+        // A conversation over the menu has the focus to itself.
+        if (Weak->IsDialogueOpen()) return true;
+        if (!IsFocusLost(FSlateApplication::Get().GetUserFocusedWidget(0), Menu)) return true;
+        if (const TSharedPtr<SWidget> Button = FirstUsableButton(Menu.ToSharedRef()))
+        {
+            FSlateApplication::Get().SetKeyboardFocus(Button, EFocusCause::Navigation);
+            FSlateApplication::Get().SetAllUserFocus(Button, EFocusCause::Navigation);
+        }
+        return true;
+    }), .15f);
 }

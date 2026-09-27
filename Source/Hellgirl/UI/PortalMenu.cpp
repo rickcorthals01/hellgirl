@@ -152,6 +152,7 @@ void AHellgirlPlayerController::OpenPortalMenu(bool bExit)
     auto Menu=SNew(SPortalMenu).Owner(this).Exit(bExit);
     PauseWidget=Menu;
     GetWorld()->GetGameViewport()->AddViewportWidgetContent(Menu,100);
+    KeepMenuFocus();
     const TSharedPtr<SButton> Focus=Menu->FirstButton;
     bShowMouseCursor=true;
     FInputModeUIOnly Mode; Mode.SetWidgetToFocus(Focus); Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock); SetInputMode(Mode);

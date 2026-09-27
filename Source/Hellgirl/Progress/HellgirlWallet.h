@@ -92,8 +92,9 @@ public:
     int64 LastLost = 0;
     double LostTime = -10.0;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Wallet") bool bGoblinQueenOwned = false;
-    // The Goblin Queen outfit: 20000 Soul Coins, only after clearing endless Goblins wave 50 (an achievement).
-    static constexpr int64 GoblinQueenPrice = 20000;
+    // The Goblin Queen outfit: free, but only after clearing endless Goblins wave 50 (an achievement). It cost 20000 Soul
+    // Coins until 2026-09-27; the price stays here in case it comes back.
+    static constexpr int64 GoblinQueenPrice = 0;
     bool CanBuyGoblinQueen() const;
     bool BuyGoblinQueen();
     // The goblin's shop (Rules/ShopUpgrades.h): energy moves and permanent stat upgrades, kept in the wallet save.

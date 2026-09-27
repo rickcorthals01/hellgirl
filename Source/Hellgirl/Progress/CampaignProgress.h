@@ -19,7 +19,8 @@ namespace HellgirlProgress
             TEXT("UltimatesUnlocked"),  // 03: the Goblin Queen at 30% health
             TEXT("GoblinFollowed"),     // 03.5: "A goblin has followed Hellgirl to her camp."
             TEXT("ShopUnlocked"),       // 03.5: first talk with the goblin
-            TEXT("EndlessWave50")};     // the endless wave-50 story beat has played (its dialogue is still to come)
+            TEXT("EndlessSecrets"),     // 03.5: the strange voice at the forest road after the shop unlocked
+            TEXT("EndlessQueenSpared")}; // 04: the Goblin Queen was beaten and spared at endless wave 20
         return Names;
     }
     // Automated runs (-Hellgirl...) start with no flags and keep them in memory, never touching the player's progress.

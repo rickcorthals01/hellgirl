@@ -294,7 +294,7 @@ public:
                 .OnClicked_Lambda([this]() { if (Owner.IsValid()) if (auto* Wallet=Cast<UHellgirlWallet>(Owner->GetGameInstance())) Wallet->BuyGoblinQueen(); return FReply::Handled(); })
                 [SNew(STextBlock).Text_Lambda([this]() {
                     const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
-                    return FText::FromString(Wallet && Wallet->bGoblinQueenOwned ? TEXT("GOBLIN QUEEN / OWNED") : TEXT("GOBLIN QUEEN SKIN / 20000 SOUL COINS")); })]];
+                    return FText::FromString(Wallet && Wallet->bGoblinQueenOwned ? TEXT("GOBLIN QUEEN / OWNED") : TEXT("GOBLIN QUEEN SKIN / FREE")); })]];
             // It is only for sale once endless Goblins wave 50 has been cleared.
             Stats->AddSlot().AutoHeight().Padding(0,4)[SNew(STextBlock).AutoWrapText(true).Justification(ETextJustify::Center).Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).ColorAndOpacity(FLinearColor(.75f,.6f,.45f))
                 .Text_Lambda([this]() {
@@ -338,6 +338,14 @@ void AHellgirlPlayerController::InteractWithHub()
         HellgirlProgress::SetFlag(TEXT("ShopUnlocked"));
         DialogueNextHubMenu=2;
     }
+    // 03.5, after the shop is unlocked: the next time she opens the forest road, the strange voice points her back to
+    // endless, and the level select follows.
+    else if (Kind==1 && HellgirlProgress::Flag(TEXT("ShopUnlocked")) && !HellgirlProgress::Flag(TEXT("EndlessSecrets")) && !HellgirlProgress::IsCheckRun()
+        && ShowConversation(TEXT("C_EndlessSecrets")))
+    {
+        HellgirlProgress::SetFlag(TEXT("EndlessSecrets"));
+        DialogueNextHubMenu=1;
+    }
     // After the first talk, the goblin just opens his shop (as the campfire and road open theirs).
     else if (Kind>=0) OpenHubMenu(Kind);
 }
@@ -366,6 +374,7 @@ void AHellgirlPlayerController::OpenHubMenu(int32 Kind)
         PauseWidget=Menu; Focus=Menu->FirstButton;
         GetWorld()->GetGameViewport()->AddViewportWidgetContent(Menu,100);
     }
+    KeepMenuFocus();
     bShowMouseCursor=true;
     FInputModeUIOnly Mode; Mode.SetWidgetToFocus(Focus); Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock); SetInputMode(Mode);
     TWeakObjectPtr<AHellgirlPlayerController> Weak(this);

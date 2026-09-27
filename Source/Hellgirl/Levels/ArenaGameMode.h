@@ -29,6 +29,10 @@ public:
     // Answering YES at a level's exit portal (Stage 1 plays a last line first).
     void UseExitPortal();
     void QueenSurrendered(class AArenaFighter* Queen);
+    // Endless ("04 Dialog - Endless Mode Goblins 01.txt"): whether the Goblin Queen story is still to be told (Stage 3 won,
+    // the queen not yet spared), and whether this is its wave 20, where she begs instead of dying.
+    bool IsEndlessStoryOpen() const;
+    bool IsEndlessQueenStoryWave() const;
     bool TickStory(float Dt);
     void TravelToHub();
     void BuildForestHub();
@@ -218,7 +222,9 @@ private:
     TArray<TWeakObjectPtr<class AArenaFighter>> CourtFlyers;
     TArray<float> CourtFlyerRespawn;
     void TickCourtFlyers(float Dt);
-    bool bWave50Tried = false;
+    // Endless story: a conversation waiting to be shown, and whether the queen was spared in this run.
+    FName EndlessTalk;
+    bool bEndlessQueenSpared = false;
     TArray<int32> UpgradeLevels, PortalOffers;
     TArray<bool> OfferSold;
     void RollPortalOffers();

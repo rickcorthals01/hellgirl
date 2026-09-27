@@ -71,7 +71,7 @@ void AHellgirlPlayerController::OpenSaveMenu()
     if (!SetPause(true)) return;
     if (auto* Hero=Cast<AArenaFighter>(GetPawn())) Hero->PrepareForPause();
     FlushPressedKeys(); bMenuOpen=true; bShowMouseCursor=true;
-    auto Menu=SNew(SHellgirlSaveMenu).Owner(this); PauseWidget=Menu;
+    auto Menu=SNew(SHellgirlSaveMenu).Owner(this); PauseWidget=Menu; KeepMenuFocus();
     GetWorld()->GetGameViewport()->AddViewportWidgetContent(Menu,100);
     FInputModeUIOnly Mode; Mode.SetWidgetToFocus(Menu->FirstButton); Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock); SetInputMode(Mode);
 }

@@ -189,7 +189,7 @@ UTexture2D* AHellgirlPlayerController::FindPortrait(const FString& Speaker,const
     FString Close=Wanted;
     for (const TPair<const TCHAR*,const TCHAR*>& Alias : {TPair<const TCHAR*,const TCHAR*>(TEXT("Smirk"),TEXT("Grin")),{TEXT("EvilSmirk"),TEXT("Grin")},
         {TEXT("Laugh"),TEXT("Grin")},{TEXT("Surprised"),TEXT("Confused")},{TEXT("Headache"),TEXT("Confused")},{TEXT("Hurt"),TEXT("Sad")},
-        {TEXT("Quiet"),TEXT("Sad")},{TEXT("Angry"),TEXT("Yelling")}})
+        {TEXT("Quiet"),TEXT("Sad")},{TEXT("Angry"),TEXT("Yelling")},{TEXT("Beg"),TEXT("Begging")},{TEXT("Yell"),TEXT("Yelling")},{TEXT("Talk"),TEXT("Grin")}})
         if (Wanted.Equals(Alias.Key,ESearchCase::IgnoreCase)) Close=Alias.Value;
     for (const FString& Set : Sets)
         for (const FString& Try : {Wanted,Close,FString(TEXT("Neutral")),FString(TEXT("Grin"))})

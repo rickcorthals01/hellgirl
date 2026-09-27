@@ -83,7 +83,7 @@ void AArenaFighter::HandleDeath(const FVector& ImpulseVelocity)
 {
     if (bDeathHandled || bStorySurrendered) return;
     if (bEnemy && bBossEncounter && EnemyType==EHellgirlEnemyType::GoblinQueen)
-        if (auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(this)); GM && GM->bStoryEnabled)
+        if (auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(this)); GM && (GM->bStoryEnabled || GM->IsEndlessQueenStoryWave()))
         {
             bStorySurrendered=true; Health=1.f; CancelEnemyMove(); CancelCharge(); ResetPlayerMomentum();
             bCombatLaunched=false; QueuedCombatImpacts.Reset(); AttackFlash->SetVisibility(false);
