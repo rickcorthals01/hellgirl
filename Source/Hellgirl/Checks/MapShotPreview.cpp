@@ -3,6 +3,8 @@
 #include "Levels/ArenaGameMode.h"
 #include "Levels/WavePortal.h"
 #include "Fighter/ArenaFighter.h"
+#include "Progress/HellgirlWallet.h"
+#include "UI/HellgirlPlayerController.h"
 #include "Enemies/EnemySpawnPoint.h"
 #include "Particles/ParticleSystem.h"
 #include "Camera/CameraActor.h"
@@ -106,6 +108,20 @@ void AArenaGameMode::RunMapShot(float Dt)
         FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float) {
             FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / TEXT("Screenshots/MapShot/Death.png"), true, false); return false; }), 3.f);
         FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float) { FPlatformMisc::RequestExitWithStatus(false, 0); return false; }), 4.5f);
+        return;
+    }
+    // -MapShotPortalMenu: the blue portal's menu with fresh offers and a pocket of Souls, captured once it is up.
+    if (FParse::Param(FCommandLine::Get(), TEXT("MapShotPortalMenu")))
+    {
+        static bool bOpened = false;
+        if (bOpened || Clock < 2.f) return;
+        bOpened = true;
+        if (auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance())) Wallet->LevelSouls.Souls = 60;
+        RollPortalOffers();
+        if (auto* Controller = Cast<AHellgirlPlayerController>(PC)) Controller->OpenPortalMenu(false);
+        FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float) {
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / TEXT("Screenshots/MapShot/PortalMenu.png"), true, false); return false; }), 1.f);
+        FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float) { FPlatformMisc::RequestExitWithStatus(false, 0); return false; }), 2.5f);
         return;
     }
     // -MapShotPortals: a blue soul portal and a purple exit open ahead of Hellgirl, captured opening and then open.

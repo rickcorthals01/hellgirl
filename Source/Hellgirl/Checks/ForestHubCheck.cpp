@@ -21,8 +21,9 @@ void AArenaGameMode::RunForestHubCheck(float Dt)
     const bool Check=FParse::Param(FCommandLine::Get(),TEXT("HellgirlHubCheck"));
     const bool MenuPreview=FParse::Param(FCommandLine::Get(),TEXT("HellgirlLevelSelectPreview"));
     const bool StagePreview=FParse::Param(FCommandLine::Get(),TEXT("HellgirlLevelSelectStagePreview"));
+    const bool ShopPreview=FParse::Param(FCommandLine::Get(),TEXT("HellgirlShopPreview"));
     const bool RollCheck=FParse::Param(FCommandLine::Get(),TEXT("HellgirlHubRollCheck"));
-    if (!Preview && !Check && !MenuPreview && !StagePreview && !RollCheck) return;
+    if (!Preview && !Check && !MenuPreview && !StagePreview && !ShopPreview && !RollCheck) return;
     static int32 Phase=0; static float Time=0.f; Time+=Dt;
     auto* Player=Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this,0));
     auto* PC=Cast<AHellgirlPlayerController>(UGameplayStatics::GetPlayerController(this,0));
@@ -113,21 +114,21 @@ void AArenaGameMode::RunForestHubCheck(float Dt)
         }
         return;
     }
-    if (MenuPreview || StagePreview)
+    if (MenuPreview || StagePreview || ShopPreview)
     {
         if (Phase==0)
         {
             Phase=1;
             Player->SetActorLocation(FVector(800,0,110));
-            PC->OpenHubMenu(1);
+            PC->OpenHubMenu(ShopPreview?2:1);
             TWeakObjectPtr<AHellgirlPlayerController> Weak(PC);
-            FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([Weak,StagePreview,Elapsed=0.f](float Delta) mutable
+            FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([Weak,StagePreview,ShopPreview,Elapsed=0.f](float Delta) mutable
             {
                 Elapsed+=Delta;
                 if (Elapsed<1.f) return true;
                 if (!Weak.IsValid() || !Weak->IsPauseMenuOpen()) FPlatformMisc::RequestExitWithStatus(false,1);
                 else FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()
-                    /(StagePreview?TEXT("Screenshots/LevelSelectStages.png"):TEXT("Screenshots/LevelSelect.png")),true,false);
+                    /(ShopPreview?TEXT("Screenshots/Shop.png"):StagePreview?TEXT("Screenshots/LevelSelectStages.png"):TEXT("Screenshots/LevelSelect.png")),true,false);
                 FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float)
                 {
                     UE_LOG(LogTemp,Display,TEXT("LEVEL SELECT PREVIEW PASSED"));
