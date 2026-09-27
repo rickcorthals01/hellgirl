@@ -203,7 +203,7 @@ Replaces the carried-souls rules above.
 | Wrath | Fury | +15% damage | 28 |
 | Pride | Iron Skin | −15% damage taken (at most −55%) | 25 |
 | Lust | Vitality | +25 max health, and heals half her health | 20 |
-| Sloth | Swiftness | +25% move speed (at most +50%, two levels) | 17 |
+| Sloth | Swiftness | +25% move and attack speed (at most +50%, two levels) | 17 |
 | Gluttony | Soul Hunger | +25% energy from hits | 20 |
 | Resurrection | Second Wind | Heals her fully (spent at once) | 14 |
 | Envy | Bloodthirst | Heals 5% of her max health per kill | 25 |

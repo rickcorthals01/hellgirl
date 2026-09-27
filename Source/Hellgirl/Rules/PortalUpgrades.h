@@ -21,7 +21,7 @@ inline const FInfo& Info(int32 Upgrade)
         {TEXT("WRATH"),        TEXT("+15% damage"),                         28},
         {TEXT("PRIDE"),        TEXT("-15% damage taken"),                   25},
         {TEXT("LUST"),         TEXT("+25 max health, heals half your health"), 20},
-        {TEXT("SLOTH"),        TEXT("+25% move speed"),                     17},
+        {TEXT("SLOTH"),        TEXT("+25% move and attack speed"),          17},
         {TEXT("GLUTTONY"),     TEXT("+25% energy from hits"),               20},
         {TEXT("RESURRECTION"), TEXT("Heals you fully"),                     14},
         {TEXT("ENVY"),         TEXT("Heals 5% of your health per kill"),    25},

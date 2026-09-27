@@ -557,7 +557,8 @@ void AArenaFighter::StartAttack(bool Heavy)
         Energy = FMath::Clamp(Energy - Cost, 0.f, MaxEnergy);
     }
     CurrentAttack = RequestedAttack;
-    if (!bEnemy) CurrentAttack.Duration /= GetSpeedMultiplier() * Shop.Speed;
+    // Faster attacks: her ultimate, the shop's Agility and the blue portal's Sloth (which speeds up moving and attacking alike).
+    if (!bEnemy) CurrentAttack.Duration /= GetSpeedMultiplier() * Shop.Speed * Upgrades.Speed;
     bLastComboHeavy = Heavy;
     bSecondHitResolved = CurrentAttack.Type != FistCombat::Move::DoubleJab;
     JabHitTargets.Reset();
