@@ -816,7 +816,7 @@ void AArenaFighter::ReceiveHit(float Damage, const FVector& Direction, float Kno
     if (!IsAlive() || DodgeClock > 0.f || HitClock > 0.f) return;
     Damage = FilterEnemyDamage(Damage) * Upgrades.DamageTaken;
     if (Damage <= 0.f) return;
-    const bool Armored = IsBossAttackArmored();
+    const bool Armored = IsUninterruptible();
     // Direction points away from the attacker, so negate it to test the guarded front.
     const auto Defense = HellgirlDefense::Receive(Damage,
         static_cast<float>(FVector::DotProduct(GetActorForwardVector(), -Direction.GetSafeNormal2D())), IsBlocking(), Riposte);
@@ -1429,7 +1429,7 @@ void AArenaFighter::StartAirMove()
             FCollisionQueryParams Query;
             Query.AddIgnoredActor(this); Query.AddIgnoredActor(Target);
             const bool bBlocked = GetWorld()->LineTraceSingleByChannel(Wall, GetActorLocation(), Target->GetActorLocation(), ECC_Visibility, Query);
-            if (Target->IsAlive() && !Target->IsBossAttackArmored() && Target->bFlyingEnemy && Delta.Size() <= 260.f && !bBlocked)
+            if (Target->IsAlive() && !Target->IsUninterruptible() && Target->bFlyingEnemy && Delta.Size() <= 260.f && !bBlocked)
             {
                 Target->AttackClock = 0.f;
                 Target->bHitResolved = true;

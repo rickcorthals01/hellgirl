@@ -84,6 +84,9 @@ public:
     // Previews only: start the meter at a given number of points.
     void SetComboPointsForPreview(float Points) { ComboMeter.Points = Points; ComboMeter.SinceHit = 0.f; }
     bool IsBossAttackArmored() const;
+    // Bosses (and mini-bosses) take damage from Hellgirl's attacks but are never interrupted by them: no flinch, knockback,
+    // launch or knockdown (2026-09-27). Includes IsBossAttackArmored.
+    bool IsUninterruptible() const { return IsBossAttackArmored() || (bEnemy && bBossEncounter && IsAlive()); }
     bool bBossEncounter = false;
     bool bStorySurrendered = false;
     // Boss rules (phases, summons, damage gates); set by SetEnemyType for boss types, otherwise null.

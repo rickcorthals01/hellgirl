@@ -13,7 +13,7 @@
 
 void AArenaFighter::ApplyCombatLaunch(const FVector& InVelocity, int32 ChainDepth, AArenaFighter* IgnoreEnemy, TSharedPtr<FCombatImpactBudget> ImpactBudget)
 {
-    if (!bEnemy || !IsAlive() || IsBossAttackArmored() || ParalysisClock > 0.f || IsBossHidden() || bStorySurrendered) return;
+    if (!bEnemy || !IsAlive() || IsUninterruptible() || ParalysisClock > 0.f || IsBossHidden() || bStorySurrendered) return;
     CancelEnemyMove();
     CombatLaunchImpactBudget = ImpactBudget;
     auto* Movement = GetCharacterMovement();
@@ -62,7 +62,7 @@ void AArenaFighter::ApplyPhysicsDamage(float Damage,const FVector& ImpulseVeloci
     if (!IsAlive() || Damage<=0.f) return;
     Damage=FilterEnemyDamage(Damage);
     if (Damage<=0.f) return;
-    if (IsBossAttackArmored() || ParalysisClock > 0.f)
+    if (IsUninterruptible() || ParalysisClock > 0.f)
     {
         Health=FMath::Max(0.f,Health-Damage);
         if (!IsAlive()) HandleDeath(ImpulseVelocity);
@@ -139,14 +139,14 @@ void AArenaFighter::UpdateCombatPhysics(float Dt)
                 Other->ApplyCombatLaunch(Transfer,Impact.ChainDepth+1,this,Impact.Budget);
             const float SelfDamage = Impact.Budget.IsValid() ? Impact.Budget->Spend(this,Damage) : Damage;
             ApplyPhysicsDamage(SelfDamage,Impact.Velocity);
-            if (IsAlive() && !IsBossAttackArmored())
+            if (IsAlive() && !IsUninterruptible())
                 LaunchCharacter(Impact.Velocity*.35f+FVector(0,0,80),true,true);
         }
         else
         {
             const float SelfDamage = Impact.Budget.IsValid() ? Impact.Budget->Spend(this,Damage) : Damage;
             ApplyPhysicsDamage(SelfDamage,Impact.Velocity);
-            if (IsAlive() && !IsBossAttackArmored())
+            if (IsAlive() && !IsUninterruptible())
             {
                 bCombatLaunched=false; CombatLaunchClock=0;
                 GetCharacterMovement()->AirControl=LaunchAirControl;
