@@ -14,6 +14,7 @@
 #include "Styling/CoreStyle.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Containers/Ticker.h"
+#include "UI/GothicUIKit.h"
 
 // Shown a moment after Hellgirl falls: TRY AGAIN (the same level, or a fresh run for Stage II of the swamp and
 // endless) or RETURN TO CAMP. R still tries again straight away.
@@ -25,25 +26,16 @@ public:
     void Construct(const FArguments& Args)
     {
         Owner=Args._Owner;
-        const FLinearColor Ink(.94f,.88f,.77f), Faint(.58f,.54f,.52f), Blood(.9f,.2f,.15f);
-        auto Text=[](const FString& Value,int32 Size,FLinearColor Color)
-        { return SNew(STextBlock).Text(FText::FromString(Value)).AutoWrapText(true).Justification(ETextJustify::Center).Font(FCoreStyle::GetDefaultFontStyle("Regular",Size)).ColorAndOpacity(Color); };
-        auto Choice=[this,Ink](TSharedPtr<SButton>& Out,const TCHAR* Label,bool bCamp)
-        {
-            return SAssignNew(Out,SButton).HAlign(HAlign_Center).ContentPadding(FMargin(18,12))
-                .ButtonColorAndOpacity(FLinearColor(.12f,.05f,.06f,.95f))
-                .OnClicked_Lambda([this,bCamp]() { Choose(bCamp); return FReply::Handled(); })
-                [SNew(STextBlock).Text(FText::FromString(Label)).Font(FCoreStyle::GetDefaultFontStyle("Regular",18)).ColorAndOpacity(Ink)];
-        };
+        // The placeholder art "Death Retry Return to camp.png" (724 x 543): the frame with its two bars, the title above
+        // them and the detail below the frame.
+        using namespace GothicUI;
         TSharedPtr<SButton> Camp;
-        TSharedRef<SVerticalBox> Items=SNew(SVerticalBox)
-            + SVerticalBox::Slot().AutoHeight().Padding(0,0,0,8)[Text(Args._Title,28,Blood)]
-            + SVerticalBox::Slot().AutoHeight().Padding(0,0,0,22)[Text(Args._Detail,14,Faint)]
-            + SVerticalBox::Slot().AutoHeight().Padding(0,5)[Choice(FirstButton,TEXT("TRY AGAIN"),false)]
-            + SVerticalBox::Slot().AutoHeight().Padding(0,5)[Choice(Camp,TEXT("RETURN TO CAMP"),true)];
-        ChildSlot.HAlign(HAlign_Center).VAlign(VAlign_Center)
-        [SNew(SBox).WidthOverride(460)
-          [SNew(SBorder).Padding(32).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(.03f,.015f,.02f,.95f))[Items]]];
+        const TArray<FPlace> Places = {
+            {FVector2D(196,112), FVector2D(352,56), Label(Args._Title,20,Blood())},
+            {FVector2D(228,168), FVector2D(290,66), ArtButton(FirstButton,TEXT("DeathDark"),TEXT("DeathRed"),Label(TEXT("TRY AGAIN"),15,Ink()),[this]() { Choose(false); })},
+            {FVector2D(230,243), FVector2D(282,60), ArtButton(Camp,TEXT("DeathDark"),TEXT("DeathRed"),Label(TEXT("RETURN TO CAMP"),15,Ink()),[this]() { Choose(true); })},
+            {FVector2D(170,350), FVector2D(384,40), Label(Args._Detail,11,Faint())}};
+        ChildSlot[Screen(TEXT("DeathMenu"),FVector2D(724,543),Places)];
     }
     virtual bool SupportsKeyboardFocus() const override { return true; }
     virtual FReply OnPreviewKeyDown(const FGeometry&,const FKeyEvent& Event) override

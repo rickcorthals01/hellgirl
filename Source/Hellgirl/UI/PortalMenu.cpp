@@ -16,6 +16,8 @@
 #include "Styling/CoreStyle.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Containers/Ticker.h"
+#include "UI/GothicUIKit.h"
+#include "Widgets/Layout/SBox.h"
 
 // The soul portal between waves: continue to the next wave, stock the level's Souls (sent to camp now as Soul Coins),
 // or buy upgrades with them. In endless mode it can also take Hellgirl back to camp.
@@ -49,6 +51,60 @@ public:
         auto Wallet=[this]() { return Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr; };
         const auto* GM=Owner.IsValid()?Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get())):nullptr;
         const bool Endless=GM && GM->bEndless;
+        // The blue portal, drawn as the placeholder art "Blue Portal Menu.png" (1024 x 1536): the red bar continues, the
+        // dark bar stocks the Souls, the Souls in hand sit by the divider, and the five rows below are the offers
+        // (the sin's initial in the diamond, its name and level, what it does, and its price).
+        if (!Args._Exit)
+        {
+            using namespace GothicUI;
+            auto Mode=[this]() { return Owner.IsValid()?Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get())):nullptr; };
+            auto Pick=[this](AArenaGameMode::EPortalChoice Choice,bool bClose)
+            {
+                auto* M=Owner.IsValid()?Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get())):nullptr;
+                if (bClose && Owner.IsValid()) Owner->ResumeGame();
+                if (M) M->ChoosePortal(Choice);
+            };
+            TSharedPtr<SButton> Stock, Leave;
+            TArray<FPlace> Places = {
+                {FVector2D(140,40), FVector2D(750,200), ArtButton(FirstButton,TEXT("PortalBarDark"),TEXT("PortalBarRed"),
+                    Label(TEXT("CONTINUE  /  NEXT WAVE"),24,Ink()),[Pick]() { Pick(AArenaGameMode::EPortalChoice::Continue,true); })},
+                {FVector2D(160,222), FVector2D(704,152), ArtButton(Stock,TEXT("PortalBarDark"),TEXT("PortalBarRed"),
+                    Label([Wallet]() { const auto* W=Wallet(); return W && W->LevelSouls.Souls>0 ? FString::Printf(TEXT("STOCK %lld SOULS  /  TO CAMP"),W->LevelSouls.Souls) : FString(TEXT("NO SOULS TO STOCK")); },20,Ink()),
+                    [Pick]() { Pick(AArenaGameMode::EPortalChoice::Stock,false); },nullptr,
+                    [Wallet]() { const auto* W=Wallet(); return W && W->LevelSouls.Souls>0 && !W->bLoadFailed; })},
+                {FVector2D(60,372), FVector2D(Endless?560:904,34), Label([Wallet]() { const auto* W=Wallet();
+                    return FString::Printf(TEXT("SOULS  %lld     ·     SOUL COINS IN CAMP  %lld"),W?W->LevelSouls.Souls:0,W?W->Coins:0); },15,Soul,!Endless)}};
+            if (Endless)
+                Places.Add({FVector2D(640,364), FVector2D(340,50), ArtButton(Leave,TEXT("DeathDark"),TEXT("DeathRed"),Label(TEXT("LEAVE FOR CAMP"),14,Ink()),
+                    [Pick]() { Pick(AArenaGameMode::EPortalChoice::Leave,true); })});
+            for (int32 Offer=0; GM && Offer<GM->GetPortalOffers().Num() && Offer<5; ++Offer)
+            {
+                const int32 Upgrade=GM->GetPortalOffers()[Offer];
+                const HellgirlUpgrades::FInfo& Info=HellgirlUpgrades::Info(Upgrade);
+                auto Sold=[Mode,Offer]() { const auto* M=Mode(); return M && M->IsOfferSold(Offer); };
+                auto Afford=[Mode,Wallet,Upgrade]() { const auto* M=Mode(); const auto* W=Wallet(); return M && W && W->LevelSouls.Souls>=M->GetUpgradeCost(Upgrade); };
+                TSharedPtr<SButton> Row;
+                const FString Initial=FString(Info.Name).Left(1);
+                TSharedRef<SWidget> Content=SNew(SHorizontalBox)
+                    + SHorizontalBox::Slot().AutoWidth()[SNew(SBox).WidthOverride(225)[Label(Initial,40,OfferGold)]]
+                    + SHorizontalBox::Slot().FillWidth(1).Padding(22,0,10,0).VAlign(VAlign_Center)
+                      [SNew(SVerticalBox)
+                        + SVerticalBox::Slot().AutoHeight()[Label([Mode,Offer,Upgrade,Name=FString(Info.Name)]() {
+                              const auto* M=Mode();
+                              // The level this purchase brings, or brought once bought (Resurrection is spent at once).
+                              const int32 Level=M?M->GetUpgradeLevel(Upgrade)-(M->IsOfferSold(Offer)?1:0):0;
+                              static const TCHAR* Numerals[]={TEXT(""),TEXT(" II"),TEXT(" III"),TEXT(" IV"),TEXT(" V"),TEXT(" VI")};
+                              return Name+(HellgirlUpgrades::IsInstant(Upgrade)?TEXT(""):Numerals[FMath::Clamp(Level,0,5)]); },26,Ink(),false)]
+                        + SVerticalBox::Slot().AutoHeight().Padding(0,6,0,0)[Label(FString(Info.Detail),16,Faint(),false)]]
+                    + SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0,0,110,0)
+                      [Label([Mode,Offer,Upgrade]() { const auto* M=Mode(); return M && M->IsOfferSold(Offer) ? FString(TEXT("BOUGHT"))
+                          : FString::Printf(TEXT("%d SOULS"),M?M->GetUpgradeCost(Upgrade):0); },20,Soul)];
+                Places.Add({FVector2D(32,446+Offer*214), FVector2D(970,212), ArtButton(Row,TEXT("PortalRow"),nullptr,Content,
+                    [Mode,Offer]() { if (auto* M=Mode()) M->BuyUpgrade(Offer); },nullptr,[Sold,Afford]() { return !Sold() && Afford(); })});
+            }
+            ChildSlot[Screen(TEXT("PortalMenu"),FVector2D(1024,1536),Places)];
+            return;
+        }
         TSharedRef<SVerticalBox> Items=SNew(SVerticalBox);
         TSharedPtr<SButton> Button;
         if (Args._Exit)
