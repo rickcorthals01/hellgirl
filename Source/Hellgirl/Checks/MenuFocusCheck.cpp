@@ -26,7 +26,7 @@ void AArenaGameMode::RunMenuFocusCheck(float Dt)
     Started = true;
     // The blue portal's menu with Souls to stock: its second button (stock) disables once they are stocked.
     Wallet->LevelSouls.Souls = 40;
-    PC->OpenPortalMenu(false);
+    if (FParse::Param(FCommandLine::Get(), TEXT("MenuFocusPause"))) PC->TogglePauseMenu(); else PC->OpenPortalMenu(false);
     // The game is paused while the menu is open, so the steps run on the core ticker.
     struct FState { int32 Step = 0; float Time = 0.f; TSharedPtr<SWidget> First, Opening; };
     TSharedRef<FState> State = MakeShared<FState>();
