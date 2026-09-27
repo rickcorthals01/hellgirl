@@ -155,15 +155,22 @@ void AArenaHUD::DrawHUD()
     }
 
     // ---- Top centre: the boss. ----
+    // Bosses with their own behaviour (the Goblin Queen, the Imp Commander...) and the Frog King (a mini-boss that fights
+    // as a big frog) get the same bar.
     for (TActorIterator<AArenaFighter> It(GetWorld()); It; ++It)
-        if (const UBossBehavior* Boss = It->GetBossBehavior(); Boss && It->bEnemy && It->bBossEncounter && It->IsAlive())
+    {
+        const UBossBehavior* Boss = It->GetBossBehavior();
+        const bool FrogKing = It->EnemyType == EHellgirlEnemyType::FrogKing;
+        if ((Boss || FrogKing) && It->bEnemy && It->bBossEncounter && It->IsAlive())
         {
             const float BW = FMath::Min(620.f, W - 420.f), BX = (W - BW) * .5f, BY = 34.f;
-            Centered(Boss->GetDisplayName() + (It->IsBossAttackArmored() ? TEXT("  ·  ARMORED") : TEXT("")), Gold, BY - 22.f, 1.1f);
+            const FString Name = Boss ? Boss->GetDisplayName() : FString(TEXT("THE FROG KING"));
+            Centered(Name + (It->IsBossAttackArmored() ? TEXT("  ·  ARMORED") : TEXT("")), Gold, BY - 22.f, 1.1f);
             Bar(BX, BY + 4.f, BW, 12.f, It->Health / FMath::Max(1.f, It->MaxHealth), Blood);
-            if (!Boss->GetHudStatus().IsEmpty()) Centered(Boss->GetHudStatus(), Ash, BY + 22.f);
+            if (Boss && !Boss->GetHudStatus().IsEmpty()) Centered(Boss->GetHudStatus(), Ash, BY + 22.f);
             break;
         }
+    }
 
     // ---- Bottom left: health, energy tubes and stamina, with no box behind them. ----
     const float VX = 28.f, VW = FMath::Min(360.f, W - 56.f), VY = H - 112.f;

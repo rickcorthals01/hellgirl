@@ -365,7 +365,7 @@ void AArenaGameMode::Tick(float Dt)
         {
             if (PC->IsPauseMenuOpen()) DeathMenuClock=.2f;
             else if (bEndless) PC->OpenDeathMenu(TEXT("THE HORDE WINS"),FString::Printf(TEXT("Wave %d  ·  best %d"),EndlessWave,HellgirlProgress::EndlessBest()));
-            else PC->OpenDeathMenu(TEXT("YOU FELL"),bForestRun || (bSwamp && SwampStage==2) ? TEXT("The run is over. Trying again starts a new run.")
+            else PC->OpenDeathMenu(TEXT("YOU FELL"),bForestRun || (bSwamp && SwampStage==2) ? TEXT("The run is over.")
                 : TEXT("The Souls you carried are lost."));
         }
     TrackLevelSouls(Dt);
