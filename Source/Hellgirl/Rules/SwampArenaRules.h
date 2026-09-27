@@ -31,7 +31,7 @@ inline const TArray<TArray<FStreamPoint>>& Streams()
         auto Line = [](std::initializer_list<FVector> Points)
         {
             TArray<FStreamPoint> Out;
-            for (const FVector& V : Points) Out.Add({Sketch(V.X, V.Y), V.Z * SketchWidth});
+            for (const FVector& V : Points) Out.Add({Sketch(static_cast<float>(V.X), static_cast<float>(V.Y)), static_cast<float>(V.Z) * SketchWidth});
             return Out;
         };
         return TArray<TArray<FStreamPoint>>{
@@ -110,10 +110,10 @@ inline FPlan Make()
     // Zombie arms, where the sketch has them.
     for (const FVector2D& S : {FVector2D(185, 510), FVector2D(440, 550), FVector2D(357, 690), FVector2D(440, 830), FVector2D(822, 735),
                                FVector2D(870, 690), FVector2D(905, 260), FVector2D(965, 330), FVector2D(868, 380)})
-        Plan.Items.Add(Item(EPiece::ZombieArm, Wet(Sketch(S.X, S.Y), 60.f), Dice.FRandRange(0.f, 360.f), Dice.FRandRange(.9f, 1.1f)));
+        Plan.Items.Add(Item(EPiece::ZombieArm, Wet(Sketch(static_cast<float>(S.X), static_cast<float>(S.Y)), 60.f), Dice.FRandRange(0.f, 360.f), Dice.FRandRange(.9f, 1.1f)));
     // Four big dark lily pads where the upper streams bend: wide enough to stand and fight on.
     for (const FVector2D& S : {FVector2D(563, 468), FVector2D(502, 532), FVector2D(507, 605), FVector2D(636, 593)})
-        Plan.Items.Add(Item(EPiece::GiantLily, Wet(Sketch(S.X, S.Y), 40.f), Dice.FRandRange(0.f, 360.f), .62f, 2));
+        Plan.Items.Add(Item(EPiece::GiantLily, Wet(Sketch(static_cast<float>(S.X), static_cast<float>(S.Y)), 40.f), Dice.FRandRange(0.f, 360.f), .62f, 2));
     // Two drowned stumps (a big one in the middle stream) and the one dead tree on the mud.
     Plan.Items.Add(Item(EPiece::DrownedStump, Wet(Sketch(718, 265), 40.f), 30.f, 1.1f));
     Plan.Items.Add(Item(EPiece::DrownedStump, Wet(Sketch(258, 730), 60.f), 200.f, 1.9f));
@@ -148,7 +148,7 @@ inline FPlan Make()
     Scatter(EPiece::LilyPad, 26, 60.f, 10000.f, .8f, 1.3f);
     Scatter(EPiece::LilyPadSmall, 22, 40.f, 10000.f, .8f, 1.3f);
     for (const FVector2D& S : {FVector2D(300, 450), FVector2D(700, 420), FVector2D(850, 850), FVector2D(250, 850), FVector2D(620, 250)})
-        Plan.Fireflies.Add(FVector(Sketch(S.X, S.Y), Dice.FRandRange(140.f, 240.f)));
+        Plan.Fireflies.Add(FVector(Sketch(static_cast<float>(S.X), static_cast<float>(S.Y)), Dice.FRandRange(140.f, 240.f)));
     return Plan;
 }
 }
