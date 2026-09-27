@@ -14,6 +14,7 @@
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
+#include "EngineUtils.h"
 #include "Containers/Ticker.h"
 
 void AArenaGameMode::RunMapShot(float Dt)
@@ -135,6 +136,20 @@ void AArenaGameMode::RunMapShot(float Dt)
     if (FParse::Param(FCommandLine::Get(), TEXT("MapShotBoss")) && Clock > 1.5f)
         for (auto& Site : SpawnSites)
             if (Site && Site->bBoss && !Site->bActivated) { Site->bEnabled = true; Site->bActivated = true; }
+    // ...and with -MapShotBossClose Hellgirl stands 4 m from the boss, facing it, before the first picture.
+    static bool bMovedToBoss = false;
+    if (FParse::Param(FCommandLine::Get(), TEXT("MapShotBossClose")) && Clock > 3.f && !bMovedToBoss)
+        if (APawn* Hero = PC->GetPawn())
+            for (TActorIterator<AArenaFighter> It(GetWorld()); It; ++It)
+                if (It->bEnemy && It->bBossEncounter && It->IsAlive())
+                {
+                    bMovedToBoss = true;
+                    const FVector Boss = It->GetActorLocation();
+                    const FVector From = Boss + (Hero->GetActorLocation() - Boss).GetSafeNormal2D() * 400.f;
+                    Hero->SetActorLocation(FVector(From.X, From.Y, Boss.Z + 30.f), false, nullptr, ETeleportType::TeleportPhysics);
+                    PC->SetControlRotation(FRotator(-15.f, (Boss - From).Rotation().Yaw, 0.f));
+                    break;
+                }
     // -MapShotCombo=Points holds the combo meter at that value, to see how it looks on the HUD.
     float ComboPoints = -1.f;
     if (FParse::Value(FCommandLine::Get(), TEXT("MapShotCombo="), ComboPoints))
