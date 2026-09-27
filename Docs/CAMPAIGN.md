@@ -195,3 +195,16 @@ Replaces the carried-souls rules above.
 - **Goblin Queen outfit:** free once endless wave 50 has been cleared (it cost 20000 Soul Coins). Its achievement is now "Claimed the Goblin Queen outfit".
 - **Goblin Queen portraits:** `Content/Dialogue/Portraits/GoblinQueen`, with the moods Angry, Begging, Confused, Grin, Sad and Yelling. They are made from "Talkbox Images/GoblinQueen" by `Tools/Dialogue/import_portraits.ps1`. Other moods show the closest one (Smirk → Grin, Surprised → Confused, Hurt/Quiet → Sad, Neutral → Grin).
 - **Controller menus:** while any menu is open, if the focused button gets disabled or hidden, focus moves to the menu's first usable button (`AHellgirlPlayerController::KeepMenuFocus`). The check `-HellgirlMenuFocusCheck` needs a window.
+
+**Blue portal upgrades renamed after the seven deadly sins (2026-09-27)** (`Rules/PortalUpgrades.h`):
+
+| Upgrade | Was | Effect | Price |
+|---|---|---|---|
+| Wrath | Fury | +15% damage | 28 |
+| Pride | Iron Skin | −15% damage taken (at most −55%) | 25 |
+| Lust | Vitality | +25 max health, and heals half her health | 20 |
+| Sloth | Swiftness | +25% move speed (at most +50%, two levels) | 17 |
+| Gluttony | Soul Hunger | +25% energy from hits | 20 |
+| Resurrection | Second Wind | Heals her fully (spent at once) | 14 |
+| Envy | Bloodthirst | Heals 5% of her max health per kill | 25 |
+| Greed | Greed | +1 Soul from every drop | 22 |

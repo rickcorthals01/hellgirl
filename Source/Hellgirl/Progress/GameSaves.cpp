@@ -100,7 +100,7 @@ void UHellgirlWallet::RestorePending()
     GConfig->Flush(false,GGameUserSettingsIni);
     }
     Hero->SetOutfit(Save->Outfit==4 && !bGoblinQueenOwned?0:Save->Outfit);
-    GM->RestoreUpgrades(Save->Upgrades); // before health, which Vitality may raise past 100
+    GM->RestoreUpgrades(Save->Upgrades); // before health, which Lust may raise past 100
     Hero->Health=FMath::Clamp(Save->Health,1.f,Hero->MaxHealth); Hero->Energy=FMath::Clamp(Save->Energy,0.f,Hero->MaxEnergy);
     Hero->Stamina=FMath::Clamp(Save->Stamina,0.f,100.f);
     const bool bOldImpLayout=Save->Level==4 && !Save->bHub && Save->ImpArenaLayoutVersion==0;

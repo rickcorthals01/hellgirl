@@ -110,7 +110,7 @@ public:
                               + SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",17)).ColorAndOpacity(Ink)
                                   .Text_Lambda([Mode,Offer,Upgrade,Name=Info.Name]() {
                                       const auto* M=Mode();
-                                      // The level this purchase brings, or brought once bought (Second Wind is spent at once).
+                                      // The level this purchase brings, or brought once bought (Resurrection is spent at once).
                                       const int32 Level=M?M->GetUpgradeLevel(Upgrade)-(M->IsOfferSold(Offer)?1:0):0;
                                       static const TCHAR* Numerals[]={TEXT(""),TEXT(" II"),TEXT(" III"),TEXT(" IV"),TEXT(" V"),TEXT(" VI")};
                                       return FText::FromString(FString(Name)+(HellgirlUpgrades::IsInstant(Upgrade)?TEXT(""):Numerals[FMath::Clamp(Level,0,5)])); })]

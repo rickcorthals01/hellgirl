@@ -41,9 +41,10 @@ bool AArenaGameMode::BuyUpgrade(int32 Offer)
     OfferSold[Offer] = true;
     if (UpgradeLevels.Num() != HellgirlUpgrades::Count) UpgradeLevels.Init(0, HellgirlUpgrades::Count);
     using HellgirlUpgrades::EUpgrade;
-    if (Upgrade == static_cast<int32>(EUpgrade::SecondWind)) Hero->Health = FMath::Min(Hero->MaxHealth, Hero->Health + Hero->MaxHealth * .5f);
+    // Resurrection heals her fully; Lust raises her max health by 25 and heals half her health.
+    if (Upgrade == static_cast<int32>(EUpgrade::Resurrection)) Hero->Health = Hero->MaxHealth;
     else ++UpgradeLevels[Upgrade];
-    if (Upgrade == static_cast<int32>(EUpgrade::Vitality)) { Hero->MaxHealth += 25.f; Hero->Health = FMath::Min(Hero->MaxHealth, Hero->Health + 25.f); }
+    if (Upgrade == static_cast<int32>(EUpgrade::Lust)) { Hero->MaxHealth += 25.f; Hero->Health = FMath::Min(Hero->MaxHealth, Hero->Health + Hero->MaxHealth * .5f); }
     ApplyUpgrades();
     Hero->MoveLabel = FString(HellgirlUpgrades::Info(Upgrade).Name) + TEXT(" / ") + HellgirlUpgrades::Info(Upgrade).Detail;
     return true;

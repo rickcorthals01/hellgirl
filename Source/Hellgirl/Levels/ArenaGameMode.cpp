@@ -318,11 +318,11 @@ void AArenaGameMode::AnswerPrompt(bool Yes)
 void AArenaGameMode::EnemyDefeated(const FVector& Location)
 {
     auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
-    // Soul portal upgrades: Greed adds souls to every drop, Bloodthirst heals on every kill.
+    // Soul portal upgrades: Greed adds souls to every drop, Envy heals a share of her health on every kill.
     // Soul Harvest from the goblin's shop adds its percentage to every drop (Rules/ShopUpgrades.h).
     const int32 Coins = HellgirlShop::HarvestDrop(HellgirlCoins::DropAmount(FMath::RandRange(0,99), FMath::RandRange(0,2)), Hero ? Hero->Shop.SoulBonus : 0.f, FMath::FRand())
         + (Hero ? Hero->Upgrades.BonusSouls : 0);
-    if (Hero && Hero->IsAlive() && Hero->Upgrades.HealPerKill > 0.f) Hero->Health = FMath::Min(Hero->MaxHealth, Hero->Health + Hero->Upgrades.HealPerKill);
+    if (Hero && Hero->IsAlive() && Hero->Upgrades.HealPerKill > 0.f) Hero->Health = FMath::Min(Hero->MaxHealth, Hero->Health + Hero->MaxHealth * Hero->Upgrades.HealPerKill);
     FHitResult Hit;
     FCollisionObjectQueryParams Types; Types.AddObjectTypesToQuery(ECC_WorldStatic); Types.AddObjectTypesToQuery(ECC_WorldDynamic);
     FVector Drop = Location;
