@@ -4,11 +4,12 @@
 #include "Kismet/GameplayStatics.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Containers/Ticker.h"
+#include "Input/Events.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 
-// -HellgirlMenuFocusCheck (at camp): a gamepad player must never be left without a focused button. The goblin's shop
-// opens with its first item focused; buying it disables that button, and focus must move to another usable button.
+// -HellgirlMenuFocusCheck (at camp): a gamepad player must never be left without a focused button. The blue portal's
+// menu opens; moving down focuses its stock button, and stocking the Souls disables it: focus must move to another usable button.
 // Then focus is dropped on the game view (as happens when a menu page changes), and it must come back to a button.
 // Needs a real window (Slate only refreshes a button's enabled state when it draws), so it is not in run-checks.ps1:
 //   UnrealEditor.exe Hellgirl.uproject /Engine/Maps/Entry?ForestHub=1 -game -windowed -HellgirlMenuFocusCheck
@@ -23,10 +24,9 @@ void AArenaGameMode::RunMenuFocusCheck(float Dt)
     auto* Wallet = Cast<UHellgirlWallet>(GetGameInstance());
     if (Started || Clock < 1.f || !PC || !Wallet) return;
     Started = true;
-    Wallet->bShopInChecks = true;
-    Wallet->ShopLevels.Reset();
-    Wallet->Coins = 100000;
-    PC->OpenHubMenu(2);
+    // The blue portal's menu with Souls to stock: its second button (stock) disables once they are stocked.
+    Wallet->LevelSouls.Souls = 40;
+    PC->OpenPortalMenu(false);
     // The game is paused while the menu is open, so the steps run on the core ticker.
     struct FState { int32 Step = 0; float Time = 0.f; TSharedPtr<SWidget> First; };
     TSharedRef<FState> State = MakeShared<FState>();
@@ -53,16 +53,24 @@ void AArenaGameMode::RunMenuFocusCheck(float Dt)
         {
         case 0:
             if (State->Time < .5f) return true;
-            if (!WeakPC->IsPauseMenuOpen()) return Finish(false, TEXT("the shop did not open"));
+            if (!WeakPC->IsPauseMenuOpen()) return Finish(false, TEXT("the portal menu did not open"));
+            if (!FocusedButton().IsValid()) return Finish(false, TEXT("the menu opened without a focused button"));
+            // Down to the stock button, as a gamepad would.
+            FSlateApplication::Get().ProcessKeyDownEvent(FKeyEvent(EKeys::Down, FModifierKeysState(), 0, false, 0, 0));
+            FSlateApplication::Get().ProcessKeyUpEvent(FKeyEvent(EKeys::Down, FModifierKeysState(), 0, false, 0, 0));
+            State->Step = 3; State->Time = 0.f;
+            return true;
+        case 3:
+            if (State->Time < .3f) return true;
             State->First = FocusedButton();
-            if (!State->First.IsValid()) return Finish(false, TEXT("the shop opened without a focused button"));
-            // Buy the focused first item (Charge): its button is disabled from now on.
-            if (!WeakWallet->BuyShopItem(0)) return Finish(false, TEXT("could not buy the first item"));
+            if (!State->First.IsValid()) return Finish(false, TEXT("no button focused after moving down"));
+            // Stock the Souls: the focused stock button disables.
+            if (!WeakWallet->StockSouls(false)) return Finish(false, TEXT("could not stock the Souls"));
             State->Step = 1; State->Time = 0.f;
             return true;
         case 1:
             if (State->Time < .5f) return true;
-            if (State->First->IsEnabled()) return Finish(false, TEXT("the bought item's button stayed enabled"));
+            if (State->First->IsEnabled()) return Finish(false, TEXT("the stock button stayed enabled (focus was not on it)"));
             if (!FocusedButton().IsValid() || FocusedButton() == State->First) return Finish(false, TEXT("focus stayed on the disabled button"));
             FSlateApplication::Get().SetAllUserFocusToGameViewport();
             State->Step = 2; State->Time = 0.f;
@@ -70,7 +78,7 @@ void AArenaGameMode::RunMenuFocusCheck(float Dt)
         default:
             if (State->Time < .5f) return true;
             if (!FocusedButton().IsValid()) return Finish(false, TEXT("focus left on the game view"));
-            return Finish(true, TEXT("focus moved off a bought item's button and back from the game view"));
+            return Finish(true, TEXT("focus moved off a button that disabled, and back from the game view"));
         }
     }));
 #endif
