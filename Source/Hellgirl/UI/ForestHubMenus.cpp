@@ -117,9 +117,9 @@ public:
                 const FStage* S=Stage(); if (!S) return FString();
                 return Which==0 ? S->Name : Which==1 ? S->Detail : S->Level==ComingLater ? FString(TEXT("COMING LATER")) : S->bAvailable ? FString(TEXT("PLAY")) : FString(TEXT("LOCKED")); }; };
             TSharedRef<SConstraintCanvas> Face=SNew(SConstraintCanvas);
-            Face->AddSlot().Anchors(FAnchors(0.f,0.f)).Offset(FMargin(25,40,100,58))[Label([Stage]() { const FStage* S=Stage(); return S?S->Numeral:FString(); },20,Ink())];
+            Face->AddSlot().Anchors(FAnchors(0.f,0.f)).Alignment(FVector2D::ZeroVector).Offset(FMargin(25,40,100,58))[Label([Stage]() { const FStage* S=Stage(); return S?S->Numeral:FString(); },20,Ink())];
             for (int32 L=0; L<3; ++L)
-                Face->AddSlot().Anchors(FAnchors(0.f,0.f)).Offset(FMargin(38,146+L*37,92,24))[Label(Line(L),L==0?7:6,L==2?FLinearColor(.95f,.72f,.32f):Ink())];
+                Face->AddSlot().Anchors(FAnchors(0.f,0.f)).Alignment(FVector2D::ZeroVector).Offset(FMargin(38,146+L*37,92,24))[Label(Line(L),L==0?7:6,L==2?FLinearColor(.95f,.72f,.32f):Ink())];
             StagePlaces.Add({FVector2D(CardX[Card],58), FVector2D(150,275), SNew(SBox).Visibility_Lambda([Stage]() { return Stage()?EVisibility::Visible:EVisibility::Hidden; })
                 [ArtButton(CardButtons[Card],TEXT("StageCardDark"),TEXT("StageCardRed"),SNew(SBox).WidthOverride(150).HeightOverride(275)[Face],
                     [this,Card]() { PlayCard(Card); },[this,Card]() { return LitCard()==Card; },[Stage]() { const FStage* S=Stage(); return S && S->bAvailable; })]});

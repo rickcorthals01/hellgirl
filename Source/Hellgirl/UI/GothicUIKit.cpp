@@ -81,13 +81,15 @@ TSharedRef<SButton> ArtButton(TSharedPtr<SButton>& Out, const TCHAR* Dark, const
 TSharedRef<SWidget> Screen(const TCHAR* Background, FVector2D Size, const TArray<FPlace>& Places)
 {
     TSharedRef<SConstraintCanvas> Canvas = SNew(SConstraintCanvas);
-    Canvas->AddSlot().Anchors(FAnchors(0.f, 0.f)).Offset(FMargin(0.f, 0.f, Size.X, Size.Y))[SNew(SImage).Image(Brush(Background))];
+    // Canvas slots are placed by their top-left corner (their default alignment is the centre).
+    Canvas->AddSlot().Anchors(FAnchors(0.f, 0.f)).Alignment(FVector2D::ZeroVector).Offset(FMargin(0.f, 0.f, Size.X, Size.Y))[SNew(SImage).Image(Brush(Background))];
     for (const FPlace& Place : Places)
-        Canvas->AddSlot().Anchors(FAnchors(0.f, 0.f)).Offset(FMargin(Place.Position.X, Place.Position.Y, Place.Size.X, Place.Size.Y))[Place.Widget];
+        Canvas->AddSlot().Anchors(FAnchors(0.f, 0.f)).Alignment(FVector2D::ZeroVector).Offset(FMargin(Place.Position.X, Place.Position.Y, Place.Size.X, Place.Size.Y))[Place.Widget];
     return SNew(SOverlay)
         + SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0.f, 0.f, 0.f, .7f))]
-        + SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
-          [SNew(SScaleBox).Stretch(EStretch::ScaleToFit)
+        // The scale box gets the whole screen, so the menu is scaled up (or down) to fit it.
+        + SOverlay::Slot()
+          [SNew(SScaleBox).Stretch(EStretch::ScaleToFit).HAlign(HAlign_Center).VAlign(VAlign_Center)
             [SNew(SBox).WidthOverride(Size.X).HeightOverride(Size.Y)[Canvas]]];
 }
 }
