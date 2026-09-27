@@ -185,3 +185,13 @@ Replaces the carried-souls rules above.
 - Soul Harvest raises every drop: the fraction is a chance of one more Soul (a 3-Soul drop at +10% gives 3.3 on average).
 - Automated checks have every move and no stat upgrades, so they don't depend on the player's wallet; `-HellgirlShopCheck` (in the swamp map) tests the shop itself.
 - The shop only opens after World I (the goblin follows her after Stage 3), so World I is played without the energy moves.
+
+**Endless story, the camp's strange voice and the free outfit (2026-09-27):**
+- **Camp (03.5):** after the shop is unlocked, the next time Hellgirl opens the forest road the strange voice says the Goblin Queen is hiding behind her army, and a box says endless mode holds new secrets (`C_EndlessSecrets`, flag `EndlessSecrets`). Then the level select opens.
+- **Endless (04):** once Stage 3 is won, the Goblin Queen joins every 10th wave. Until her story has been finished once (flag `EndlessQueenSpared`):
+  - **Wave 10:** "You again?…" (`E_Wave10`) as the wave starts.
+  - **Wave 20:** the voice tells Hellgirl to destroy her (`E_Wave20`). Beaten, the queen begs instead of dying (`E_Wave20Defeat`). Then the rest of the wave is dismissed, the run is banked (Soul Coins and best wave), and the "back to camp?" pop-up opens. If the player says no, the purple portal stays open.
+  - After that, endless has no dialogue and the queen fights to the death every 10th wave.
+- **Goblin Queen outfit:** free once endless wave 50 has been cleared (it cost 20000 Soul Coins). Its achievement is now "Claimed the Goblin Queen outfit".
+- **Goblin Queen portraits:** `Content/Dialogue/Portraits/GoblinQueen`, with the moods Angry, Begging, Confused, Grin, Sad and Yelling. They are made from "Talkbox Images/GoblinQueen" by `Tools/Dialogue/import_portraits.ps1`. Other moods show the closest one (Smirk → Grin, Surprised → Confused, Hurt/Quiet → Sad, Neutral → Grin).
+- **Controller menus:** while any menu is open, if the focused button gets disabled or hidden, focus moves to the menu's first usable button (`AHellgirlPlayerController::KeepMenuFocus`). The check `-HellgirlMenuFocusCheck` needs a window.

@@ -10,6 +10,8 @@
 // -HellgirlMenuFocusCheck (at camp): a gamepad player must never be left without a focused button. The goblin's shop
 // opens with its first item focused; buying it disables that button, and focus must move to another usable button.
 // Then focus is dropped on the game view (as happens when a menu page changes), and it must come back to a button.
+// Needs a real window (Slate only refreshes a button's enabled state when it draws), so it is not in run-checks.ps1:
+//   UnrealEditor.exe Hellgirl.uproject /Engine/Maps/Entry?ForestHub=1 -game -windowed -HellgirlMenuFocusCheck
 void AArenaGameMode::RunMenuFocusCheck(float Dt)
 {
 #if WITH_DEV_AUTOMATION_TESTS
