@@ -208,3 +208,15 @@ Replaces the carried-souls rules above.
 | Resurrection | Second Wind | Heals her fully (spent at once) | 14 |
 | Envy | Bloodthirst | Heals 5% of her max health per kill | 25 |
 | Greed | Greed | +1 Soul from every drop | 22 |
+
+**Menus on the placeholder art (2026-09-27):** the user's mockups in "Hellgirl Game/UI" (Blue Portal Menu, Death Retry Return to camp, Shop menu, Stage Select, World Select) now draw the blue portal, death, shop, world select and stage select menus.
+- **How they're built:**
+  - `Tools/UI/import_ui.ps1` (with Unreal closed) cuts the pieces from the mockups: each mockup whole as its menu's background, and the red and dark look of each button. It imports them as `/Game/UI/Placeholder/T_<Name>`.
+  - `UI/GothicUIKit` lays each menu out at its mockup's pixel size and scales it to fit the screen.
+  - Buttons show their dark piece normally and their red piece when hovered, focused or selected.
+- **Replacing the art:** a new mockup with the same layout drops straight in. Moved buttons need their coordinates changed in the menu code (DeathMenu.cpp, PortalMenu.cpp, ForestHubMenus.cpp) and the cut list in `prepare_ui.ps1`.
+- **Keep buttons apart:** buttons must not overlap, even by their spikes, or gamepad navigation between them breaks.
+- **Menus not covered yet:** the purple exit portal, the campfire, the pause, save and main menus. They keep the old look until they get mockups.
+- **Previews:**
+  - `-HellgirlLevelSelectPreview`, `-HellgirlLevelSelectStagePreview` and `-HellgirlShopPreview`, at camp;
+  - `-HellgirlMapShot -MapShotPortalMenu` and `-MapShotDeath`, in a level.
