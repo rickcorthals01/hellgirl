@@ -452,7 +452,7 @@ bool AArenaGameMode::RunEndlessCheck()
     const HellgirlSouls::FReward R = HellgirlSouls::Compute(100, 20, 100.f, 40, 50.f, 100.f, 105.f);
     Passed &= R.Speed == 30 && R.Combo == 15 && R.Energy == 10 && R.Total == 135 && HellgirlSouls::Compute(100, 0, 290.f, 40, 0.f, 0.f, 0.f).Total == 100;
     // Prices climb 40% per level owned.
-    Passed &= HellgirlUpgrades::Cost(0, 0) == 43 && HellgirlUpgrades::Cost(0, 1) == 60 && HellgirlUpgrades::Cost(0, 2) == 77;
+    Passed &= HellgirlUpgrades::Cost(0, 0) == 28 && HellgirlUpgrades::Cost(0, 1) == 39 && HellgirlUpgrades::Cost(0, 2) == 50;
     if (Passed) { UE_LOG(LogTemp, Display, TEXT("ENDLESS CHECK PASSED: ten waves, armies on 5 and 10, the Goblin Queen on 10, soul portals after 3/6/9 with five fresh upgrade offers, each buyable once, stocking Souls as Soul Coins, tougher goblins, best wave, a fall depositing nothing more, the Soul Coin reward, the Goblin Queen outfit (20000, after wave 50) and its achievements")); }
     else { UE_LOG(LogTemp, Error, TEXT("ENDLESS CHECK FAILED: wave %d, %d portals, %d armies, best %d, souls %lld"), EndlessWave, Portals, Armies, HellgirlProgress::EndlessBest(), Wallet->LevelSouls.Souls); }
     FPlatformMisc::RequestExitWithStatus(false, Passed ? 0 : 1);

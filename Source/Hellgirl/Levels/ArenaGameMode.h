@@ -111,6 +111,7 @@ public:
     TArray<int32> SwampWaveOfSite;     // which wave each spawn site belongs to
     TArray<FName> SwampWaveAfter;      // the conversation after each wave (with a blue portal: when she steps into it)
     TArray<bool> SwampWavePortal;      // whether a blue portal opens after each wave
+    TArray<bool> SwampWaveTalkAfter;   // ...whose conversation plays once she continues through it
     // The fixed point (in the room's five areas, west to east) that a swamp wave comes from.
     FVector SwampAreaPoint(int32 Area, int32 Side) const;
     // Where a blue portal can stand near Hellgirl, clear of the zombie arms.

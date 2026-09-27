@@ -145,7 +145,7 @@ Replaces the carried-souls rules above.
 - **Where you see it:** the exit portal shows the breakdown. The in-level HUD shows your Souls, the level's running total, stock and loss flashes, and a LEVEL COMPLETE banner. Camp shows your Soul Coins and the last deposit.
 - **Soul Coins** are the camp wallet. The camp HUD, shop, merchant and save slots all use Soul Coins.
 - **Code:** the rules are in `Rules/SoulRewards.h`. The wallet keeps `LevelSouls` (Souls, Earned, Stocked, time, combat time, combo time, energy spent, kills), and save slots keep it too.
-- Upgrade prices were cut 15%: Fury 43, Iron Skin 38, Vitality 30, Swiftness 26, Soul Hunger 30, Second Wind 21, Bloodthirst 38, Greed 34.
+- Upgrade prices were cut 15%: Fury 43, Iron Skin 38, Vitality 30, Swiftness 26, Soul Hunger 30, Second Wind 21, Bloodthirst 38, Greed 34. On 2026-09-27 they were cut another 35%: Fury 28, Iron Skin 25, Vitality 20, Swiftness 17, Soul Hunger 20, Second Wind 14, Bloodthirst 25, Greed 22 (each level owned still makes the next 40% dearer).
 
 **Endless and the forest run (2026-09-25):**
 - **Forest run:** out of the game for now. Its level-select card is commented out in `UI/ForestHubMenus.cpp`, and its code and checks stay for later.

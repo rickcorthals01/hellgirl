@@ -75,7 +75,7 @@ Open them from the forest road, under **World II**. Stage I opens once World I i
 |---|---|
 | **I, The Swamp of Souls** | One stretch of swamp (always seed 1101). A six-second camera flight from the far end back to Hellgirl, then the Goblin Queen's intro. Ten waves of rats and frogs from the areas' points (below). Blue portals open after waves 2, 5, 7 and 9: stepping in plays her conversation (none at wave 7), then the portal menu (continue, stock Souls, upgrades). After wave 10, the purple portal by the light at the end. |
 | **II, Deeper In** | A run of ten rooms (a new seed each run). Each room sends groups of random rats and frogs from three to five of the areas' points (all five in room 10). Once they are all beaten, a blue portal opens (not in room 10), and continuing through it opens the light. Health, energy and Souls carry over, and dying ends the run. Her lines play at rooms 1, 5, 7 and 10. Room 10 is the Frog King's: he waits on his giant lily pad, guarded by rats and frogs. Beating him brings "Up there! I can see it." and the purple portal. |
-| **III, The Doorway** | Two waves (seed 3303), then the doorway conversation, ending "Watch out!". The Rat Queen's fight comes later, in her own area, so for now the purple portal leads back to camp. Her after-fight conversation is already in `LevelTwo.ini` (`S3_AfterRatQueen`). |
+| **III, The Doorway** | In the boss arena (see Boss arena below). Wave 1, then a blue portal; once she continues through it, the doorway conversation, ending "Watch out!", and wave 2 springs at once. Then the crypt entrance is the way out (walking in wins the level). The Rat Queen's fight comes later, between "Watch out!" and the crypt. Her after-fight conversation is already in `LevelTwo.ini` (`S3_AfterRatQueen`). |
 
 ### Where the waves come from
 
@@ -114,3 +114,14 @@ Checks:
 - `SwampEnemy` (in the swamp map): the rat bites (uncounterable), punches and rolls away from her swings; the frog hops and slams her.
 - `SwampStage` (Stage I, a Stage II room, Stage II room 10 and Stage III): walks each script, stepping Hellgirl up to each wave's point. It checks the wave counts, that only rats, frogs and the Frog King appear, where the Frog King stands, that the points run west to east and a wave never starts while she is far from its point, Stage I's areas (rats only in the first mud, frogs only mid-water) and its blue portals after waves 2, 5, 7 and 9, that the portal or light opens, and that every conversation exists.
 - `-HellgirlSwampEnemyPreview` (at camp, windowed): the rat's and the frog's clips at their key moments, saved to `Saved/Screenshots/SwampEnemies_*.png`.
+
+## Boss arena (Stage III)
+
+Built from the user's sketch ("Developer idea folder lol/Swamp boss arena.png"); the layout is fixed, in `Rules/SwampArenaRules.h`, and dressed in `BuildSwampArenaScenery` (`Levels/SwampScenery.cpp`).
+- **Shape:** a 50 × 50 m square of mud, ringed by dead trees. North is +X, east is +Y.
+- **Water:** three streams of soul water run from the south-west to the north-east: a thin one, a middle one widening to the east, and a wide one in the south.
+- **Way in:** Hellgirl arrives at the south end of a boardwalk across the wide stream; its last two sections are broken.
+- **Way out:** the crypt entrance (the graveyard's `SM_CryptExit`) in the north-west corner, its doorway lit from inside.
+- **Pieces:** 9 zombie arms, 4 big dark lily pads to stand on where the upper streams bend, 2 drowned stumps, and one dead tree on the mud. Reeds, small lily pads and fireflies dress the streams. As in the corridor, the mud holds nothing but the tree (and the crypt).
+- **Waves:** wave 1 comes from the east mud, wave 2 from the north-west mud by the crypt.
+- **Checks:** `SwampStage3` checks the rules above, the blue portal after wave 1 and the crypt opening. `-HellgirlSwampPreview` with `Stage=3` photographs the arena.

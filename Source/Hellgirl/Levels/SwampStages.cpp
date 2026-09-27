@@ -33,14 +33,17 @@ namespace SwampStages
 // A wave: its area and side of the corridor (0 north, 1 south), how many rats and frogs (before the global wave
 // scaling), the conversation once it is beaten, and whether a blue portal opens first (the conversation then plays
 // when she steps into it).
-struct FWave { int32 Area; int32 Side; int32 Rats; int32 Frogs; const TCHAR* After; bool bPortal; };
+// bTalkAfter: with a blue portal, the conversation plays once she continues through it instead of when she steps in.
+struct FWave { int32 Area; int32 Side; int32 Rats; int32 Frogs; const TCHAR* After; bool bPortal; bool bTalkAfter = false; };
 const FWave StageOne[] = {
     {0, 0, 3, 0, nullptr, false}, {0, 1, 4, 0, TEXT("S1_Portal1"), true},   // the first mud: rats
     {1, 0, 3, 1, nullptr, false}, {1, 1, 4, 2, nullptr, false},             // the start of the water: mostly rats
     {2, 0, 0, 3, TEXT("S1_Portal2"), true}, {2, 1, 0, 4, nullptr, false},   // the middle of the water: frogs
     {3, 0, 2, 4, nullptr, true}, {3, 1, 2, 5, nullptr, false},              // nearing the mud: mostly frogs
     {4, 0, 4, 4, TEXT("S1_Portal3"), true}, {4, 1, 6, 5, nullptr, false}};  // the last mud: rats and frogs
-const FWave StageThree[] = {{1, 0, 5, 2, nullptr, false}, {3, 1, 4, 4, TEXT("S3_Doorway"), false}};
+// Stage III (the boss arena): wave 1, a blue portal, the doorway conversation once she continues ("Watch out!"),
+// then wave 2 springs the ambush.
+const FWave StageThree[] = {{1, 0, 5, 2, TEXT("S3_Doorway"), true, true}, {3, 1, 4, 4, nullptr, false}};
 constexpr int32 RunRooms = 10;
 constexpr int32 Areas = 5;
 constexpr float OverviewSeconds = 6.f;
@@ -87,8 +90,9 @@ FVector AArenaGameMode::SwampPortalSpot(const FVector& Near) const
     FVector2D Best(Near.X + 550.f, Near.Y);
     for (const FVector2D& O : Offsets)
     {
-        const FVector2D P(FMath::Clamp(static_cast<float>(Near.X) + O.X, -SwampRoom::Half + 700.f, SwampRoom::Half - 1000.f),
-                          FMath::Clamp(static_cast<float>(Near.Y) + O.Y, -SwampRoom::HalfWidth + 500.f, SwampRoom::HalfWidth - 500.f));
+        // Inside the corridor, or the boss arena's square.
+        const FVector2D Bound = bSwampArena ? FVector2D(SwampArena::Half - 600.f) : FVector2D(SwampRoom::Half - 1000.f, SwampRoom::HalfWidth - 500.f);
+        const FVector2D P(FMath::Clamp(static_cast<float>(Near.X) + O.X, -Bound.X, Bound.X), FMath::Clamp(static_cast<float>(Near.Y) + O.Y, -Bound.Y, Bound.Y));
         bool Clear = true;
         for (const FSwampArm& Arm : SwampArms) Clear &= FVector2D::Distance(P, Arm.P) > SwampRoom::ArmReach + 350.f;
         if (Clear) { Best = P; break; }
@@ -138,6 +142,7 @@ void AArenaGameMode::BuildSwampWaves()
         SwampWaveOfSite.Add(I);
         SwampWaveAfter.Add(W.After ? FName(W.After) : NAME_None);
         SwampWavePortal.Add(W.bPortal);
+        SwampWaveTalkAfter.Add(W.bTalkAfter);
     }
     // The Frog King waits on his lily pad in the run's last room and joins the wave from the middle of the water.
     if (King)
@@ -222,24 +227,28 @@ bool AArenaGameMode::TickSwampStage(float Dt, AArenaFighter* Hero)
         const FName After = SwampWaveAfter.IsValidIndex(SwampWave) ? SwampWaveAfter[SwampWave] : NAME_None;
         if (SwampWavePortal.IsValidIndex(SwampWave) && SwampWavePortal[SwampWave])
         {
-            // A blue portal: her conversation when Hellgirl steps in, then continue, stock Souls or buy upgrades.
+            // A blue portal: her conversation when Hellgirl steps in (or once she continues, in Stage III), then continue,
+            // stock Souls or buy upgrades.
+            const bool TalkAfter = SwampWaveTalkAfter.IsValidIndex(SwampWave) && SwampWaveTalkAfter[SwampWave];
             const FName PortalId(*FString::Printf(TEXT("S%d_PortalAfterWave%d"), SwampStage, SwampWave + 1));
             if (!PlayedStory.Contains(PortalId))
             {
                 if (SoulPortal && OpenPortalId != PortalId)
                 {
                     SoulPortal->Open(SwampPortalSpot(Hero->GetActorLocation()), Hero->GetActorLocation(), false);
-                    OpenPortalId = PortalId; OpenPortalIntro = After; bPortalMenuDeclined = false;
+                    OpenPortalId = PortalId; OpenPortalIntro = TalkAfter ? NAME_None : After; bPortalMenuDeclined = false;
                     RollPortalOffers();
                 }
                 Objective = Counter + TEXT(" CLEARED — A blue portal has opened / Step inside");
                 TickPortalMenus(Hero);
                 return true;
             }
+            if (TalkAfter && !After.IsNone() && !SwampSaid(After)) return true;
         }
         else if (!After.IsNone() && !SwampSaid(After)) return true;
+        const bool Ambush = SwampWaveTalkAfter.IsValidIndex(SwampWave) && SwampWaveTalkAfter[SwampWave];
         ++SwampWave;
-        SwampWaveClock = EnemyTuning::WaveBreak(3.f);
+        SwampWaveClock = Ambush ? .5f : EnemyTuning::WaveBreak(3.f);
         return true;
     }
 
@@ -385,7 +394,7 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
     }
     const int32 Expected = SwampStage == 1 ? UE_ARRAY_COUNT(StageOne) : SwampStage == 3 ? UE_ARRAY_COUNT(StageThree) : SwampWaveCount;
     const bool WantLight = (SwampStage == 2 && SwampRoomNumber < RunRooms) || bSwampArena;
-    const TArray<int32> WantPortals = SwampStage == 1 ? TArray<int32>{2, 5, 7, 9} : WantLight && !bSwampArena ? TArray<int32>{Expected} : TArray<int32>{};
+    const TArray<int32> WantPortals = SwampStage == 1 ? TArray<int32>{2, 5, 7, 9} : bSwampArena ? TArray<int32>{1} : WantLight ? TArray<int32>{Expected} : TArray<int32>{};
     UE_LOG(LogTemp, Display, TEXT("Swamp stage check: stage %d room %d: %d waves, %d blue portals, light %d, portal %d"), SwampStage, SwampRoomNumber, Waves,
         PortalsAfter.Num(), LightOpen, ExitGate && ExitGate->IsOpen());
     if (Waves != Expected || (SwampStage == 2 && (Waves < 3 || Waves > 5 || (King && Waves != 5))))
@@ -393,7 +402,7 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
     if (PortalsAfter != WantPortals) { Finish(false, FString::Printf(TEXT("%d blue portals, not after the right waves"), PortalsAfter.Num())); return; }
     if (WantLight != LightOpen || (!WantLight && !(ExitGate && ExitGate->IsOpen()))) { Finish(false, TEXT("the way out did not open")); return; }
     Finish(true, FString::Printf(TEXT("stage %d room %d: %d waves of rats and frogs from their points%s%s, then %s"), SwampStage, SwampRoomNumber, Waves,
-        King ? TEXT(" with the Frog King") : TEXT(""), SwampStage == 1 ? TEXT(", blue portals after waves 2, 5, 7 and 9") : PortalsAfter.Num() ? TEXT(", a blue portal after the last") : TEXT(""),
+        King ? TEXT(" with the Frog King") : TEXT(""), SwampStage == 1 ? TEXT(", blue portals after waves 2, 5, 7 and 9") : bSwampArena ? TEXT(", a blue portal after wave 1") : PortalsAfter.Num() ? TEXT(", a blue portal after the last") : TEXT(""),
         bSwampArena ? TEXT("the crypt entrance") : WantLight ? TEXT("the light to the next room") : TEXT("the purple portal")));
 #endif
 }
