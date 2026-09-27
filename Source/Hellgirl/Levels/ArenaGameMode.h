@@ -93,6 +93,12 @@ public:
     // World II's stages (URL option Stage=1..3 with Swamp=1; 0 is the map preview), see Levels/SwampStages.cpp.
     int32 SwampStage = 0, SwampRooms = 4;
     bool bSwampKingRoom = true;
+    // Stage III is fought in the boss arena (Rules/SwampArenaRules.h) instead of a corridor room.
+    bool bSwampArena = false;
+    FVector SwampStartPosition = FVector(-5750.f, 0.f, 115.f);
+    // Whether a point is in the soul water (the corridor's strip or the arena's streams).
+    bool SwampInWater(FVector2D P) const;
+    void BuildSwampArenaScenery();
     void StartSwampStage(int32 Stage);
     void BuildSwampWaves();
     // Runs the stage's waves, conversations and exit portal; true while the light at the end stays shut.

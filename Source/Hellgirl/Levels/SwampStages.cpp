@@ -14,6 +14,7 @@
 #include "Levels/ArenaGameMode.h"
 #include "Levels/WavePortal.h"
 #include "Rules/SwampRules.h"
+#include "Rules/SwampArenaRules.h"
 #include "Rules/EnemyTuning.h"
 #include "Fighter/ArenaFighter.h"
 #include "Enemies/EnemySpawnPoint.h"
@@ -121,7 +122,9 @@ void AArenaGameMode::BuildSwampWaves()
     for (int32 I = 0; I < Waves.Num(); ++I)
     {
         const FWave& W = Waves[I];
-        auto* S = Site(SwampAreaPoint(W.Area, W.Side), FString::Printf(TEXT("WAVE %d"), I + 1), W.Rats + W.Frogs, 0, false);
+        // In the boss arena the waves come from its own two points.
+        const FVector Point = bSwampArena ? FVector(SwampArena::WavePoint(I), 10.f) : SwampAreaPoint(W.Area, W.Side);
+        auto* S = Site(Point, FString::Printf(TEXT("WAVE %d"), I + 1), W.Rats + W.Frogs, 0, false);
         if (!S) continue;
         // The larger kind leads; the other is mixed in.
         const bool MostlyRats = W.Rats >= W.Frogs;
@@ -194,7 +197,7 @@ bool AArenaGameMode::TickSwampStage(float Dt, AArenaFighter* Hero)
         for (auto* S : Current)
         {
             Started |= S->bActivated; Beaten &= S->bCleared;
-            Near |= !S->bBoss && Hero->GetActorLocation().X > S->GetActorLocation().X - NearX;
+            Near |= bSwampArena || (!S->bBoss && Hero->GetActorLocation().X > S->GetActorLocation().X - NearX);
         }
         const bool Rooms = SwampStage == 2;
         const FString Counter = Rooms ? FString::Printf(TEXT("ROOM %d / %d"), SwampRoomNumber, RunRooms)
@@ -245,6 +248,13 @@ bool AArenaGameMode::TickSwampStage(float Dt, AArenaFighter* Hero)
         return false;
     }
     if (SwampStage == 2 && !SwampSaid(TEXT("S2_Won"))) return true;
+    // Stage III's arena: the crypt entrance is the way out (Swamp.cpp takes her once she reaches it). The Rat Queen's
+    // fight comes before it once she is designed.
+    if (bSwampArena)
+    {
+        Objective = TEXT("THE DOORWAY / Enter the crypt   ·   the Rat Queen's fight comes later");
+        return false;
+    }
     // The purple portal, by the light at the end.
     if (ExitGate && !ExitGate->IsOpen())
         ExitGate->Open(FVector(SwampRoom::Exit.X - 250.f, 0.f, 0.f), FVector(SwampRoom::Exit.X - 900.f, 0.f, 0.f), true);
@@ -297,12 +307,36 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
     bool HasKing = false;
     for (auto S : SpawnSites) HasKing |= S->GroundType == EHellgirlEnemyType::FrogKing && S->bBoss;
     if (HasKing != King) { Finish(false, TEXT("the Frog King is in the wrong room")); return; }
+    // Stage III is in the boss arena, laid out by the swamp's rules: the mud holds only the dead tree (and the crypt),
+    // everything else stands in a stream, arms keep clear of the boardwalk, and the way in, the crypt and the wave
+    // points are on the mud.
+    if ((SwampStage == 3) != bSwampArena) { Finish(false, TEXT("Stage III is not in the boss arena")); return; }
+    if (bSwampArena)
+    {
+        using namespace SwampArena;
+        const FPlan Arena = Make();
+        int32 Arms = 0, Pads = 0;
+        for (const FItem& Item : Arena.Items)
+        {
+            const bool Tree = SwampRoom::IsTree(Item.Piece), Walk = Item.Piece == EPiece::Boardwalk || Item.Piece == EPiece::BoardwalkBroken;
+            if (!Tree && !Walk && !InWater(Item.P)) { Finish(false, FString::Printf(TEXT("piece %d stands on the mud at %s"), static_cast<int32>(Item.Piece), *Item.P.ToString())); return; }
+            if (Tree && InWater(Item.P)) { Finish(false, TEXT("the dead tree stands in the water")); return; }
+            if (Item.Piece == EPiece::ZombieArm && FMath::Abs(Item.P.Y - Start.Y) < SwampRoom::ArmFromBoardwalk && Item.P.X < -1150.f)
+            { Finish(false, TEXT("an arm by the boardwalk")); return; }
+            Arms += Item.Piece == EPiece::ZombieArm;
+            Pads += Item.Piece == EPiece::GiantLily;
+        }
+        if (Arms != 9 || Pads != 4) { Finish(false, FString::Printf(TEXT("%d arms and %d big lily pads, expected 9 and 4"), Arms, Pads)); return; }
+        for (const FVector2D P : {Start, Exit(), WavePoint(0), WavePoint(1)})
+            if (InWater(P, -100.f)) { Finish(false, FString::Printf(TEXT("%s is in or by the water"), *P.ToString())); return; }
+        if (!InWater(FVector2D(Start.X + 500.f, Start.Y), 50.f)) { Finish(false, TEXT("the boardwalk does not cross the southern stream")); return; }
+    }
     // The points run west to east, wave after wave; Stage I's first mud is rats only and the middle of the water frogs only.
     float LastX = -SwampRoom::Half;
     for (int32 I = 0; I < SpawnSites.Num(); ++I)
     {
         const AEnemySpawnPoint* S = SpawnSites[I];
-        if (S->bBoss) continue;
+        if (S->bBoss || bSwampArena) continue;
         const float X = static_cast<float>(S->GetActorLocation().X);
         if (X < LastX - 1.f) { Finish(false, FString::Printf(TEXT("wave %d comes from behind the wave before it"), I + 1)); return; }
         LastX = X;
@@ -328,7 +362,7 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
                 if (SwampWaveOfSite.IsValidIndex(I) && SwampWaveOfSite[I] == SwampWave && !SpawnSites[I]->bBoss && !SpawnSites[I]->bActivated)
                 {
                     const FVector Point = SpawnSites[I]->GetActorLocation();
-                    if (Point.X - NearX - 1500.f > -SwampRoom::Half + 400.f)
+                    if (!bSwampArena && Point.X - NearX - 1500.f > -SwampRoom::Half + 400.f)
                     {
                         Hero->SetActorLocation(FVector(Point.X - NearX - 1500.f, 0.f, Home.Z));
                         TickSwampStage(10.f, Hero);
@@ -348,7 +382,7 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
         Waves += Started.Num();
     }
     const int32 Expected = SwampStage == 1 ? UE_ARRAY_COUNT(StageOne) : SwampStage == 3 ? UE_ARRAY_COUNT(StageThree) : SwampWaveCount;
-    const bool WantLight = SwampStage == 2 && SwampRoomNumber < RunRooms;
+    const bool WantLight = (SwampStage == 2 && SwampRoomNumber < RunRooms) || bSwampArena;
     const TArray<int32> WantPortals = SwampStage == 1 ? TArray<int32>{2, 5, 7, 9} : WantLight ? TArray<int32>{Expected} : TArray<int32>{};
     UE_LOG(LogTemp, Display, TEXT("Swamp stage check: stage %d room %d: %d waves, %d blue portals, light %d, portal %d"), SwampStage, SwampRoomNumber, Waves,
         PortalsAfter.Num(), LightOpen, ExitGate && ExitGate->IsOpen());
@@ -358,6 +392,6 @@ void AArenaGameMode::RunSwampStageCheck(float Dt)
     if (WantLight != LightOpen || (!WantLight && !(ExitGate && ExitGate->IsOpen()))) { Finish(false, TEXT("the way out did not open")); return; }
     Finish(true, FString::Printf(TEXT("stage %d room %d: %d waves of rats and frogs from their points%s%s, then %s"), SwampStage, SwampRoomNumber, Waves,
         King ? TEXT(" with the Frog King") : TEXT(""), SwampStage == 1 ? TEXT(", blue portals after waves 2, 5, 7 and 9") : PortalsAfter.Num() ? TEXT(", a blue portal after the last") : TEXT(""),
-        WantLight ? TEXT("the light to the next room") : TEXT("the purple portal")));
+        bSwampArena ? TEXT("the crypt entrance") : WantLight ? TEXT("the light to the next room") : TEXT("the purple portal")));
 #endif
 }

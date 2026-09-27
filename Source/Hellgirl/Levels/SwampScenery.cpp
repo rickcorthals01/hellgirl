@@ -5,6 +5,7 @@
 #include "Levels/ForestArt.h"
 #include "Levels/GraveyardArt.h"
 #include "Rules/SwampRules.h"
+#include "Rules/SwampArenaRules.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -32,10 +33,13 @@ UMaterialInterface* Material(const TCHAR* Name)
     return LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("/Game/Environment/Swamp/%s.%s"), Name, Name));
 }
 
+// Half the flat area inside the tree ring: the corridor, or the boss arena's square.
+FVector2D FlatHalf(SwampRoom::Half, SwampRoom::HalfWidth);
+
 // Flat inside the tree ring; the mud rises a little under the trees and beyond.
 float GroundHeight(FVector2D P)
 {
-    const float Out = FMath::Max3(0.f, static_cast<float>(FMath::Abs(P.X)) - SwampRoom::Half - 300.f, static_cast<float>(FMath::Abs(P.Y)) - SwampRoom::HalfWidth - 300.f);
+    const float Out = FMath::Max3(0.f, static_cast<float>(FMath::Abs(P.X) - FlatHalf.X) - 300.f, static_cast<float>(FMath::Abs(P.Y) - FlatHalf.Y) - 300.f);
     return Out * .1f * (.6f + .4f * FMath::PerlinNoise2D(P * .001f));
 }
 
@@ -77,6 +81,64 @@ void Water(UWorld* World, float West, float East, UMaterialInterface* Material, 
         for (int32 I = 0; I < Triangles.Num(); I += 3) Swap(Triangles[I + 1], Triangles[I + 2]);
     Mesh->CreateMeshSection(0, Vertices, Triangles, Normals, UVs, {}, {}, false);
     Mesh->SetMaterial(0, Material);
+    Actor->Tags.Add(TEXT("SwampWater"));
+}
+
+// The boss arena's three streams (Rules/SwampArenaRules.h): a ribbon of water along each centre line, its banks
+// ragged, one mesh section per stream.
+void Streams(UWorld* World, UMaterialInterface* Material)
+{
+    auto* Actor = World->SpawnActor<AActor>();
+    auto* Mesh = NewObject<UProceduralMeshComponent>(Actor);
+    Actor->SetRootComponent(Mesh);
+    Actor->AddInstanceComponent(Mesh);
+    Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Mesh->SetCastShadow(false);
+    Mesh->RegisterComponent();
+    int32 Section = 0;
+    for (const TArray<SwampArena::FStreamPoint>& Stream : SwampArena::Streams())
+    {
+        // Resampled every ~1.2 m along the line, so the banks bend smoothly.
+        TArray<FVector2D> Points; TArray<float> Widths;
+        for (int32 I = 0; I + 1 < Stream.Num(); ++I)
+        {
+            const int32 Steps = FMath::Max(1, FMath::CeilToInt(FVector2D::Distance(Stream[I].P, Stream[I + 1].P) / 120.f));
+            for (int32 S = 0; S < Steps; ++S)
+            {
+                const float T = static_cast<float>(S) / Steps;
+                Points.Add(FMath::Lerp(Stream[I].P, Stream[I + 1].P, T));
+                Widths.Add(FMath::Lerp(Stream[I].Width, Stream[I + 1].Width, T));
+            }
+        }
+        Points.Add(Stream.Last().P); Widths.Add(Stream.Last().Width);
+        TArray<FVector> Vertices, Normals;
+        TArray<FVector2D> UVs;
+        TArray<int32> Triangles;
+        for (int32 I = 0; I < Points.Num(); ++I)
+        {
+            const FVector2D Along = (Points[FMath::Min(I + 1, Points.Num() - 1)] - Points[FMath::Max(I - 1, 0)]).GetSafeNormal();
+            const FVector2D Side(-Along.Y, Along.X);
+            for (const float S : {-1.f, 1.f})
+            {
+                const float Ragged = 45.f * FMath::PerlinNoise1D(I * .21f + S * 7.f + Section * 13.f) + 20.f * FMath::PerlinNoise1D(I * .9f + S * 3.f + Section);
+                const FVector2D P = Points[I] + Side * S * (Widths[I] * .5f + Ragged);
+                Vertices.Add(FVector(P, SwampRoom::WaterZ));
+                Normals.Add(FVector::UpVector);
+                UVs.Add(P / 650.f);
+            }
+            if (I + 1 < Points.Num())
+            {
+                const int32 A = I * 2;
+                Triangles.Append({A, A + 2, A + 1, A + 1, A + 2, A + 3});
+            }
+        }
+        // Clockwise from above faces up in Unreal.
+        if (FVector::CrossProduct(Vertices[2] - Vertices[0], Vertices[1] - Vertices[0]).Z > 0.f)
+            for (int32 I = 0; I < Triangles.Num(); I += 3) Swap(Triangles[I + 1], Triangles[I + 2]);
+        Mesh->CreateMeshSection(Section, Vertices, Triangles, Normals, UVs, {}, {}, false);
+        Mesh->SetMaterial(Section, Material);
+        ++Section;
+    }
     Actor->Tags.Add(TEXT("SwampWater"));
 }
 
@@ -205,6 +267,63 @@ void AArenaGameMode::BuildSwampScenery()
     ForestArt::PointGlow(World, Flame, FLinearColor(1.f, .78f, .5f), 32000.f, 2200.f);
 
     for (const FVector& Swarm : Plan.Fireflies) ForestArt::Fireflies(World, Swarm, 1.5f);
+    GraveArt::MistSheet(World, 45.f, Half + 2500.f, 1600.f, .45f, .8f, FLinearColor(.1f, .15f, .15f));
+    GraveArt::MistSheet(World, 120.f, Half + 2500.f, 2300.f, .22f, .6f, FLinearColor(.09f, .13f, .13f));
+    SwampArt::Night(World);
+}
+
+// Stage III's boss arena (Rules/SwampArenaRules.h): the same mud, water, night, mist and fireflies as the corridor, the
+// tree ring round a 50 m square, three streams instead of one strip, and the crypt entrance in the north-west corner.
+void AArenaGameMode::BuildSwampArenaScenery()
+{
+    using SwampArena::Half;
+    UWorld* World = GetWorld();
+    FRandomStream Dice(2711);
+    SwampArt::FlatHalf = FVector2D(Half, Half);
+    ForestArt::Ground(World, Half + 2500.f, 420.f, SwampArt::Material(TEXT("MI_SwampGround")), [](FVector2D P) { return SwampArt::GroundHeight(P); });
+    SwampArt::Streams(World, SwampArt::Material(TEXT("M_SwampWater")));
+
+    // The tree ring: several rows of dead trees all the way round the square.
+    UStaticMesh* TreeMeshes[] = {SwampArt::Kit(TEXT("SM_SwampTreeA")), SwampArt::Kit(TEXT("SM_SwampTreeB")), SwampArt::Kit(TEXT("SM_SwampTreeC")), ForestArt::Kit(TEXT("SM_DeadTree"))};
+    UHierarchicalInstancedStaticMeshComponent* Trees[4];
+    for (int32 I = 0; I < 4; ++I) Trees[I] = GraveArt::Batch(World, TreeMeshes[I], false, 2.5f);
+    for (int32 Row = 0; Row < 4; ++Row)
+    {
+        const float Out = 180.f + Row * 420.f;
+        for (float A = -Half - Out; A <= Half + Out; A += Dice.FRandRange(260.f, 380.f))
+            for (int32 Side = 0; Side < 4; ++Side)
+            {
+                const float S = Side % 2 ? 1.f : -1.f, Edge = S * (Half + Out + Dice.FRandRange(-90.f, 90.f)), Along = A + Dice.FRandRange(-80.f, 80.f);
+                const FVector2D P = Side < 2 ? FVector2D(Along, Edge) : FVector2D(Edge, Along);
+                Trees[Dice.RandRange(0, 3)]->AddInstance(FTransform(FRotator(0, Dice.FRandRange(0.f, 360.f), 0), FVector(P.X, P.Y, SwampArt::GroundHeight(P) - 15.f),
+                    FVector(Dice.FRandRange(.9f, 1.45f) + Row * .1f)));
+            }
+    }
+    for (auto* Batch : Trees) Batch->BuildTreeIfOutdated(true, true);
+    // Invisible walls just inside the tree ring.
+    for (int32 Side = 0; Side < 4; ++Side)
+    {
+        const float S = Side % 2 ? 1.f : -1.f;
+        auto* Edge = Prop(Side < 2 ? FVector(0.f, S * (Half + 60.f), 2900.f) : FVector(S * (Half + 60.f), 0.f, 2900.f),
+            Side < 2 ? FVector(Half * 2.4f / 100.f, .8f, 60.f) : FVector(.8f, Half * 2.4f / 100.f, 60.f), FLinearColor::Black);
+        Edge->SetActorHiddenInGame(true);
+        Edge->Tags.Add(TEXT("SwampBoundary"));
+    }
+
+    // The streams light their banks from below.
+    int32 Alternate = 0;
+    for (const TArray<SwampArena::FStreamPoint>& Stream : SwampArena::Streams())
+        for (int32 I = 1; I + 1 < Stream.Num(); I += 2)
+            if (FMath::Abs(Stream[I].P.X) < Half && FMath::Abs(Stream[I].P.Y) < Half)
+                ForestArt::PointGlow(World, FVector(Stream[I].P, 70.f) + FVector(0.f, 0.f, (Alternate++ % 2) * 20.f), FLinearColor(.35f, .7f, 1.f), 4200.f, 1300.f);
+
+    // The crypt entrance, its doorway turned to the arena and lit a cold white from inside: the way out.
+    const FVector2D Facing = SwampArena::CryptFacing();
+    ForestArt::Solid(World, GraveArt::Kit(TEXT("SM_CryptExit")), FTransform(FRotator(0.f, GraveRoom::FaceYaw(Facing), 0.f), FVector(SwampArena::Crypt, -2.f),
+        FVector(SwampArena::CryptScale)), true);
+    ForestArt::PointGlow(World, FVector(SwampArena::Crypt + Facing * 120.f, 200.f), FLinearColor(.75f, .88f, 1.f), 9000.f, 1100.f);
+
+    for (const FVector& Swarm : SwampArena::Make().Fireflies) ForestArt::Fireflies(World, Swarm, 1.5f);
     GraveArt::MistSheet(World, 45.f, Half + 2500.f, 1600.f, .45f, .8f, FLinearColor(.1f, .15f, .15f));
     GraveArt::MistSheet(World, 120.f, Half + 2500.f, 2300.f, .22f, .6f, FLinearColor(.09f, .13f, .13f));
     SwampArt::Night(World);

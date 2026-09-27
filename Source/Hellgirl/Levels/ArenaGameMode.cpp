@@ -57,7 +57,7 @@ void AArenaGameMode::BeginPlay()
     // Souls picked up in a level count toward it (Rules/SoulRewards.h); at camp pickups are Soul Coins.
     if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance())) Wallet->bInLevel=!bForestHub;
     if (bForestHub) BuildForestHub(); else BuildArena();
-    LastSafePosition = bForestHub ? FVector(-550.f,0.f,110.f) : bSuccubusCourt ? FVector(-2600.f,0.f,115.f) : bForestRun ? FVector(-2150.f,0.f,115.f) : bGraveyard ? FVector(-4900.f,0.f,115.f) : bSwamp ? FVector(-5750.f,0.f,115.f)
+    LastSafePosition = bForestHub ? FVector(-550.f,0.f,110.f) : bSuccubusCourt ? FVector(-2600.f,0.f,115.f) : bForestRun ? FVector(-2150.f,0.f,115.f) : bGraveyard ? FVector(-4900.f,0.f,115.f) : bSwamp ? SwampStartPosition
         : ((CampaignLevel==2 && !bLegacyMap) || IsImpArena() ? FVector(0.f,0.f,115.f) : FVector(-5000.f,0.f,115.f));
     if (APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0))
     {

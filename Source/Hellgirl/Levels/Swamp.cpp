@@ -6,6 +6,7 @@
 #include "Levels/ForestArt.h"
 #include "Levels/GraveyardArt.h"
 #include "Rules/SwampRules.h"
+#include "Rules/SwampArenaRules.h"
 #include "Fighter/ArenaFighter.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
@@ -85,6 +86,11 @@ void AArenaGameMode::BuildSwamp()
     const FPlan Plan = Make(SwampSeed, SwampRoomNumber, SwampRooms, bSwampKingRoom);
     SwampWaterStart = Plan.WaterStart;
     SwampWaterEnd = Plan.WaterEnd;
+    // Stage III is fought in the boss arena: its own fixed layout, the same kinds of pieces.
+    bSwampArena = SwampStage == 3;
+    const SwampArena::FPlan ArenaPlan = bSwampArena ? SwampArena::Make() : SwampArena::FPlan();
+    const TArray<FItem>& Items = bSwampArena ? ArenaPlan.Items : Plan.Items;
+    SwampStartPosition = bSwampArena ? FVector(SwampArena::Start.X, SwampArena::Start.Y, 115.f) : FVector(Start.X, Start.Y, 115.f);
     MapTitle = SwampStage == 1 ? TEXT("WORLD II / STAGE I / THE SWAMP OF SOULS")
         : SwampStage == 3 ? TEXT("WORLD II / STAGE III / THE DOORWAY")
         : FString::Printf(TEXT("WORLD II / %s / ROOM %d OF %d%s"), SwampStage == 2 ? TEXT("STAGE II") : TEXT("THE SWAMP"), SwampRoomNumber, SwampRooms,
@@ -92,18 +98,19 @@ void AArenaGameMode::BuildSwamp()
     // The stages tell their story (the Goblin Queen travels with Hellgirl); checks run without it unless asked.
     if (SwampStage > 0)
         bStoryEnabled = !FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl")) || FParse::Param(FCommandLine::Get(), TEXT("HellgirlStoryCheck"));
-    MapPlatforms.Add(FVector4(0.f, 0.f, Half * 2.f, HalfWidth * 2.f));
+    MapPlatforms.Add(bSwampArena ? FVector4(0.f, 0.f, SwampArena::Half * 2.f, SwampArena::Half * 2.f) : FVector4(0.f, 0.f, Half * 2.f, HalfWidth * 2.f));
     UWorld* World = GetWorld();
 
     // An invisible, flat floor under both the mud and the water; the visible ground is in SwampScenery.cpp.
-    Prop(FVector(0, 0, -80), FVector(Half * 2.4f / 100.f, HalfWidth * 3.f / 100.f, 1.6f), FLinearColor::Black)->SetActorHiddenInGame(true);
-    BuildSwampScenery();
+    Prop(FVector(0, 0, -80), bSwampArena ? FVector(SwampArena::Half * 3.f / 100.f, SwampArena::Half * 3.f / 100.f, 1.6f)
+        : FVector(Half * 2.4f / 100.f, HalfWidth * 3.f / 100.f, 1.6f), FLinearColor::Black)->SetActorHiddenInGame(true);
+    if (bSwampArena) BuildSwampArenaScenery(); else BuildSwampScenery();
 
     // The planned pieces, one instanced batch per mesh. The boardwalk, islands, stumps and the giant lily pad block
     // (and can be stood on); trees get simple trunk blockers. Lily pads float on the surface; arms are animated actors.
     TMap<EPiece, UHierarchicalInstancedStaticMeshComponent*> Batches;
     UMaterialInterface* Soul = SwampArt::Material(TEXT("MI_SwampSoul"));
-    for (const FItem& Item : Plan.Items)
+    for (const FItem& Item : Items)
     {
         if (Item.Piece == EPiece::ZombieArm)
         {
@@ -142,7 +149,7 @@ void AArenaGameMode::BuildSwamp()
     }
     for (auto& [Piece, Batch] : Batches) Batch->BuildTreeIfOutdated(true, true);
 
-    ExitPosition = FVector(Exit.X, Exit.Y, 0.f);
+    ExitPosition = bSwampArena ? FVector(SwampArena::Exit(), 0.f) : FVector(Exit.X, Exit.Y, 0.f);
     ExitPortal = Prop(ExitPosition + FVector(0, 0, 200), FVector(.4f, 2.8f, 4.f), FLinearColor(.55f, .025f, .9f), true);
     ExitPortal->GetStaticMeshComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     ExitPortal->SetActorHiddenInGame(true);
@@ -251,7 +258,7 @@ bool AArenaGameMode::TickSwamp(float Dt)
     const FVector At = Hero->GetActorLocation();
     auto* Move = Hero->GetCharacterMovement();
     const bool OnGround = Move->IsMovingOnGround();
-    const bool Wading = At.X > SwampWaterStart && At.X < SwampWaterEnd && OnGround && Move->CurrentFloor.HitResult.ImpactPoint.Z < 10.f;
+    const bool Wading = SwampInWater(FVector2D(At)) && OnGround && Move->CurrentFloor.HitResult.ImpactPoint.Z < 10.f;
     const float Speed = Hero->GetVelocity().Size2D();
     const FVector Feet(At.X, At.Y, WaterZ);
     if (Wading)
@@ -277,7 +284,7 @@ bool AArenaGameMode::TickSwamp(float Dt)
 
     if (At.Z < -300.f)
     {
-        Hero->SetActorLocation(FVector(Start.X, Start.Y, 115.f), false, nullptr, ETeleportType::TeleportPhysics);
+        Hero->SetActorLocation(SwampStartPosition, false, nullptr, ETeleportType::TeleportPhysics);
         Hero->ResetAfterRecovery();
     }
     // The stages: waves, conversations and the purple portal; the light stays shut until a Stage II room is clear.
@@ -285,6 +292,8 @@ bool AArenaGameMode::TickSwamp(float Dt)
     if (FVector::Dist2D(At, ExitPosition) > 260.f) return false;
     // Stepping into the light: on to the next room, or home after the last one.
     if (FParse::Param(FCommandLine::Get(), TEXT("HellgirlSwampCheck"))) return true;
+    // Stage III: into the crypt, the level is won (the purple portal's job in the other stages).
+    if (bSwampArena) { UseExitPortal(); return true; }
     if (Last) TravelToHub(); else TravelToSwampRoom(SwampSeed, SwampRoomNumber + 1);
     return true;
 }
@@ -322,7 +331,18 @@ void AArenaGameMode::RunSwampCheck(float Dt)
             Toward(FVector(Exit.X - 1800.f, 400.f, 300.f), FVector(Exit.X + 150.f, -80.f, 180.f)),    // the light at the end
             {FVector(Start.X - 400.f, 0.f, 330.f), FRotator(-20.f, 0.f, 0.f)},                          // the play camera at the start
         };
-        const FView& View = Views[FMath::Min(Shot, static_cast<int32>(UE_ARRAY_COUNT(Views)) - 1)];
+        // The boss arena: from above, the way in over the boardwalk, the lily pads, and the crypt.
+        const FVector2D Crypt = SwampArena::Crypt;
+        const FView ArenaViews[] = {
+            {FVector(0.f, 0.f, 7200.f), FRotator(-89.9f, 0.f, 0.f)},
+            Toward(FVector(SwampArena::Start.X - 500.f, SwampArena::Start.Y, 420.f), FVector(200.f, SwampArena::Start.Y + 200.f, 40.f)),
+            Toward(FVector(-900.f, 900.f, 650.f), FVector(900.f, -150.f, 20.f)),
+            Toward(FVector(Crypt.X - 1500.f, Crypt.Y + 1300.f, 450.f), FVector(Crypt.X, Crypt.Y, 200.f)),
+            Toward(FVector(1800.f, 2000.f, 900.f), FVector(-800.f, -600.f, 20.f)),
+            {FVector(SwampArena::Start.X - 400.f, SwampArena::Start.Y, 330.f), FRotator(-20.f, 0.f, 0.f)},
+        };
+        const int32 ShotCount = bSwampArena ? UE_ARRAY_COUNT(ArenaViews) : UE_ARRAY_COUNT(Views);
+        const FView& View = bSwampArena ? ArenaViews[FMath::Min(Shot, ShotCount - 1)] : Views[FMath::Min(Shot, ShotCount - 1)];
         Camera->SetActorLocationAndRotation(View.Eye, View.Look);
         PC->SetViewTarget(Camera.Get());
         // Keep the arms up for the photographs.
@@ -330,7 +350,7 @@ void AArenaGameMode::RunSwampCheck(float Dt)
         if (Clock >= 5.f + Shot * 1.5f)
         {
             FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/Swamp/%d_%d_%d.png"), SwampSeed, SwampRoomNumber, Shot), false, false);
-            if (++Shot >= static_cast<int32>(UE_ARRAY_COUNT(Views))) FPlatformMisc::RequestExitWithStatus(false, 0);
+            if (++Shot >= ShotCount) FPlatformMisc::RequestExitWithStatus(false, 0);
         }
         return;
     }
@@ -428,4 +448,9 @@ void AArenaGameMode::RunSwampCheck(float Dt)
     else { UE_LOG(LogTemp, Error, TEXT("SWAMP CHECK FAILED: %s"), *Detail); }
     FPlatformMisc::RequestExitWithStatus(false, Passed ? 0 : 1);
 #endif
+}
+
+bool AArenaGameMode::SwampInWater(FVector2D P) const
+{
+    return bSwampArena ? SwampArena::InWater(P) : P.X > SwampWaterStart && P.X < SwampWaterEnd;
 }
