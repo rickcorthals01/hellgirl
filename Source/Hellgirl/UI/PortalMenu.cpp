@@ -67,15 +67,15 @@ public:
             TSharedPtr<SButton> Stock, Leave;
             TArray<FPlace> Places = {
                 {FVector2D(140,40), FVector2D(750,200), ArtButton(FirstButton,TEXT("PortalBarDark"),TEXT("PortalBarRed"),
-                    Label(TEXT("CONTINUE  /  NEXT WAVE"),24,Ink()),[Pick]() { Pick(AArenaGameMode::EPortalChoice::Continue,true); })},
+                    Label(TEXT("CONTINUE  /  NEXT WAVE"),24,Ink),[Pick]() { Pick(AArenaGameMode::EPortalChoice::Continue,true); })},
                 {FVector2D(160,222), FVector2D(704,152), ArtButton(Stock,TEXT("PortalBarDark"),TEXT("PortalBarRed"),
-                    Label([Wallet]() { const auto* W=Wallet(); return W && W->LevelSouls.Souls>0 ? FString::Printf(TEXT("STOCK %lld SOULS  /  TO CAMP"),W->LevelSouls.Souls) : FString(TEXT("NO SOULS TO STOCK")); },20,Ink()),
+                    Label([Wallet]() { const auto* W=Wallet(); return W && W->LevelSouls.Souls>0 ? FString::Printf(TEXT("STOCK %lld SOULS  /  TO CAMP"),W->LevelSouls.Souls) : FString(TEXT("NO SOULS TO STOCK")); },20,Ink),
                     [Pick]() { Pick(AArenaGameMode::EPortalChoice::Stock,false); },nullptr,
                     [Wallet]() { const auto* W=Wallet(); return W && W->LevelSouls.Souls>0 && !W->bLoadFailed; })},
                 {FVector2D(60,372), FVector2D(Endless?560:904,34), Label([Wallet]() { const auto* W=Wallet();
                     return FString::Printf(TEXT("SOULS  %lld     ·     SOUL COINS IN CAMP  %lld"),W?W->LevelSouls.Souls:0,W?W->Coins:0); },15,Soul,!Endless)}};
             if (Endless)
-                Places.Add({FVector2D(640,364), FVector2D(340,50), ArtButton(Leave,TEXT("DeathDark"),TEXT("DeathRed"),Label(TEXT("LEAVE FOR CAMP"),14,Ink()),
+                Places.Add({FVector2D(640,364), FVector2D(340,50), ArtButton(Leave,TEXT("DeathDark"),TEXT("DeathRed"),Label(TEXT("LEAVE FOR CAMP"),14,Ink),
                     [Pick]() { Pick(AArenaGameMode::EPortalChoice::Leave,true); })});
             for (int32 Offer=0; GM && Offer<GM->GetPortalOffers().Num() && Offer<5; ++Offer)
             {
@@ -94,8 +94,8 @@ public:
                               // The level this purchase brings, or brought once bought (Resurrection is spent at once).
                               const int32 Level=M?M->GetUpgradeLevel(Upgrade)-(M->IsOfferSold(Offer)?1:0):0;
                               static const TCHAR* Numerals[]={TEXT(""),TEXT(" II"),TEXT(" III"),TEXT(" IV"),TEXT(" V"),TEXT(" VI")};
-                              return Name+(HellgirlUpgrades::IsInstant(Upgrade)?TEXT(""):Numerals[FMath::Clamp(Level,0,5)]); },26,Ink(),false)]
-                        + SVerticalBox::Slot().AutoHeight().Padding(0,6,0,0)[Label(FString(Info.Detail),16,Faint(),false)]]
+                              return Name+(HellgirlUpgrades::IsInstant(Upgrade)?TEXT(""):Numerals[FMath::Clamp(Level,0,5)]); },26,Ink,false)]
+                        + SVerticalBox::Slot().AutoHeight().Padding(0,6,0,0)[Label(FString(Info.Detail),16,Faint,false)]]
                     + SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0,0,110,0)
                       [Label([Mode,Offer,Upgrade]() { const auto* M=Mode(); return M && M->IsOfferSold(Offer) ? FString(TEXT("BOUGHT"))
                           : FString::Printf(TEXT("%d SOULS"),M?M->GetUpgradeCost(Upgrade):0); },20,Soul)];
