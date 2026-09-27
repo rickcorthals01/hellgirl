@@ -184,8 +184,15 @@ UTexture2D* AHellgirlPlayerController::FindPortrait(const FString& Speaker,const
     TArray<FString> Sets;
     if (Speaker.Equals(TEXT("Hellgirl"),ESearchCase::IgnoreCase)) { Sets.Add(HellgirlOutfits::Folder(GetSelectedOutfit())); Sets.AddUnique(TEXT("Rags")); }
     else Sets.Add(Speaker.Replace(TEXT(" "),TEXT("")));
+    // A set without the wanted mood falls back on a close one (the Goblin Queen's set has Angry, Begging, Confused,
+    // Grin, Sad and Yelling), then Neutral, then Grin.
+    FString Close=Wanted;
+    for (const TPair<const TCHAR*,const TCHAR*>& Alias : {TPair<const TCHAR*,const TCHAR*>(TEXT("Smirk"),TEXT("Grin")),{TEXT("EvilSmirk"),TEXT("Grin")},
+        {TEXT("Laugh"),TEXT("Grin")},{TEXT("Surprised"),TEXT("Confused")},{TEXT("Headache"),TEXT("Confused")},{TEXT("Hurt"),TEXT("Sad")},
+        {TEXT("Quiet"),TEXT("Sad")},{TEXT("Angry"),TEXT("Yelling")}})
+        if (Wanted.Equals(Alias.Key,ESearchCase::IgnoreCase)) Close=Alias.Value;
     for (const FString& Set : Sets)
-        for (const FString& Try : {Wanted,FString(TEXT("Neutral"))})
+        for (const FString& Try : {Wanted,Close,FString(TEXT("Neutral")),FString(TEXT("Grin"))})
             if (auto* Texture=LoadObject<UTexture2D>(nullptr,*FString::Printf(TEXT("/Game/Dialogue/Portraits/%s/T_%s_%s.T_%s_%s"),*Set,*Set,*Try,*Set,*Try)))
                 return Texture;
     return nullptr;

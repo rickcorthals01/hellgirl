@@ -86,7 +86,8 @@ function Mood([string]$name)
     $n = $name.ToLower()
     foreach ($pair in @(('headache','Headache'),('sleep','Headache'),('hurt-angry','HurtAngry'),('hurt-determined','HurtDetermined'),
         ('hurt-neutral','HurtNeutral'),('hurt','Hurt'),('evil-smirk','EvilSmirk'),('smirk','Smirk'),('laugh','Laugh'),('angry','Angry'),
-        ('surprised','Surprised'),('quiet','Quiet'),('neutral','Neutral'))) { if ($n.Contains($pair[0])) { return $pair[1] } }
+        ('surprised','Surprised'),('quiet','Quiet'),('neutral','Neutral'),
+        ('begging','Begging'),('confused','Confused'),('grin','Grin'),('sad','Sad'),('yelling','Yelling'))) { if ($n.Contains($pair[0])) { return $pair[1] } }
     return $null
 }
 
