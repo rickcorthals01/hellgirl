@@ -152,6 +152,8 @@ void AArenaGameMode::BuildSwampWaves()
     TotalSites = SpawnSites.Num();
     SoulPortal = GetWorld()->SpawnActor<AWavePortal>();
     bPortalIntroOnEnter = true;
+    // In the boss arena the first wave gives her a few seconds to look around first.
+    if (bSwampArena) SwampWaveClock = 4.f;
     ExitGate = GetWorld()->SpawnActor<AWavePortal>();
 }
 

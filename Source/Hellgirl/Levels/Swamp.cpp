@@ -335,7 +335,7 @@ void AArenaGameMode::RunSwampCheck(float Dt)
         const FVector2D Crypt = SwampArena::Crypt;
         const FView ArenaViews[] = {
             {FVector(0.f, 0.f, 7200.f), FRotator(-89.9f, 0.f, 0.f)},
-            Toward(FVector(SwampArena::Start.X - 500.f, SwampArena::Start.Y, 420.f), FVector(200.f, SwampArena::Start.Y + 200.f, 40.f)),
+            Toward(FVector(SwampArena::Start.X - 250.f, SwampArena::Start.Y - 150.f, 420.f), FVector(200.f, SwampArena::Start.Y + 200.f, 40.f)),
             Toward(FVector(-900.f, 900.f, 650.f), FVector(900.f, -150.f, 20.f)),
             Toward(FVector(Crypt.X - 1500.f, Crypt.Y + 1300.f, 450.f), FVector(Crypt.X, Crypt.Y, 200.f)),
             Toward(FVector(1800.f, 2000.f, 900.f), FVector(-800.f, -600.f, 20.f)),
