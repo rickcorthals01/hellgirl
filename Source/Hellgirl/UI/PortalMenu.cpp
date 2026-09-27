@@ -66,7 +66,7 @@ public:
             };
             TSharedPtr<SButton> Stock, Leave;
             TArray<FPlace> Places = {
-                {FVector2D(140,40), FVector2D(750,200), ArtButton(FirstButton,TEXT("PortalBarDark"),TEXT("PortalBarRed"),
+                {FVector2D(140,40), FVector2D(750,180), ArtButton(FirstButton,TEXT("PortalBarDark"),TEXT("PortalBarRed"),
                     Label(TEXT("CONTINUE  /  NEXT WAVE"),24,Ink),[Pick]() { Pick(AArenaGameMode::EPortalChoice::Continue,true); })},
                 {FVector2D(160,222), FVector2D(704,152), ArtButton(Stock,TEXT("PortalBarDark"),TEXT("PortalBarRed"),
                     Label([Wallet]() { const auto* W=Wallet(); return W && W->LevelSouls.Souls>0 ? FString::Printf(TEXT("STOCK %lld SOULS  /  TO CAMP"),W->LevelSouls.Souls) : FString(TEXT("NO SOULS TO STOCK")); },20,Ink),
@@ -75,7 +75,7 @@ public:
                 {FVector2D(60,372), FVector2D(Endless?560:904,34), Label([Wallet]() { const auto* W=Wallet();
                     return FString::Printf(TEXT("SOULS  %lld     ·     SOUL COINS IN CAMP  %lld"),W?W->LevelSouls.Souls:0,W?W->Coins:0); },15,Soul,!Endless)}};
             if (Endless)
-                Places.Add({FVector2D(640,364), FVector2D(340,50), ArtButton(Leave,TEXT("DeathDark"),TEXT("DeathRed"),Label(TEXT("LEAVE FOR CAMP"),14,Ink),
+                Places.Add({FVector2D(640,378), FVector2D(340,50), ArtButton(Leave,TEXT("DeathDark"),TEXT("DeathRed"),Label(TEXT("LEAVE FOR CAMP"),14,Ink),
                     [Pick]() { Pick(AArenaGameMode::EPortalChoice::Leave,true); })});
             for (int32 Offer=0; GM && Offer<GM->GetPortalOffers().Num() && Offer<5; ++Offer)
             {

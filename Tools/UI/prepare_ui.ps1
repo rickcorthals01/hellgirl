@@ -13,7 +13,7 @@ Add-Type -AssemblyName System.Drawing
 
 # Name, mockup, x, y, width, height, and an optional area (x, y, w, h inside the piece) whose baked text is painted over.
 $pieces = @(
-    @('PortalBarRed',   'Blue Portal Menu.png', 140, 40, 750, 200),
+    @('PortalBarRed',   'Blue Portal Menu.png', 140, 40, 750, 180),   # stops above the dark bar: overlapping buttons break gamepad navigation
     @('PortalBarDark',  'Blue Portal Menu.png', 160, 222, 704, 152),
     @('PortalRow',      'Blue Portal Menu.png', 32, 446, 970, 212),
     @('DeathRed',       'Death Retry Return to camp.png', 228, 168, 290, 66),

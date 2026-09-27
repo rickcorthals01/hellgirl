@@ -42,3 +42,5 @@ struct FPlace
 // and centred, over a dark veil.
 TSharedRef<SWidget> Screen(const TCHAR* Background, FVector2D Size, const TArray<FPlace>& Places);
 }
+// Note for layouts: buttons must not overlap (not even their art's spikes), or gamepad navigation between them breaks:
+// "down" only finds buttons that start below the current one's bottom edge.
