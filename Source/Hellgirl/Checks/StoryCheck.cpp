@@ -59,8 +59,9 @@ void AHellgirlPlayerController::RunStoryCheck()
                     if (Id==TEXT("L1_Portal"))
                     {
                         const TArray<FName> Expected={TEXT("L1_Darkness"),TEXT("L1_Wake"),TEXT("L1_Voice"),TEXT("L1_AfterWave2"),TEXT("L1_AfterWave5"),TEXT("L1_Portal")};
-                        // Portraits: Hellgirl's two waking lines, four after wave 2, one after wave 5 and one at the portal.
-                        if (State->Seen!=Expected || State->Pages!=17 || State->Portraits!=8) { Fail(TEXT("Wrong Stage 1 conversation order, page count or portraits")); return false; }
+                        // Portraits: Hellgirl's two waking lines, four of hers and two of the Goblin Queen's after wave 2, one after
+                        // wave 5 and one at the portal.
+                        if (State->Seen!=Expected || State->Pages!=17 || State->Portraits!=10) { Fail(TEXT("Wrong Stage 1 conversation order, page count or portraits")); return false; }
                         UE_LOG(LogTemp,Display,TEXT("STORY CHECK PASSED: Stage 1 darkness, wake-up, voice before any wave, five waves, Queen outburst, exit lines, 17 pages, 8 portraits%s"),
                             FParse::Param(FCommandLine::Get(),TEXT("StoryRealInput"))?TEXT(", every page advanced by real key presses"):TEXT(""));
                         FPlatformMisc::RequestExitWithStatus(false,0); return false;
