@@ -1,6 +1,7 @@
 // -HellgirlMapShot (windowed, needs a GPU): on any map, saves the player's view and an overview from above to
 // Saved/Screenshots/MapShot/<map>_<0|1>.png, then quits. -MapShotHeight=N sets the overview height.
 #include "Levels/ArenaGameMode.h"
+#include "Levels/WavePortal.h"
 #include "Fighter/ArenaFighter.h"
 #include "Particles/ParticleSystem.h"
 #include "Camera/CameraActor.h"
@@ -88,6 +89,30 @@ void AArenaGameMode::RunMapShot(float Dt)
             else FPlatformMisc::RequestExitWithStatus(false, 0);
             ++Hit;
         }
+        return;
+    }
+    // -MapShotPortals: a blue soul portal and a purple exit open ahead of Hellgirl, captured opening and then open.
+    if (FParse::Param(FCommandLine::Get(), TEXT("MapShotPortals")))
+    {
+        static bool Opened = false;
+        static int32 PortalShot = 0;
+        APawn* Hero = PC->GetPawn();
+        if (!Hero || Clock < 2.f) return;
+        if (!Opened)
+        {
+            Opened = true;
+            const FVector Ahead = Hero->GetActorLocation() + Hero->GetActorForwardVector() * 900.f;
+            const FVector Side = Hero->GetActorRightVector() * 330.f;
+            if (auto* Blue = GetWorld()->SpawnActor<AWavePortal>()) Blue->Open(Ahead - Side, Hero->GetActorLocation(), false);
+            if (auto* Purple = GetWorld()->SpawnActor<AWavePortal>()) Purple->Open(Ahead + Side, Hero->GetActorLocation(), true);
+        }
+        const float Times[] = {2.25f, 4.f, 4.4f};
+        if (PortalShot < 3 && Clock > Times[PortalShot])
+        {
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/MapShot/Portals_%d.png"), PortalShot), false, false);
+            ++PortalShot;
+        }
+        else if (PortalShot >= 3 && Clock > 5.5f) FPlatformMisc::RequestExitWithStatus(false, 0);
         return;
     }
     // -MapShotCombo=Points holds the combo meter at that value, to see how it looks on the HUD.
