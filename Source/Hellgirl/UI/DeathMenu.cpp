@@ -31,7 +31,7 @@ public:
         using namespace GothicUI;
         TSharedPtr<SButton> Camp;
         const TArray<FPlace> Places = {
-            {FVector2D(196,112), FVector2D(352,56), Label(Args._Title,20,Blood())},
+            {FVector2D(196,30), FVector2D(352,44), Label(Args._Title,22,Blood())},
             {FVector2D(228,168), FVector2D(290,66), ArtButton(FirstButton,TEXT("DeathDark"),TEXT("DeathRed"),Label(TEXT("TRY AGAIN"),15,Ink()),[this]() { Choose(false); })},
             {FVector2D(230,243), FVector2D(282,60), ArtButton(Camp,TEXT("DeathDark"),TEXT("DeathRed"),Label(TEXT("RETURN TO CAMP"),15,Ink()),[this]() { Choose(true); })},
             {FVector2D(170,350), FVector2D(384,40), Label(Args._Detail,11,Faint())}};

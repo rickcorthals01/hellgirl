@@ -117,7 +117,7 @@ public:
                 const FStage* S=Stage(); if (!S) return FString();
                 return Which==0 ? S->Name : Which==1 ? S->Detail : S->Level==ComingLater ? FString(TEXT("COMING LATER")) : S->bAvailable ? FString(TEXT("PLAY")) : FString(TEXT("LOCKED")); }; };
             TSharedRef<SConstraintCanvas> Face=SNew(SConstraintCanvas);
-            Face->AddSlot().Anchors(FAnchors(0.f,0.f)).Alignment(FVector2D::ZeroVector).Offset(FMargin(25,40,100,58))[Label([Stage]() { const FStage* S=Stage(); return S?S->Numeral:FString(); },20,Ink())];
+            Face->AddSlot().Anchors(FAnchors(0.f,0.f)).Alignment(FVector2D::ZeroVector).Offset(FMargin(25,48,100,50))[Label([Stage]() { const FStage* S=Stage(); return S?S->Numeral:FString(); },20,Ink())];
             for (int32 L=0; L<3; ++L)
                 Face->AddSlot().Anchors(FAnchors(0.f,0.f)).Alignment(FVector2D::ZeroVector).Offset(FMargin(38,146+L*37,92,24))[Label(Line(L),L==0?7:6,L==2?FLinearColor(.95f,.72f,.32f):Ink())];
             StagePlaces.Add({FVector2D(CardX[Card],58), FVector2D(150,275), SNew(SBox).Visibility_Lambda([Stage]() { return Stage()?EVisibility::Visible:EVisibility::Hidden; })
@@ -398,7 +398,7 @@ private:
         Places.Add({FVector2D(905,200), FVector2D(420,60), Label([Entry,this]() { const FShopEntry* E=Entry(ShopItem); return E?E->Name:FString(); },30,Ink())});
         Places.Add({FVector2D(915,270), FVector2D(400,150), Label([Entry,this]() { const FShopEntry* E=Entry(ShopItem); return E?E->Detail:FString(); },17,Faint())});
         Places.Add({FVector2D(905,430), FVector2D(420,40), Label([Entry,this]() { const FShopEntry* E=Entry(ShopItem); return E?E->Status():FString(); },18,FLinearColor(.95f,.72f,.32f))});
-        Places.Add({FVector2D(905,720), FVector2D(420,36), Label([Wallet]() { const auto* W=Wallet(); return FString::Printf(TEXT("YOUR SOUL COINS  %lld"),W?W->Coins:0); },17,FLinearColor(.55f,.82f,1.f))});
+        Places.Add({FVector2D(905,480), FVector2D(420,36), Label([Wallet]() { const auto* W=Wallet(); return FString::Printf(TEXT("YOUR SOUL COINS  %lld"),W?W->Coins:0); },17,FLinearColor(.55f,.82f,1.f))});
         TSharedPtr<SButton> Buy;
         Places.Add({FVector2D(970,770), FVector2D(290,66), ArtButton(Buy,TEXT("DeathDark"),TEXT("DeathRed"),
             Label([Entry,this]() { const FShopEntry* E=Entry(ShopItem); return E && E->CanBuy() ? FString(E->Status()==TEXT("FREE")?TEXT("CLAIM"):TEXT("BUY")) : FString(TEXT("—")); },20,Ink()),
