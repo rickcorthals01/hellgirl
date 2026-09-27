@@ -359,7 +359,8 @@ void AArenaGameMode::Tick(float Dt)
         if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance())) Wallet->LoseLevel();
     }
     // A moment after she falls, the death menu (not in automated checks, which go on after a fall).
-    if (bPlayerDeathHandled && DeathMenuClock>0.f && (DeathMenuClock-=Dt)<=0.f && !HellgirlProgress::IsAutomated())
+    if (bPlayerDeathHandled && DeathMenuClock>0.f && (DeathMenuClock-=Dt)<=0.f
+        && (!HellgirlProgress::IsAutomated() || FParse::Param(FCommandLine::Get(),TEXT("MapShotDeath"))))
         if (auto* PC=Cast<AHellgirlPlayerController>(UGameplayStatics::GetPlayerController(this,0)))
         {
             if (PC->IsPauseMenuOpen()) DeathMenuClock=.2f;

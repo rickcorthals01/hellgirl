@@ -13,6 +13,7 @@
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
+#include "Containers/Ticker.h"
 
 void AArenaGameMode::RunMapShot(float Dt)
 {
@@ -89,6 +90,20 @@ void AArenaGameMode::RunMapShot(float Dt)
             else FPlatformMisc::RequestExitWithStatus(false, 0);
             ++Hit;
         }
+        return;
+    }
+    // -MapShotDeath: Hellgirl falls; the death menu is captured once it is up (the game is paused then, so the
+    // capture and the exit run on the core ticker).
+    if (FParse::Param(FCommandLine::Get(), TEXT("MapShotDeath")))
+    {
+        static bool Killed = false;
+        auto* Hero = Cast<AArenaFighter>(PC->GetPawn());
+        if (Killed || !Hero || Clock < 2.f) return;
+        Killed = true;
+        Hero->ApplyPhysicsDamage(100000.f, FVector::ZeroVector);
+        FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float) {
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / TEXT("Screenshots/MapShot/Death.png"), true, false); return false; }), 3.f);
+        FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float) { FPlatformMisc::RequestExitWithStatus(false, 0); return false; }), 4.5f);
         return;
     }
     // -MapShotPortals: a blue soul portal and a purple exit open ahead of Hellgirl, captured opening and then open.
