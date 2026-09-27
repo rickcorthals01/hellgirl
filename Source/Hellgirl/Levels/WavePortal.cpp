@@ -89,14 +89,14 @@ void AWavePortal::Tick(float Dt)
     // It swells open over half a second, then breathes.
     const float Grow = FMath::InterpEaseOut(0.f, 1.f, FMath::Clamp(Age / .5f, 0.f, 1.f), 2.f);
     const float Pulse = 1.f + .025f * FMath::Sin(Age * 3.f);
-    // The plane lies flat (1 m square); pitched up it stands, its length along the portal's height.
-    Card->SetRelativeScale3D(FVector(CardHeight / 100.f, CardWidth / 100.f, 1.f) * FMath::Max(Grow * Pulse, .01f));
+    // The plane lies flat (1 m square); rolled upright its Y (the painting's height) points up and X stays across.
+    Card->SetRelativeScale3D(FVector(CardWidth / 100.f, CardHeight / 100.f, 1.f) * FMath::Max(Grow * Pulse, .01f));
     Card->SetRelativeLocation(FVector(0.f, 0.f, CardLift + CardHeight * .5f * Grow * Pulse));
     // Always square to the camera, upright.
     if (const APlayerCameraManager* View = UGameplayStatics::GetPlayerCameraManager(this, 0))
     {
         const FVector ToCamera = (View->GetCameraLocation() - Card->GetComponentLocation()).GetSafeNormal2D();
-        if (!ToCamera.IsNearlyZero()) Card->SetWorldRotation(FRotator(90.f, ToCamera.Rotation().Yaw, 0.f));
+        if (!ToCamera.IsNearlyZero()) Card->SetWorldRotation(FRotator(0.f, ToCamera.Rotation().Yaw + 90.f, 90.f));
     }
     if (Glow)
     {
