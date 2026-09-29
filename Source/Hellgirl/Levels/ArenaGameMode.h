@@ -99,8 +99,9 @@ public:
     bool bSwampWasFalling = false;
     // World II's stages (URL option Stage=1..3 with Swamp=1; 0 is the map preview), see Levels/SwampStages.cpp.
     int32 SwampStage = 0, SwampRooms = 4;
-    // Stage II's save point: falling in this room or a later one tries again from it (same run, same rooms).
-    static constexpr int32 SwampSaveRoom = 6;
+    // Stage II's save points (rooms 6 and 10, the Frog King's): falling tries again from the last one she reached (same
+    // run, same rooms); 0 before room 6, when the run starts over.
+    int32 SwampSaveRoom() const { return SwampRoomNumber >= 10 ? 10 : SwampRoomNumber >= 6 ? 6 : 0; }
     bool bSwampKingRoom = true;
     // Stage III is fought in the boss arena (Rules/SwampArenaRules.h) instead of a corridor room.
     bool bSwampArena = false;
