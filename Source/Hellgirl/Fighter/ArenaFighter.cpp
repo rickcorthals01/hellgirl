@@ -262,14 +262,31 @@ bool AArenaFighter::SetOutfit(int32 Outfit)
     JumpAnimation = CombatAnimations.FindRef(TEXT("Jump"));
     SelectedOutfit = Outfit;
     GetMesh()->SetSkeletalMesh(OutfitMesh);
-    // The placeholder blade follows the right hand so sword clips swing it.
+    // The blade follows the right hand so sword clips swing it.
     Sword->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("RightHand"));
-    Sword->SetRelativeLocation(SwordGripOffset);
-    Sword->SetRelativeRotation(SwordGripRotation);
+    ApplySwordLook();
     GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
     ActiveAnimation = nullptr;
     UpdatePose(0.f);
     return true;
+}
+
+void AArenaFighter::ApplySwordLook()
+{
+    // Without the imported meshes the old placeholder box stays (its long axis is X, centred on the cube).
+    UStaticMesh* Blade = LoadObject<UStaticMesh>(nullptr, Shop.bInfernalSword
+        ? TEXT("/Game/Weapons/SM_InfernalSword.SM_InfernalSword") : TEXT("/Game/Weapons/SM_BatSword.SM_BatSword"));
+    if (!Blade)
+    {
+        Sword->SetRelativeLocation(FVector(0.f, 50.f, 0.f));
+        Sword->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
+        return;
+    }
+    Sword->SetStaticMesh(Blade);
+    Sword->EmptyOverrideMaterials();
+    Sword->SetRelativeScale3D(FVector(BladeScale));
+    Sword->SetRelativeLocation(BladeGripOffset);
+    Sword->SetRelativeRotation(BladeGripRotation);
 }
 
 void AArenaFighter::MakeEnemy(int32 Wave, bool Flying)
@@ -728,7 +745,7 @@ void AArenaFighter::ResolveAttack()
     const float StoredRiposte = bEnemy ? 0.f : Riposte;
     const bool Critical = !bEnemy && CurrentAttack.Type == FistCombat::Move::Headbutt && FMath::FRand() < .25f;
     const float Damage = CurrentAttack.Damage * HellgirlDefense::BonusMultiplier(StoredRiposte)
-        * ((!bEnemy && UltimateClock > 0.f && ActiveUltimate == 0) ? 1.5f : 1.f) * (Critical ? 1.5f : 1.f) * (bEnemy ? 1.f : ComboMultiplier() * Upgrades.Damage * Shop.Damage);
+        * ((!bEnemy && UltimateClock > 0.f && ActiveUltimate == 0) ? 1.5f : 1.f) * (Critical ? 1.5f : 1.f) * (bEnemy ? 1.f : ComboMultiplier() * Upgrades.Damage * Shop.Damage * (SelectedWeapon == 1 ? Shop.SwordDamage : 1.f));
     if (Critical) MoveLabel += TEXT(" / CRITICAL");
     Fighters.Sort([this](const AActor& A, const AActor& B) { return FVector::DistSquared(A.GetActorLocation(), GetActorLocation()) < FVector::DistSquared(B.GetActorLocation(), GetActorLocation()); });
     const bool PlayerArea = !bEnemy && FistCombat::IsPlayerAreaMove(CurrentAttack.Type);

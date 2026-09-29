@@ -288,13 +288,13 @@ public:
                                 const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
                                 const HellgirlShop::FInfo& Info=HellgirlShop::Info(Item);
                                 const int32 Level=Wallet?Wallet->ShopLevel(Item):0;
-                                const FString Price=Level>=Info.MaxLevel ? (HellgirlShop::IsMove(Item)?TEXT("OWNED"):TEXT("MAXED")) : FString::Printf(TEXT("%lld"),Info.Price);
+                                const FString Price=Level>=Info.MaxLevel ? (HellgirlShop::IsOneOff(Item)?TEXT("OWNED"):TEXT("MAXED")) : FString::Printf(TEXT("%lld"),Info.Price);
                                 return FText::FromString(FString::Printf(TEXT("%s  /  %s"),Info.Name,*Price)); })]
                         + SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",12)).ColorAndOpacity(FLinearColor(.62f,.58f,.52f)).AutoWrapText(true)
                             .Text_Lambda([this,Item]() {
                                 const auto* Wallet=Owner.IsValid()?Cast<UHellgirlWallet>(Owner->GetGameInstance()):nullptr;
                                 const HellgirlShop::FInfo& Info=HellgirlShop::Info(Item);
-                                if (HellgirlShop::IsMove(Item)) return FText::FromString(Info.Detail);
+                                if (HellgirlShop::IsOneOff(Item)) return FText::FromString(Info.Detail);
                                 // Stats show what is owned so far.
                                 const int32 Level=Wallet?Wallet->ShopLevel(Item):0;
                                 const HellgirlShop::FStats Now=HellgirlShop::Stats(Wallet?Wallet->ShopLevels:TArray<int32>());
@@ -367,8 +367,8 @@ private:
                 [Wallet,Item]() {
                     const auto* W=Wallet(); const HellgirlShop::FInfo& I=HellgirlShop::Info(Item);
                     const int32 Level=W?W->ShopLevel(Item):0;
-                    if (Level>=I.MaxLevel) return FString(HellgirlShop::IsMove(Item)?TEXT("OWNED"):TEXT("MAXED"));
-                    return HellgirlShop::IsMove(Item) ? FString::Printf(TEXT("%lld SOUL COINS"),I.Price)
+                    if (Level>=I.MaxLevel) return FString(HellgirlShop::IsOneOff(Item)?TEXT("OWNED"):TEXT("MAXED"));
+                    return HellgirlShop::IsOneOff(Item) ? FString::Printf(TEXT("%lld SOUL COINS"),I.Price)
                         : FString::Printf(TEXT("%lld SOUL COINS  ·  owned %d / %d"),I.Price,Level,I.MaxLevel); },
                 [Wallet,Item]() { const auto* W=Wallet(); return W && W->CanBuyShopItem(Item); },
                 [Wallet,Item]() { if (auto* W=Wallet()) W->BuyShopItem(Item); }});

@@ -126,9 +126,12 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat") float Riposte = 0.f;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> Body;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> Sword;
-    // Placeholder blade placement relative to the RightHand bone (the cube's long axis is X).
-    UPROPERTY(EditAnywhere, Category="Combat|Sword") FVector SwordGripOffset = FVector(0.f, 50.f, 0.f);
-    UPROPERTY(EditAnywhere, Category="Combat|Sword") FRotator SwordGripRotation = FRotator(0.f, 90.f, 0.f);
+    // The sword in the RightHand bone: the Bat Sword, or the Infernal Sword once bought at the shop (/Game/Weapons; both
+    // have the pivot at the grip's centre and the blade along +Z). Set by ApplySwordLook.
+    UPROPERTY(EditAnywhere, Category="Combat|Sword") FVector BladeGripOffset = FVector(0.f, 9.f, -3.f);
+    UPROPERTY(EditAnywhere, Category="Combat|Sword") FRotator BladeGripRotation = FRotator(0.f, 0.f, -90.f);
+    UPROPERTY(EditAnywhere, Category="Combat|Sword") float BladeScale = .7f;
+    void ApplySwordLook();
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> Head;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> RightHand;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> LeftHand;

@@ -148,6 +148,36 @@ void AArenaGameMode::RunMapShot(float Dt)
         else if (PortalShot >= 3 && Clock > 5.5f) FPlatformMisc::RequestExitWithStatus(false, 0);
         return;
     }
+    // -MapShotSword: Hellgirl draws her sword (-MapShotInfernal: the shop's Infernal Sword) and is seen close up from the
+    // front and the side, then mid-slash: Sword_0..2.png.
+    if (FParse::Param(FCommandLine::Get(), TEXT("MapShotSword")))
+    {
+        static int32 SwordShot = 0;
+        static TWeakObjectPtr<ACameraActor> Close;
+        auto* Hero = Cast<AArenaFighter>(PC->GetPawn());
+        if (!Hero || Clock < 2.f) return;
+        if (!Close.IsValid())
+        {
+            if (FParse::Param(FCommandLine::Get(), TEXT("MapShotInfernal"))) { Hero->Shop.bInfernalSword = true; Hero->Shop.SwordDamage = 1.25f; Hero->ApplySwordLook(); }
+            Hero->SelectWeapon(1);
+            Close = GetWorld()->SpawnActor<ACameraActor>();
+            Close->GetCameraComponent()->SetFieldOfView(50.f);
+            PC->SetViewTarget(Close.Get());
+        }
+        // Front, side, then front again mid-slash.
+        const FVector At = Hero->GetActorLocation() + FVector(0, 0, 20);
+        const FVector Dir = SwordShot == 1 ? Hero->GetActorRightVector() : Hero->GetActorForwardVector();
+        Close->SetActorLocationAndRotation(At + Dir * 330.f + FVector(0, 0, 30), (-Dir).Rotation() + FRotator(-5.f, 0.f, 0.f));
+        const float Times[] = {3.f, 3.6f, 4.6f};
+        if (SwordShot == 2 && Clock > 4.2f && Clock < 4.3f) Hero->Attack();
+        if (SwordShot < 3 && Clock > Times[SwordShot])
+        {
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/MapShot/Sword_%d.png"), SwordShot), false, false);
+            ++SwordShot;
+        }
+        else if (SwordShot >= 3 && Clock > 5.5f) FPlatformMisc::RequestExitWithStatus(false, 0);
+        return;
+    }
     // -MapShotBoss: the room's boss sites wake at once (to see a boss and its bar without fighting through the waves).
     if (FParse::Param(FCommandLine::Get(), TEXT("MapShotBoss")) && Clock > 1.5f)
         for (auto& Site : SpawnSites)
