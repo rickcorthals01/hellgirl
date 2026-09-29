@@ -128,8 +128,10 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> Sword;
     // The sword in the RightHand bone: the Bat Sword, or the Infernal Sword once bought at the shop (/Game/Weapons; both
     // have the pivot at the grip's centre and the blade along +Z). Set by ApplySwordLook.
-    UPROPERTY(EditAnywhere, Category="Combat|Sword") FVector BladeGripOffset = FVector(0.f, 9.f, -3.f);
-    UPROPERTY(EditAnywhere, Category="Combat|Sword") FRotator BladeGripRotation = FRotator(0.f, 0.f, -90.f);
+    // The hand bone's +Y runs back up the forearm; the blade leaves the fist along the bone's -Z (forward and a little
+    // down when her arm hangs). -HellgirlMapShot -MapShotSword -BladeRot=P,Y,R -BladeOff=X,Y,Z tries others.
+    UPROPERTY(EditAnywhere, Category="Combat|Sword") FVector BladeGripOffset = FVector(0.f, -8.f, 0.f);
+    UPROPERTY(EditAnywhere, Category="Combat|Sword") FRotator BladeGripRotation = FRotator(0.f, 0.f, 180.f);
     UPROPERTY(EditAnywhere, Category="Combat|Sword") float BladeScale = .7f;
     void ApplySwordLook();
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> Head;

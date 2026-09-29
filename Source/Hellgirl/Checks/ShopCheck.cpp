@@ -67,8 +67,8 @@ struct FShopCheck
         auto* Wallet = Cast<UHellgirlWallet>(Hero->GetGameInstance());
         if (!Wallet) return TEXT("no wallet");
         // The price list and the steps.
-        const int64 Prices[Count] = {500, 500, 700, 300, 300, 1500, 3000, 2500, 4000, 3000};
-        const int32 Caps[Count] = {1, 1, 1, 1, 1, 1, 100, 27, 50, 20};
+        const int64 Prices[Count] = {500, 500, 700, 300, 300, 1500, 3000, 2500, 4000, 3000, 5000};
+        const int32 Caps[Count] = {1, 1, 1, 1, 1, 1, 100, 27, 50, 20, 1};
         for (int32 I = 0; I < Count; ++I)
             if (Info(I).Price != Prices[I] || Info(I).MaxLevel != Caps[I]) return FString::Printf(TEXT("%s has the wrong price or cap"), Info(I).Name);
         const float Steps[] = {0.f, 2.5f, 5.f, 6.f, 7.f};
@@ -79,6 +79,9 @@ struct FShopCheck
         Levels[static_cast<int32>(EItem::Health)] = 100; Levels[static_cast<int32>(EItem::Damage)] = 50; Levels[static_cast<int32>(EItem::Speed)] = 20;
         const FStats Top = Stats(Levels);
         if (!FMath::IsNearlyEqual(Top.BonusHealth, 1000.f) || !FMath::IsNearlyEqual(Top.Damage, 1.5f) || !FMath::IsNearlyEqual(Top.Speed, 1.4f)) return TEXT("the capped stats are wrong");
+        if (Top.bInfernalSword || !FMath::IsNearlyEqual(Top.SwordDamage, 1.f)) return TEXT("the Infernal Sword without buying it");
+        Levels[static_cast<int32>(EItem::InfernalSword)] = 1;
+        if (!Stats(Levels).bInfernalSword || !FMath::IsNearlyEqual(Stats(Levels).SwordDamage, 1.25f)) return TEXT("the Infernal Sword does not add 25% sword damage");
 
         const int64 CoinsKept = Wallet->Coins;
         const TArray<int32> LevelsKept = Wallet->ShopLevels;

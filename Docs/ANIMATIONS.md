@@ -41,7 +41,7 @@ The game loads whatever clips exist for the equipped outfit; anything missing fa
 
 Current sources: everything except SwordThrust has a clip; the sword slash, backslash and spin use the Great Sword pack. Air moves use `lift: 0` (the jump physics already lifts her), DodgeSlam keeps a third of its leap. Knockdown is Mixamo "Knocked Down" up to the moment she lies on her back, a short hold, then "Kip Up" at double speed: the game's knockdowns last only about a second, and the whole clip is fitted into that time. ("Getting Up" doesn't fit: it starts face-down with her head the other way round.) Hit ("Hit To Body") is fitted into the 0.3 s hit window.
 
-The sword is still a placeholder box, now held in the right hand (`SwordGripOffset` / `SwordGripRotation` on the fighter).
+The sword is the Bat Sword (the Infernal Sword once bought at the shop), from `Weapons/` next to the project, imported by `Tools/Weapons/import_weapons.ps1` into `/Game/Weapons`. It sits in the RightHand bone (`BladeGripOffset` / `BladeGripRotation` / `BladeScale` on the fighter). `-HellgirlMapShot -MapShotSword [-MapShotInfernal] [-BladeRot=P,Y,R] [-BladeOff=X,Y,Z]` in a level takes close-ups from the front and side and mid-slash, to try another grip.
 
 ## Tiptoe outfits
 

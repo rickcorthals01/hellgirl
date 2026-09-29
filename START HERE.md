@@ -52,7 +52,7 @@ Keyboard bindings can be changed in **Pause > Options**. Controller bindings are
 
 ## Known gaps
 
-- Animated so far: idle, walk, run, both fist combos, charge and charged strike, sword slash/backslash/spin. The after-dodge moves, air combo and reactions still use the neutral pose until their Mixamo clips are added (see **Docs/ANIMATIONS.md**). The sword is a placeholder box.
+- Animated so far: idle, walk, run, both fist combos, charge and charged strike, sword slash/backslash/spin. The after-dodge moves, air combo and reactions still use the neutral pose until their Mixamo clips are added (see **Docs/ANIMATIONS.md**). The sword is the Bat Sword; the shop's Infernal Sword replaces it.
 - The shop, the Succubus Hall hub, World III's encounters and Worlds IV–VII are not built yet.
 - Balance values are initial tuning and have not been hands-on playtested.
 

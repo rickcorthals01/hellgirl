@@ -18,6 +18,7 @@
 #include "UnrealClient.h"
 #include "EngineUtils.h"
 #include "Containers/Ticker.h"
+#include "ShaderCompiler.h"
 
 void AArenaGameMode::RunMapShot(float Dt)
 {
@@ -25,6 +26,10 @@ void AArenaGameMode::RunMapShot(float Dt)
     if (!FParse::Param(FCommandLine::Get(), TEXT("HellgirlMapShot"))) return;
     static float Clock = 0.f;
     static int32 Shot = 0;
+#if WITH_EDITOR
+    // New materials would be drawn with the default one until their shaders are compiled: the clock waits for them.
+    if (GShaderCompilingManager && GShaderCompilingManager->IsCompiling()) return;
+#endif
     Clock += Dt;
     auto* PC = UGameplayStatics::GetPlayerController(this, 0);
     if (!PC || Shot > 2) return;
@@ -158,8 +163,28 @@ void AArenaGameMode::RunMapShot(float Dt)
         if (!Hero || Clock < 2.f) return;
         if (!Close.IsValid())
         {
-            if (FParse::Param(FCommandLine::Get(), TEXT("MapShotInfernal"))) { Hero->Shop.bInfernalSword = true; Hero->Shop.SwordDamage = 1.25f; Hero->ApplySwordLook(); }
+            // -BladeRot=P,Y,R and -BladeOff=X,Y,Z try another grip.
+            FString Grip;
+            if (FParse::Value(FCommandLine::Get(), TEXT("BladeRot="), Grip, false))
+            {
+                TArray<FString> V; Grip.ParseIntoArray(V, TEXT(","));
+                if (V.Num() == 3) Hero->BladeGripRotation = FRotator(FCString::Atof(*V[0]), FCString::Atof(*V[1]), FCString::Atof(*V[2]));
+            }
+            if (FParse::Value(FCommandLine::Get(), TEXT("BladeOff="), Grip, false))
+            {
+                TArray<FString> V; Grip.ParseIntoArray(V, TEXT(","));
+                if (V.Num() == 3) Hero->BladeGripOffset = FVector(FCString::Atof(*V[0]), FCString::Atof(*V[1]), FCString::Atof(*V[2]));
+            }
+            if (FParse::Param(FCommandLine::Get(), TEXT("MapShotInfernal"))) { Hero->Shop.bInfernalSword = true; Hero->Shop.SwordDamage = 1.25f; }
+            Hero->ApplySwordLook();
             Hero->SelectWeapon(1);
+            // Where the fingers are in the hand bone's own space (to set the grip).
+            const FTransform Hand = Hero->GetMesh()->GetSocketTransform(TEXT("RightHand"), RTS_World);
+            TArray<FName> Bones;
+            Hero->GetMesh()->GetBoneNames(Bones);
+            for (const FName& Bone : Bones)
+                if (Bone.ToString().Contains(TEXT("Right")) && (Bone.ToString().Contains(TEXT("Hand")) || Bone.ToString().Contains(TEXT("Fore"))))
+                    UE_LOG(LogTemp, Display, TEXT("SWORD GRIP %s at %s"), *Bone.ToString(), *Hand.InverseTransformPosition(Hero->GetMesh()->GetSocketLocation(Bone)).ToString());
             Close = GetWorld()->SpawnActor<ACameraActor>();
             Close->GetCameraComponent()->SetFieldOfView(50.f);
             PC->SetViewTarget(Close.Get());

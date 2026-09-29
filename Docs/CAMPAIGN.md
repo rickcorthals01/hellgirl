@@ -181,6 +181,7 @@ Replaces the carried-souls rules above.
 | Soul Harvest | +2.5% Souls for the first two levels, then +1% | +30% (27 levels) | 2500 |
 | Strength | +1% damage | +50% (50 levels) | 4000 |
 | Agility | +2% attack and movement speed | +40% (20 levels) | 3000 |
+| Infernal Sword (2026-09-30) | Her Bat Sword becomes the burning Infernal Sword: sword hits +25% damage | once | 5000 |
 
 - Soul Harvest raises every drop: the fraction is a chance of one more Soul (a 3-Soul drop at +10% gives 3.3 on average).
 - Automated checks have every move and no stat upgrades, so they don't depend on the player's wallet; `-HellgirlShopCheck` (in the swamp map) tests the shop itself.

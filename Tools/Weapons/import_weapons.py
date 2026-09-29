@@ -39,15 +39,21 @@ def node(material, cls, x, y, **props):
     return expression
 
 
-# --- M_Weapon: base colour, roughness and metallic maps, and an emissive map times Glow -------------------------------
+# The maps first: the material uses them as its parameters' defaults (a default must suit its sampler type).
+bat_d = texture("Bat Sword", "BatSword_BaseColor.png", "T_BatSword_D", True)
+bat_r = texture("Bat Sword", "BatSword_Roughness.png", "T_BatSword_R", False)
+bat_m = texture("Bat Sword", "BatSword_Metallic.png", "T_BatSword_M", False)
+inf_d = texture("Infernal Sword", "Sword_Blade_BaseColor.png", "T_InfernalBlade_D", True)
+inf_r = texture("Infernal Sword", "Sword_Blade_Roughness.png", "T_InfernalBlade_R", False)
+inf_e = texture("Infernal Sword", "Sword_Blade_Emissive.png", "T_InfernalBlade_E", True)
+
+# --- M_Weapon: base colour and roughness maps, metallic map * MetallicScale + MetallicAdd, emissive map * Glow ---------
 path = f"{ROOT}/M_Weapon"
 if u.EditorAssetLibrary.does_asset_exist(path):
     m = u.load_asset(path)
     lib.delete_all_material_expressions(m)
 else:
     m = tools.create_asset("M_Weapon", ROOT, u.Material, u.MaterialFactoryNew())
-black = u.load_asset("/Engine/EngineResources/Black")
-white = u.load_asset("/Engine/EngineResources/WhiteSquareTexture")
 
 
 def sample(name, x, y, default, masks):
@@ -55,21 +61,26 @@ def sample(name, x, y, default, masks):
                 sampler_type=u.MaterialSamplerType.SAMPLERTYPE_MASKS if masks else u.MaterialSamplerType.SAMPLERTYPE_COLOR)
 
 
-base = sample("BaseColor", -700, -300, white, False)
-rough = sample("Roughness", -700, 0, white, True)
-metal = sample("Metallic", -700, 300, black, True)
-glow_map = sample("Emissive", -700, 600, black, False)
-metal_scale = node(m, u.MaterialExpressionScalarParameter, -700, 500, parameter_name="MetallicScale", default_value=1.0)
-glow = node(m, u.MaterialExpressionScalarParameter, -700, 850, parameter_name="Glow", default_value=0.0)
-metal_mul = node(m, u.MaterialExpressionMultiply, -350, 300)
+def scalar(name, x, y, value):
+    return node(m, u.MaterialExpressionScalarParameter, x, y, parameter_name=name, default_value=value)
+
+
+base = sample("BaseColor", -900, -300, bat_d, False)
+rough = sample("Roughness", -900, 0, bat_r, True)
+metal = sample("Metallic", -900, 300, bat_m, True)
+glow_map = sample("Emissive", -900, 600, inf_e, False)
+metal_mul = node(m, u.MaterialExpressionMultiply, -550, 300)
 lib.connect_material_expressions(metal, "R", metal_mul, "A")
-lib.connect_material_expressions(metal_scale, "", metal_mul, "B")
+lib.connect_material_expressions(scalar("MetallicScale", -900, 500, 1.0), "", metal_mul, "B")
+metal_add = node(m, u.MaterialExpressionAdd, -350, 300)
+lib.connect_material_expressions(metal_mul, "", metal_add, "A")
+lib.connect_material_expressions(scalar("MetallicAdd", -900, 550, 0.0), "", metal_add, "B")
 glow_mul = node(m, u.MaterialExpressionMultiply, -350, 600)
 lib.connect_material_expressions(glow_map, "RGB", glow_mul, "A")
-lib.connect_material_expressions(glow, "", glow_mul, "B")
+lib.connect_material_expressions(scalar("Glow", -900, 850, 0.0), "", glow_mul, "B")
 lib.connect_material_property(base, "RGB", u.MaterialProperty.MP_BASE_COLOR)
 lib.connect_material_property(rough, "R", u.MaterialProperty.MP_ROUGHNESS)
-lib.connect_material_property(metal_mul, "", u.MaterialProperty.MP_METALLIC)
+lib.connect_material_property(metal_add, "", u.MaterialProperty.MP_METALLIC)
 lib.connect_material_property(glow_mul, "", u.MaterialProperty.MP_EMISSIVE_COLOR)
 lib.recompile_material(m)
 u.EditorAssetLibrary.save_loaded_asset(m, False)
@@ -80,6 +91,7 @@ def instance(name, textures, scalars):
     mi = u.load_asset(p) if u.EditorAssetLibrary.does_asset_exist(p) else \
         tools.create_asset(name, ROOT, u.MaterialInstanceConstant, u.MaterialInstanceConstantFactoryNew())
     mi.set_editor_property("parent", m)
+    lib.clear_all_material_instance_parameters(mi)
     for param, tex in textures.items():
         if tex: lib.set_material_instance_texture_parameter_value(mi, param, tex)
     for param, value in scalars.items():
@@ -88,18 +100,10 @@ def instance(name, textures, scalars):
     return mi
 
 
-bat = instance("MI_BatSword", {
-    "BaseColor": texture("Bat Sword", "BatSword_BaseColor.png", "T_BatSword_D", True),
-    "Roughness": texture("Bat Sword", "BatSword_Roughness.png", "T_BatSword_R", False),
-    "Metallic": texture("Bat Sword", "BatSword_Metallic.png", "T_BatSword_M", False)}, {})
-# The README's blade: metallic 0.7 (a white map scaled), emissive map times 2.5.
-infernal = instance("MI_InfernalBlade", {
-    "BaseColor": texture("Infernal Sword", "Sword_Blade_BaseColor.png", "T_InfernalBlade_D", True),
-    "Roughness": texture("Infernal Sword", "Sword_Blade_Roughness.png", "T_InfernalBlade_R", False),
-    "Metallic": white,
-    "Emissive": texture("Infernal Sword", "Sword_Blade_Emissive.png", "T_InfernalBlade_E", True)},
-    {"MetallicScale": 0.7, "Glow": 2.5})
-
+bat = instance("MI_BatSword", {"BaseColor": bat_d, "Roughness": bat_r, "Metallic": bat_m}, {})
+# The README's blade: metallic 0.7, emissive map times 2.5.
+infernal = instance("MI_InfernalBlade", {"BaseColor": inf_d, "Roughness": inf_r, "Emissive": inf_e},
+                    {"MetallicScale": 0.0, "MetallicAdd": 0.7, "Glow": 2.5})
 
 def mesh(folder, file, name, own_materials):
     opt = u.FbxImportUI()
