@@ -90,6 +90,7 @@ Every wave comes from a fixed point in one of the room's five areas, and only on
 | 4 | the last mud, 45% of the way to the light | rats and frogs: 4+4, then 6+5 |
 
 - **Stage II, room *r*:** groups at 3 of the areas in rooms 1–3, 4 in rooms 4–6, 5 in rooms 7–10. Each group is one or two enemies before scaling (two more often later in the run, always two in room 10), a random mix of rats and frogs. In room 10 the Frog King joins the group from the middle of the water.
+- **Stage II save point:** room 6. Falling there or later, TRY AGAIN starts the same run again from room 6, at full health with no Souls or upgrades; earlier falls start a new run.
 - **Stage III:** 5+2 from the start of the water, then 4+4 from where it nears the mud.
 
 The dialogue file places the blue portals after waves 2, 5, 7 and 9 (wave 7's has no conversation).

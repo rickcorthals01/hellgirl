@@ -365,6 +365,8 @@ void AArenaGameMode::Tick(float Dt)
         {
             if (PC->IsPauseMenuOpen()) DeathMenuClock=.2f;
             else if (bEndless) PC->OpenDeathMenu(TEXT("THE HORDE WINS"),FString::Printf(TEXT("Wave %d  ·  best %d"),EndlessWave,HellgirlProgress::EndlessBest()));
+            else if (bSwamp && SwampStage==2 && SwampRoomNumber>=SwampSaveRoom)
+                PC->OpenDeathMenu(TEXT("YOU FELL"),FString::Printf(TEXT("Trying again starts from room %d."),SwampSaveRoom));
             else PC->OpenDeathMenu(TEXT("YOU FELL"),bForestRun || (bSwamp && SwampStage==2) ? TEXT("The run is over.")
                 : TEXT("The Souls you carried are lost."));
         }
@@ -520,8 +522,13 @@ void AArenaGameMode::EndPlay(const EEndPlayReason::Type Reason)
 }
 void AArenaGameMode::TryAgain()
 {
-    // A run that ended with her starts over from its first room; anything else restarts where she fell.
-    if (bSwamp && SwampStage == 2) { StartSwampStage(2); return; }
+    // A run that ended with her starts over from its first room (Stage II of the swamp from its save point once she has
+    // reached it); anything else restarts where she fell.
+    if (bSwamp && SwampStage == 2)
+    {
+        if (SwampRoomNumber >= SwampSaveRoom) TravelToSwampRoom(SwampSeed, SwampSaveRoom); else StartSwampStage(2);
+        return;
+    }
     if (bEndless) { StartEndless(); return; }
     if (bForestRun) { StartForestRun(); return; }
     RestartMap();
