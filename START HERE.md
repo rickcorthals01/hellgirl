@@ -21,7 +21,8 @@ All levels are generated in C++ when Play starts. There are no level `.umap` fil
 | I: Goblin Ruins | First Raid, Survival, The Queen | Goblin Queen | Playable |
 | II: Imp Torture Arena | Torture Arena | Imp Commander | Playable (stage 1 only) |
 | III: Succubus Court | Map preview (The Court) | Succubus Queen | Map only, no enemies yet: round gothic court, central pool, 8 pillars, 4 sealed arches |
-| IV–VII: Ghosts, Rats, Frogs, Apostles | — | Ghost King, Rat Queen, Frog King, Lucifer | Planned |
+| IV: The Lower Circles | Map previews (The Graveyard, The Frozen Maze) | Ghost King | Map only, no enemies yet: the ghosts' graveyard and the Deprived's icy maze |
+| V–VII: Rats, Frogs, Apostles | — | Rat Queen, Frog King, Lucifer | Planned |
 | Final special stage | — | Lucifer (Devil Form) | Planned |
 
 **Forest camp hub** (unlocked after World I, Stage I): campfire to heal and change outfit, and a road to the world/stage select. After the Goblin Queen is beaten, a goblin merchant appears; the shop itself is not implemented yet.
@@ -80,6 +81,7 @@ Keyboard bindings can be changed in **Pause > Options**. Controller bindings are
 - **CAMPAIGN.md**: boss mechanics. Its level numbering predates the World/Stage select.
 - **FOREST HUB.md**, **DIALOGUE.md**, **PAUSE MENU.md**: those systems.
 - **ARENA LOOP.md**, **STAGE ONE MAP.md**: castle arena layout and the older lava and astral maps, which are still in the code for development.
+- **GRAVEYARD.md**, **SWAMP.md**, **FROZEN MAZE.md**: those maps, their art pipelines and checks.
 - **NATIVE MODELS.md**: how the character models were set up.
 - **ANIMATIONS.md**: adding Mixamo combat clips and previewing them.
 

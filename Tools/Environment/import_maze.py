@@ -110,7 +110,7 @@ return Col * (BaseGlow + Rim * f) * RimTint.rgb;
 lib.connect_material_property(rim, "", u.MaterialProperty.MP_EMISSIVE_COLOR)
 finish(m)
 ice = m
-for name, glow_amount, rim_amount, rough in (("MI_MazeCrystal", 7.0, 2.0, .1), ("MI_MazeShadowGlow", 9.0, 0.0, .5)):
+for name, glow_amount, rim_amount, rough in (("MI_MazeCrystal", 2.2, 1.0, .1), ("MI_MazeShadowGlow", 1.8, 0.0, .5)):
     mi = instance(name, ice)
     lib.set_material_instance_scalar_parameter_value(mi, "BaseGlow", glow_amount)
     lib.set_material_instance_scalar_parameter_value(mi, "Rim", rim_amount)
@@ -133,7 +133,7 @@ lib.connect_material_property(color, "", u.MaterialProperty.MP_BASE_COLOR)
 lib.connect_material_property(scalar(s, "Roughness", -600, -150, .06), "", u.MaterialProperty.MP_ROUGHNESS)
 lib.connect_material_property(scalar(s, "Specular", -600, -80, 1.0), "", u.MaterialProperty.MP_SPECULAR)
 opacity = wire(s, custom(s, -300, 100, "return saturate(Opacity + F * 0.5);", ["Opacity", "F"], F1),
-               Opacity=scalar(s, "Opacity", -600, 250, .32), F=fres)
+               Opacity=scalar(s, "Opacity", -600, 250, .2), F=fres)
 lib.connect_material_property(opacity, "", u.MaterialProperty.MP_OPACITY)
 glow = wire(s, custom(s, -300, -20, "return Color.rgb * (0.05 + F * RimGlow);", ["Color", "F", "RimGlow"], F3),
             Color=color, F=fres, RimGlow=scalar(s, "RimGlow", -600, 330, 1.2))
@@ -155,6 +155,8 @@ for (int s = 0; s < 2; s++)
 {
     float scale = s == 0 ? Big : Fine;
     float2 p = WP.xy / scale;
+    // Warped, so the plates are irregular shards rather than a tiling of cells.
+    p += float2(sin(p.y * 1.3 + sin(p.x * 0.7) * 1.7), sin(p.x * 1.1 + sin(p.y * 0.9) * 1.3)) * 0.35;
     float2 ip = floor(p);
     float2 fp = p - ip;
     float d1 = 8.0, d2 = 8.0;
@@ -172,8 +174,10 @@ for (int s = 0; s < 2; s++)
     res[s] = 1.0 - smoothstep(0.0, Width * (s == 0 ? 1.0 : 1.5), e);
 }
 return res;
-""", ["WP", "Big", "Fine", "Width"], F2), WP=wp, Big=scalar(f, "CrackScale", -1300, 150, 420.0), Fine=scalar(f, "FineCrackScale", -1300, 220, 130.0),
-    Width=scalar(f, "CrackWidth", -1300, 290, .05))
+""", ["WP", "Big", "Fine", "Width"], F2), WP=wp, Big=scalar(f, "CrackScale", -1300, 150, 540.0), Fine=scalar(f, "FineCrackScale", -1300, 220, 150.0),
+    Width=scalar(f, "CrackWidth", -1300, 290, .035))
+# Where cracks show: some stretches of ice are crazed with them, others nearly clear.
+vis = wire(f, custom(f, -700, 0, "return saturate(A * 1.6 - 0.15);", ["A"], F1), A=(noise_samples[0], "R"))
 vortex_pos = vector(f, "VortexPosition", -1300, 400, (0, 0, 0, 1))
 lake = wire(f, custom(f, -1000, 400, "return saturate((LakeRadius - distance(WP.xy, VP.xy)) / 500.0);", ["WP", "VP", "LakeRadius"], F1),
             WP=wp, VP=vortex_pos, LakeRadius=scalar(f, "LakeRadius", -1300, 470, 2400.0))
@@ -182,21 +186,21 @@ frost = wire(f, custom(f, -700, -400, "return saturate(A * 1.5 - 0.35) * 0.75 + 
 base = wire(f, custom(f, -400, -300, """
 float3 c = lerp(Deep.rgb, Light.rgb, Frost);
 c = lerp(c, Deep.rgb * 0.5, Lake * 0.9);
-return c * (1.0 - Cracks.x * 0.6 - Cracks.y * 0.25);
-""", ["Frost", "Lake", "Cracks", "Deep", "Light"], F3), Frost=frost, Lake=lake, Cracks=cracks,
+return c * (1.0 - (Cracks.x * 0.55 + Cracks.y * 0.2) * Vis);
+""", ["Frost", "Lake", "Cracks", "Vis", "Deep", "Light"], F3), Frost=frost, Lake=lake, Cracks=cracks, Vis=vis,
     Deep=vector(f, "Deep", -700, -250, (.012, .03, .06, 1)), Light=vector(f, "Light", -700, -180, (.2, .32, .44, 1)))
 lib.connect_material_property(base, "", u.MaterialProperty.MP_BASE_COLOR)
 rough = wire(f, custom(f, -400, -100, "return lerp(lerp(0.1, 0.6, Frost), 0.03, Lake);", ["Frost", "Lake"], F1), Frost=frost, Lake=lake)
 lib.connect_material_property(rough, "", u.MaterialProperty.MP_ROUGHNESS)
 emissive = wire(f, custom(f, -400, 150, """
 float v = saturate(1.0 - distance(WP.xy, VP.xy) / Reach);
-float3 e = CrackColor.rgb * (Cracks.x + Cracks.y * 0.35) * CrackGlow;
+float3 e = CrackColor.rgb * (Cracks.x + Cracks.y * 0.3) * Vis * CrackGlow;
 e += VortexColor.rgb * (Cracks.x + Cracks.y * 0.6) * VortexGlow * v * v;
 e += VortexColor.rgb * 0.03 * Lake * VortexGlow;
 return e;
-""", ["WP", "VP", "Cracks", "Lake", "CrackColor", "CrackGlow", "VortexColor", "VortexGlow", "Reach"], F3),
-    WP=wp, VP=vortex_pos, Cracks=cracks, Lake=lake, CrackColor=vector(f, "CrackColor", -700, 250, (.2, .55, .9, 1)),
-    CrackGlow=scalar(f, "CrackGlow", -700, 320, .12), VortexColor=vector(f, "VortexColor", -700, 390, (.55, .12, 1.0, 1)),
+""", ["WP", "VP", "Cracks", "Vis", "Lake", "CrackColor", "CrackGlow", "VortexColor", "VortexGlow", "Reach"], F3),
+    WP=wp, VP=vortex_pos, Cracks=cracks, Vis=vis, Lake=lake, CrackColor=vector(f, "CrackColor", -700, 250, (.2, .55, .9, 1)),
+    CrackGlow=scalar(f, "CrackGlow", -700, 320, .06), VortexColor=vector(f, "VortexColor", -700, 390, (.55, .12, 1.0, 1)),
     VortexGlow=scalar(f, "VortexGlow", -700, 460, 3.0), Reach=scalar(f, "VortexReach", -700, 530, 3600.0))
 lib.connect_material_property(emissive, "", u.MaterialProperty.MP_EMISSIVE_COLOR)
 finish(f)
@@ -211,19 +215,19 @@ uv = node(w, u.MaterialExpressionTextureCoordinate, -1600, 0)
 time = node(w, u.MaterialExpressionTime, -1600, 100)
 tile_u, tile_v, speed = scalar(w, "TileU", -1600, 200, 2.0), scalar(w, "TileV", -1600, 270, 6.0), scalar(w, "Speed", -1600, 340, .9)
 streaks = []
-for i, (su, sv, sp, off) in enumerate(((1.0, .22, 1.0, 0.0), (1.8, .35, 1.4, .3))):
+for i, (su, sv, sp, off) in enumerate(((3.0, .22, 1.0, 0.0), (5.5, .35, 1.4, .3))):
     c = wire(w, custom(w, -1300, -300 + i * 250, f"return float2(UV.x * TileU * {su} + {off}, UV.y * TileV * {sv} - Time * Speed * {sp});",
                        ["UV", "TileU", "TileV", "Time", "Speed"], F2), UV=uv, TileU=tile_u, TileV=tile_v, Time=time, Speed=speed)
     t = node(w, u.MaterialExpressionTextureSample, -1000, -300 + i * 250, texture=noise_tex, sampler_type=MASKS)
     lib.connect_material_expressions(c, "", t, "UVs")
     streaks.append(t)
 density = wire(w, custom(w, -700, 0, """
-float streak = saturate(A * 1.6 - 0.25) * 0.55 + saturate(B * 2.0 - 0.7) * 0.8;
+float streak = saturate(A * 2.2 - 0.9) * 0.7 + saturate(B * 2.4 - 1.1) * 0.9;
 float edge = smoothstep(0.0, 0.1, UV.x) * smoothstep(1.0, 0.9, UV.x);
-float top = smoothstep(0.0, 0.05, UV.y);
+float top = smoothstep(0.0, 0.5, UV.y);  // it comes out of the dark as spray and gathers as it falls
 float foam = smoothstep(0.88, 1.0, UV.y);
-return saturate(((0.3 + streak) * Opacity + foam * 0.4) * edge * top);
-""", ["A", "B", "UV", "Opacity"], F1), A=(streaks[0], "R"), B=(streaks[1], "R"), UV=uv, Opacity=scalar(w, "Opacity", -1000, 250, .7))
+return saturate(((0.12 + streak) * Opacity + foam * 0.35) * edge * top);
+""", ["A", "B", "UV", "Opacity"], F1), A=(streaks[0], "R"), B=(streaks[1], "R"), UV=uv, Opacity=scalar(w, "Opacity", -1000, 250, .6))
 fade = node(w, u.MaterialExpressionDepthFade, -400, 100)
 lib.connect_material_expressions(density, "", fade, "Opacity")
 lib.connect_material_expressions(scalar(w, "FadeDistance", -700, 200, 80.0), "", fade, "FadeDistance")
@@ -254,10 +258,12 @@ float2 c = UV - 0.5;
 float r = length(c) * 2.0;
 float a = atan2(c.y, c.x);
 float spiral = 0.5 + 0.5 * sin(a * Arms + log(r + 0.02) * Twist + Time * Speed);
-float arms = pow(spiral, 4.0) * (0.5 + W);
+float arms = pow(spiral, 3.0) * (0.5 + W) * 1.4;
 float fade = saturate(1.0 - r); fade *= fade;
-float core = exp(-r * r * 20.0);
-float3 col = lerp(Edge.rgb, Mid.rgb, saturate(1.3 - r * 1.2)) * arms * fade + Core.rgb * core * 2.5;
+// A bright ring round a small core, the arms turning out from it.
+float ring = exp(-pow((r - 0.28) / 0.08, 2.0));
+float core = exp(-r * r * 60.0);
+float3 col = lerp(Edge.rgb, Mid.rgb, saturate(1.3 - r * 1.2)) * (arms * fade + ring * 1.2) + Core.rgb * core * 0.9;
 return col * Glow;
 """, ["UV", "Time", "Speed", "W", "Arms", "Twist", "Edge", "Mid", "Core", "Glow"], F3),
     UV=vuv, Time=vtime, Speed=vspeed, W=(wisp, "R"), Arms=scalar(v, "Arms", -800, 100, 3.0), Twist=scalar(v, "Twist", -800, 170, 5.0),

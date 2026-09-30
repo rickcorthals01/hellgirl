@@ -17,7 +17,7 @@ PREVIEW = args[1] if len(args) > 1 else None
 ICE_DEEP, ICE_MID, ICE_LIGHT, FROST = (.025, .06, .12), (.07, .17, .3), (.26, .45, .64), (.55, .72, .86)
 CRYSTAL, CRYSTAL_BRIGHT = (.2, .72, 1.0), (.6, .95, 1.0)
 SHADOW, SHADOW_EDGE, VIOLET = (.003, .003, .005), (.02, .015, .03), (.5, .1, 1.0)
-FIGURE, FIGURE_DARK = (.05, .055, .07), (.02, .022, .03)
+FIGURE, FIGURE_DARK = (.3, .36, .44), (.12, .15, .2)   # pale, frosted: it shows through the ice
 
 WALL_LENGTH = 8.0     # one grid square of the maze
 WALL_HALF = .62       # half the wall's thickness (the corridors keep about 6.6 m)
@@ -153,14 +153,14 @@ def glow_crystals(name, seed):
 
 
 def roof_icicles(name, seed):
-    """Icicles hanging from the cave roof: a frozen knot with long points below (pivot at the top)."""
+    """Icicles hanging from the cave roof: a cluster of long points growing straight out of it (pivot at the top; their
+    roots reach up into the roof, so nothing flat shows from below)."""
     P = Piece(name, seed)
     rng = P.rng
-    P.lump(Vector((0, 0, -.2)), (1.6, 1.4, .6), lump_color(ICE_MID, ICE_LIGHT), subdiv=1, rough=.3, seed=seed)
     for k in range(rng.randint(8, 13)):
         a, d = rng.uniform(0, 2 * math.pi), rng.uniform(0, 1.3)
         length = rng.uniform(1.0, 6.5) * (1 - d * .4)
-        crystal(P, Vector((math.cos(a) * d, math.sin(a) * d, -.3)), Vector((rng.uniform(-.05, .05), rng.uniform(-.05, .05), -1)), length, length * .07 + .08,
+        crystal(P, Vector((math.cos(a) * d, math.sin(a) * d, .4)), Vector((rng.uniform(-.05, .05), rng.uniform(-.05, .05), -1)), length + .4, length * .09 + .12,
                 lambda t, a2: mix(ICE_MID, FROST, t), sides=5, tip=.55)
     return P
 
@@ -204,7 +204,10 @@ def frozen_remains(name, seed):
     P.tube([Vector((-.2, -.02, 1.33)), Vector((-.22, -.25, 1.2)), Vector((-.02, -.3, 1.45))], lambda t: .055, body, sides=5)  # across the face
     for sx in (-.12, .12):
         P.tube([Vector((sx, 0, .75)), Vector((sx * 1.3, -.34, .38)), Vector((sx * 1.3, .12, .08))], lambda t: .08 - t * .02, body, sides=5)
-    P.lump(Vector((0, 0, 1.1)), (.82, .66, 1.22), lambda p, n: mix(ICE_MID, FROST, .5 + .5 * n.z), subdiv=1, rough=.12, seed=seed + 3, flatten=-.05, slot=1)
+    # A chunky block of ice round her, flat on the floor, with a second slab frozen against it.
+    shell = lambda p, n: mix(ICE_MID, FROST, .5 + .5 * n.z)
+    P.box(place(0, 0, 1.15, yaw=8), (1.5, 1.2, 2.3), shell, slot=1, jitter=.1, taper=.82)
+    P.box(place(.45, .3, .6, yaw=-20, roll=6), (.9, .8, 1.2), shell, slot=1, jitter=.08, taper=.7)
     return P
 
 

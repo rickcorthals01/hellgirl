@@ -22,7 +22,7 @@ inline FVector2D Centre(int32 X, int32 Y) { return Corner(X + .5f, Y + .5f); }
 inline FVector2D Centre(FCell C) { return Centre(C.X, C.Y); }
 inline bool Inside(int32 X, int32 Y) { return X >= 0 && Y >= 0 && X < Columns && Y < Rows; }
 inline int32 Index(int32 X, int32 Y) { return X + Y * Columns; }
-inline FCell CellAt(FVector2D P) { return {FMath::FloorToInt(P.X / Cell + Columns * .5f), FMath::FloorToInt(P.Y / Cell + Rows * .5f)}; }
+inline FCell CellAt(FVector2D P) { return {FMath::FloorToInt32(P.X / Cell + Columns * .5f), FMath::FloorToInt32(P.Y / Cell + Rows * .5f)}; }
 inline bool WallEast(int32 X, int32 Y)
 {
     if (X >= Columns - 1) return true;

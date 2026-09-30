@@ -225,7 +225,8 @@ void AArenaFighter::BeginPlay()
     }
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
-        PC->SetControlRotation(FRotator(-23.f, 0.f, 0.f));
+        // The camera looks the way she was placed facing (east unless the map turned her, like the maze's spawn rooms).
+        PC->SetControlRotation(FRotator(-23.f, GetActorRotation().Yaw, 0.f));
         PC->SetInputMode(FInputModeGameOnly());
         PC->bShowMouseCursor = false;
     }

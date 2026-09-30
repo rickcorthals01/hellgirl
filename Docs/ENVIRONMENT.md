@@ -7,6 +7,7 @@ The maps are still built in code, but they are now dressed with real meshes, mat
 | Source | What it gives | Used in |
 |---|---|---|
 | **Forest kit** (generated, `Content/Environment/ForestKit`) | Pines ×3, dead tree, rocks, standing stone, log, stump, fern, grass ×2, mushrooms (plain and glowing), bramble, goblin burrow, hell rift, rune gateway, campfire | Forest run, camp, enemy portals everywhere |
+| **Maze kit** (generated, `Content/Environment/Maze`) | Ice walls ×3, pillar, spires ×2, glow crystals, roof icicles, ice bridge and trap icicle, frozen remains, shadow pool, rubble | The Frozen Maze (see `FROZEN MAZE.md`) |
 | Rock_Collection_04 (Fab) | 7 realistic boulders | Forest cover, stepping stones, rocks among the trees |
 | Pack_Bonus (Fab) | Tiling ground materials | Grass_1 forest floor, Stone_3 flagstones at the campfire, Stone_2 cracked floor in the Imp arena |
 | Inferno_World_Free (Fab) | Hell props | Imp arena: braziers, columns, giant ribs, spikes, bones, gold, knight statues. Camp: merchant's chest, crates, vase, gold, road braziers |
@@ -50,7 +51,7 @@ Hit-stop and the shake are switched off when the command line contains "Check", 
 
 The HUD (`UI/ArenaHUD.cpp`) is drawn without big boxes:
 - **Top left:** title and objective.
-- **Top right:** a small minimap with your souls underneath.
+- **Top right:** a small minimap with your souls underneath (no minimap in the Frozen Maze).
 - **Top centre:** the boss bar.
 - **Bottom left:** health, energy tubes, stamina, and CHARGE, SLAM and weapon labels.
 - **Centre:** move callouts that fade.

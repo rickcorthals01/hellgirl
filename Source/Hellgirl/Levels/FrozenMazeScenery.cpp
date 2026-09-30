@@ -159,7 +159,7 @@ void Cave(UWorld* World)
     Sky->GetLightComponent()->SetRealTimeCaptureEnabled(false);
     auto* Fog = World->SpawnActor<AExponentialHeightFog>();
     auto* FogComponent = Fog->GetComponent();
-    FogComponent->SetFogDensity(.02f);
+    FogComponent->SetFogDensity(.028f);
     FogComponent->SetFogHeightFalloff(.05f);
     FogComponent->SetFogInscatteringColor(FLinearColor(.018f, .04f, .075f));
     FogComponent->SetStartDistance(300.f);
@@ -189,7 +189,7 @@ void Shaft(UWorld* World, FVector2D Where, float Intensity)
 {
     auto* Spot = World->SpawnActor<ASpotLight>(FVector(Where.X, Where.Y, RoofHeight - 100.f), FRotator(-90.f, 0.f, 0.f));
     if (!Spot) return;
-    auto* Light = Spot->SpotLightComponent;
+    USpotLightComponent* Light = Spot->SpotLightComponent;
     Light->SetMobility(EComponentMobility::Movable);
     Light->SetInnerConeAngle(8.f);
     Light->SetOuterConeAngle(20.f);
@@ -306,8 +306,8 @@ void AArenaGameMode::BuildFrozenMazeScenery()
         const FVector2D Out(0.f, Fall.bNorth ? 1.f : -1.f);
         const FVector2D From = Corner(Fall.X0, Y) + Out * (WallHalf + 40.f), To = Corner(Fall.X1, Y) + Out * (WallHalf + 40.f);
         const FVector2D Mid = (From + To) * .5f;
-        MazeArt::Waterfall(World, From, To, Out, RoofHeight, 170.f, 1.4f, .75f, .9f);
-        MazeArt::Waterfall(World, From + Out * 50.f, To + Out * 50.f, Out, RoofHeight, 240.f, .9f, .45f, 1.25f);
+        MazeArt::Waterfall(World, From, To, Out, RoofHeight, 170.f, 1.2f, .7f, .9f);
+        MazeArt::Waterfall(World, From + Out * 50.f, To + Out * 50.f, Out, RoofHeight, 240.f, .8f, .4f, 1.25f);
         GraveArt::Strip(World, From + Out * 200.f, To + Out * 200.f, 230.f, 500.f, Pool, 3.f, Seed++);
         MazeArt::Light(World, FVector(Mid.X + Out.X * 350.f, Mid.Y + Out.Y * 350.f, 450.f), FLinearColor(.45f, .75f, 1.f), 16000.f, 2600.f, true);
         MazeScenery::Shaft(World, Mid + Out * 250.f, 45000.f);
@@ -319,8 +319,8 @@ void AArenaGameMode::BuildFrozenMazeScenery()
         const FVector2D From = East ? Corner(C.Cell.X + 1.f, C.Cell.Y) : Corner(C.Cell.X, C.Cell.Y + 1.f);
         const FVector2D To = East ? Corner(C.Cell.X + 1.f, C.Cell.Y + C.Length) : Corner(C.Cell.X + C.Length, C.Cell.Y + 1.f);
         const FVector2D Out = East ? FVector2D(1.f, 0.f) : FVector2D(0.f, 1.f);
-        MazeArt::Waterfall(World, From - Out * 25.f, To - Out * 25.f, -Out, RoofHeight, 90.f, 1.2f, .7f, 1.f);
-        MazeArt::Waterfall(World, From + Out * 25.f, To + Out * 25.f, Out, RoofHeight, 90.f, 1.2f, .7f, 1.1f);
+        MazeArt::Waterfall(World, From - Out * 25.f, To - Out * 25.f, -Out, RoofHeight, 90.f, 1.f, .5f, 1.f);
+        MazeArt::Waterfall(World, From + Out * 25.f, To + Out * 25.f, Out, RoofHeight, 90.f, 1.f, .5f, 1.1f);
         GraveArt::Strip(World, From, To, 200.f, 500.f, Pool, 2.5f, Seed++);
         for (const float Side : {-1.f, 1.f})
         {

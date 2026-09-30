@@ -1,0 +1,100 @@
+# The Frozen Maze (World IV, map preview)
+
+The Deprived's world is an icy underground cave built as one big maze. Open it from the forest road: **World IV → THE FROZEN MAZE / Map preview**. There are no enemies yet; the Deprived come later.
+
+- Each run starts in one of the four spawn rooms, picked at random. Find the vortex in the middle of the maze; stepping into it leads back to camp.
+- R restarts from the same spawn room. After a fall, TRY AGAIN starts a new run from a new random room.
+- There is no minimap here: finding the way is the point.
+
+## The maze
+
+It is the largest map yet: 38 × 26 squares of 8 m (304 × 208 m).
+
+- **Walls:** jagged ice, 9–14 m tall, so you can't see over them. Every corridor and doorway is one square wide (about 6.5 m between the walls).
+- **Outer wall:** rises all the way to the cave roof, 28 m up.
+- **Rooms:** the four spawn rooms (S1–S4, one door each) and the vortex room. The vortex room's door is at its north-east corner.
+- **Walks:** the shortest walk from each spawn room to the vortex is about 456 m (S1), 328 m (S2), 440 m (S3) and 552 m (S4).
+
+The approved design is in `Developer idea folder lol\Maze design plan.png`.
+
+| Element | Where | What it does |
+|---|---|---|
+| **Waterfalls W1–W5** | Down the north and south outer walls | Fall from cracks in the roof into shallow pools, each lit by a shaft of pale light |
+| **Curtains C1–C8** | Across gaps in maze walls | Walk-through water falling from the roof; each hides a way through a wall |
+| **Glow crystals** (26) | Against a wall at junctions | The only light between the rooms |
+| **Frozen remains** (12) | In dead ends | A victim frozen in a block of clear ice. Attack it to smash it: 12–18 Souls spill out |
+| **Icicle traps** (8) | Straight stretches on the routes to the vortex | Walking under the ice bridge shakes its big icicle loose. Its shadow grows on the ice for 0.9 s, then it falls: 18 damage and a knock back. A dodge or block avoids it, and a new icicle grows back after 20 s |
+| **The Deprived's lairs D1–D16** | Dead ends, none near the spawn rooms | Pools of black shadow ringed by dark shards and old bones, with a violet glow. The Deprived will rise from them one at a time (see below) |
+| **The vortex** | Over the frozen lake in the vortex room | A turning purple spiral; the lake's cracks glow purple around it |
+
+Planned rule for the Deprived (not built yet): only one hunts her at a time. When it dies, the next rises about 10 s later from the nearest lair she can't see, at least about 40 m walk away.
+
+## Look
+
+- **Ice:** glossy, with a cold rim of light on its edges (`M_MazeIce`).
+- **Floor:** cracked frozen ice with frost patches; some stretches are crazed with faintly glowing cracks (`M_MazeFloor`).
+- **Frozen lake:** under the vortex, dark and clear, its cracks glowing purple.
+- **Light:**
+  - Faint cold light filters down through the ice roof; it is the only light that casts long shadows.
+  - Crystals, pools, waterfalls and the vortex glow.
+  - The rest is darkness and thick blue fog that swallows the corridors a few turns ahead.
+- **Mist:** three drifting layers hang over the ice.
+- **Roof:** dark rock hung with stalactites of ice.
+
+## Art
+
+The kit is generated in Blender, low-poly with vertex colours like the other kits:
+- Three ice-wall variants and the pillar where walls meet.
+- Two ice spires, the glow crystal cluster, roof icicles and ice rubble.
+- The ice bridge and big icicle of the traps.
+- The frozen remains and the shadow pool.
+
+Rebuild it with the editor closed (it needs the graveyard and swamp art first):
+
+```
+powershell -ExecutionPolicy Bypass -File Tools\Environment\build_maze_kit.ps1
+```
+
+This runs `maze_kit.py` in Blender (preview at `Saved/MazeKit/Preview.png`). It then runs `import_maze.py`, which makes these materials in `/Game/Environment/Maze` and imports the kit:
+
+| Material | Used for |
+|---|---|
+| `M_MazeIce`, `MI_MazeCrystal`, `MI_MazeShadowGlow` | The ice kit, the crystals' glow, the lairs' violet edge |
+| `M_MazeIceShell` | The clear ice round the frozen remains |
+| `M_MazeFloor` | The cracked floor and the frozen lake |
+| `M_MazeFall` | Waterfalls and curtains |
+| `M_MazeVortex` | The vortex |
+| `MI_MazePool` | The pools |
+
+Reused from the packs:
+- The Inferno pack's bones, round the lairs.
+- The starter VFX pack's ice burst and glass shatter, for the traps and remains.
+- The graveyard's mist material.
+- The swamp's water and ripple materials, for the pools and the traps' shadows.
+
+The walls have no collision of their own. The level puts a hidden box along each wall and at each pillar, which is smoother for the camera than jagged ice.
+
+## Changing the layout
+
+The layout is designed in `Tools/Maze` and exported to `Source/Hellgirl/Rules/FrozenMazeLayout.h`:
+
+1. `gen_full.ps1 -Seed 338` rebuilds the walls (`edits.txt`) and curtains (`curtains.txt`). The upper-left quarter is the approved hand-made maze; the rest is generated to match.
+2. `elements.ps1` places the lairs, remains, crystals and traps (`elements.txt`).
+3. `plan_full.ps1` draws the plan (`Saved/Maze/MazeDesign.png`).
+4. `export_maze.ps1` writes the header. Rebuild the game afterwards.
+
+The rules (8 m squares, rooms, waterfalls, trap and remains numbers) are in `Rules/FrozenMazeRules.h`. The map is built in `Levels/FrozenMaze.cpp` (vortex, traps, remains, check) and dressed in `Levels/FrozenMazeScenery.cpp`.
+
+## Testing
+
+- **`-HellgirlMazeCheck`** (in `Tests/run-checks.ps1` as Maze and Maze4) checks:
+  - Every square is reachable, so every spawn room leads to the vortex.
+  - The walls match the layout; the curtains are open.
+  - Lairs and remains are in dead ends; traps are on straight stretches.
+  - Every wall is built and blocks, and open sides and curtains let her through.
+  - She starts in her spawn room facing its door.
+  - Attacking frozen remains smashes them and drops Souls.
+  - A trap falls, hurts her and grows back.
+  - The vortex only takes her once she steps into it.
+- Play a specific spawn room: `/Engine/Maps/Entry?Maze=1?Spawn=0` (0–3 = S1–S4).
+- **`-HellgirlMazePreview`** (windowed, needs a GPU) saves eleven views to `Saved/Screenshots/Maze` and logs the average frame time. The views are: the spawn room, a long corridor, a crystal junction, a curtain, the big waterfall, the vortex room, a lair, frozen remains, a trap, the whole maze from above, and the play camera.

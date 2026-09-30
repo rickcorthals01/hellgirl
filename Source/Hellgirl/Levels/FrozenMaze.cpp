@@ -327,7 +327,7 @@ void AArenaGameMode::RunFrozenMazeCheck(float Dt)
                     if (Run > BestRun) { BestRun = Run; Best = {X, Y}; BestDX = StepX[D]; BestDY = StepY[D]; }
                 }
         const FVector2D Along(BestDX, BestDY);
-        Views.Add({At(Centre(Best) - Along * 200.f, 260.f), At(Centre(Best) + Along * Cell * BestRun, 200.f)});
+        Views.Add({At(Centre(Best) + Along * 300.f, 260.f), At(Centre(Best) + Along * Cell * BestRun, 200.f)});
         // A glowing junction: looking at its crystal from across the junction.
         {
             const FCell C = FrozenMazeLayout::Crystals[4];
@@ -347,8 +347,8 @@ void AArenaGameMode::RunFrozenMazeCheck(float Dt)
             const FVector2D Mid = Corner((F.X0 + F.X1) * .5f, Rows);
             Views.Add({At(Mid + FVector2D(0.f, -700.f), 300.f), At(Mid, 900.f)});
         }
-        // The vortex room, from its door.
-        Views.Add({At(Centre(OutsideDoor(VortexRoom)), 450.f), At(VortexCentre(), 350.f)});
+        // The vortex room, just inside its door.
+        Views.Add({At(Centre(VortexRoom.Door) + (VortexCentre() - Centre(VortexRoom.Door)).GetSafeNormal() * 400.f, 380.f), At(VortexCentre(), 450.f)});
         // A lair and frozen remains, each from the way into its dead end; a trap from along its corridor.
         for (const FCell& C : {FrozenMazeLayout::Lairs[2], FrozenMazeLayout::Remains[1]})
         {
@@ -467,6 +467,9 @@ void AArenaGameMode::RunFrozenMazeCheck(float Dt)
     // 3. Hellgirl starts on the ice in her spawn room.
     const FCell StartCell = CellAt(FVector2D(Hero->GetActorLocation()));
     if (!InRoom(SpawnRoom(MazeSpawn), StartCell.X, StartCell.Y) || !Hero->GetCharacterMovement()->IsMovingOnGround()) Fail(TEXT("Hellgirl is not standing in her spawn room"));
+    // ...looking toward its door.
+    if (const AController* Controller = Hero->GetController(); !Controller || FMath::Abs(FRotator::NormalizeAxis(Controller->GetControlRotation().Yaw - SpawnYaw(MazeSpawn))) > 5.f)
+        Fail(TEXT("the camera does not look toward the spawn room's door"));
 
     // 4. Frozen remains: an attack in front of them smashes them and Souls drop out.
     if (Passed && MazeRemains.Num())
@@ -474,13 +477,19 @@ void AArenaGameMode::RunFrozenMazeCheck(float Dt)
         FMazeRemains& R = MazeRemains[0];
         const FVector2D Out = WayOut(FrozenMazeLayout::Remains[0]);
         Hero->SetActorLocation(R.Where + FVector(Out.X, Out.Y, 0.f) * 230.f + FVector(0.f, 0.f, 95.f), false, nullptr, ETeleportType::TeleportPhysics);
-        Hero->SetActorRotation(FRotator(0.f, FMath::RadiansToDegrees(FMath::Atan2(-Out.Y, -Out.X)), 0.f));
+        // Her attacks go where the camera looks, so turn both toward the remains.
+        const FRotator Toward(0.f, FMath::RadiansToDegrees(FMath::Atan2(-Out.Y, -Out.X)), 0.f);
+        Hero->SetActorRotation(Toward);
+        if (AController* Controller = Hero->GetController()) Controller->SetControlRotation(Toward);
         Hero->Attack();
         if (Hero->GetAttackClock() <= 0.f) Fail(TEXT("the attack did not start"));
         TickMazeRemains(Hero);
         int32 Pickups = 0;
         for (TActorIterator<ACoinPickup> It(GetWorld()); It; ++It) ++Pickups;
-        if (Passed && (!R.bSmashed || !Pickups || (R.Actor.IsValid() && R.Actor->GetActorEnableCollision()))) Fail(TEXT("attacking the frozen remains does not smash them"));
+        const FVector To = R.Where - Hero->GetActorLocation();
+        if (Passed && (!R.bSmashed || !Pickups || (R.Actor.IsValid() && R.Actor->GetActorEnableCollision())))
+            Fail(FString::Printf(TEXT("attacking the frozen remains does not smash them (%.0f cm away, facing %.2f, %d pickups)"),
+                To.Size2D(), FVector::DotProduct(Hero->GetActorForwardVector(), To.GetSafeNormal2D()), Pickups));
     }
     // 5. An icicle trap: standing under it, it shakes loose, falls and hurts her; then it grows back.
     if (Passed && MazeTraps.Num())
