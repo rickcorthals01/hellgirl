@@ -5,8 +5,9 @@
 //   its speed boost: twice its walking speed for 6 s, then 5 s before it can boost again.
 //   Once per life, reaching her, it charges an execute: 0.5 s to the hit, heavy damage and a lunge through her. A dodge
 //   avoids it; a perfect dodge parries it (her counter). After that it slices and claws: slow swings, medium damage.
-// Until its own model arrives it is a shadow of Hellgirl: her body all black with a violet rim, her sword clips, a black
-// blade and two white eyes (ApplyDeprivedStandIn).
+// Its body is the user's model rigged onto Hellgirl's skeleton (Tools/Enemies/deprived.ps1, the Deprived model slot), so
+// it plays her sword clips, with a black blade in its hand (ArmDeprived). If the slot is emptied, a shadow of Hellgirl
+// stands in: her body all black with a violet rim and two white eyes (ApplyDeprivedStandIn).
 #include "Fighter/ArenaFighter.h"
 #include "Enemies/EnemyMovesetState.h"
 #include "Levels/MapPieces.h"
@@ -93,11 +94,7 @@ void AArenaFighter::ApplyDeprivedStandIn()
     if (Shadow) for (int32 I = 0; I < GetMesh()->GetNumMaterials(); ++I) GetMesh()->SetMaterial(I, Shadow);
     GetMesh()->SetVisibility(true);
     for (UStaticMeshComponent* Part : {Body.Get(), Head.Get(), RightHand.Get(), LeftHand.Get(), RightFoot.Get(), LeftFoot.Get()}) Part->SetVisibility(false);
-    // Her sword as its black blade.
-    Sword->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("RightHand"));
-    ApplySwordLook();
-    if (Shadow) for (int32 I = 0; I < Sword->GetNumMaterials(); ++I) Sword->SetMaterial(I, Shadow);
-    Sword->SetVisibility(true);
+    ArmDeprived();
     // Two small white eyes on the head, set in the head bone's own axes (worked out from where it faces now).
     if (GetMesh()->DoesSocketExist(TEXT("Head")))
     {
@@ -123,4 +120,14 @@ void AArenaFighter::ApplyDeprivedStandIn()
             Eye->RegisterComponent();
         }
     }
+}
+
+void AArenaFighter::ArmDeprived()
+{
+    // Her sword as its black blade (both its model and the stand-in are on her skeleton, so her RightHand bone).
+    Sword->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("RightHand"));
+    ApplySwordLook();
+    if (UMaterialInterface* Shadow = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Environment/Maze/MI_DeprivedShadow.MI_DeprivedShadow")))
+        for (int32 I = 0; I < Sword->GetNumMaterials(); ++I) Sword->SetMaterial(I, Shadow);
+    Sword->SetVisibility(true);
 }

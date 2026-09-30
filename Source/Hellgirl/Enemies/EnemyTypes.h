@@ -68,7 +68,8 @@ public:
     UPROPERTY(Config, EditAnywhere, Category="Level 02") FEnemyModelSlot Frogs;
     UPROPERTY(Config, EditAnywhere, Category="Level 02") FEnemyModelSlot FrogKing;
     UPROPERTY(Config, EditAnywhere, Category="Level 02") FEnemyModelSlot RatQueen;
-    // Empty until the Deprived's own model arrives: a shadow of Hellgirl stands in (AArenaFighter::ApplyDeprivedStandIn).
+    // The user's model, rigged onto Hellgirl's skeleton (Tools/Enemies/deprived.ps1), so it plays her sword clips. If
+    // emptied, a shadow of Hellgirl stands in (AArenaFighter::ApplyDeprivedStandIn).
     UPROPERTY(Config, EditAnywhere, Category="World IV") FEnemyModelSlot Deprived;
     const FEnemyModelSlot& ForType(EHellgirlEnemyType Type) const
     {

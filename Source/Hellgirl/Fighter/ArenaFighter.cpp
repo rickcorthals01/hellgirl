@@ -427,6 +427,7 @@ void AArenaFighter::SetEnemyType(EHellgirlEnemyType Type)
             Part->SetVisibility(false);
         if (!Model.AttackFlashSocket.IsNone() && GetMesh()->DoesSocketExist(Model.AttackFlashSocket))
             AttackFlash->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, Model.AttackFlashSocket);
+        if (Type == EHellgirlEnemyType::Deprived) ArmDeprived();
     }
 }
 
@@ -1211,7 +1212,7 @@ void AArenaFighter::UpdateEnemyAnimation(float Dt)
     else if (Hopping) EnemyAnimationTime = FMath::Clamp(EnemyAirTime / 1.4f, 0.f, .999f) * Length;
     else
     {
-        // (The Deprived's stand-in runs on Hellgirl's run clip, made for her 5.6 m/s; faster while it is boosted.)
+        // (The Deprived runs on Hellgirl's run clip, made for her 5.6 m/s; faster while it is boosted.)
         const float Rate = Moving && EnemyType == EHellgirlEnemyType::Imps ? FMath::Clamp(Speed / 224.f, .4f, 1.8f)
             : Moving && EnemyType == EHellgirlEnemyType::Deprived ? FMath::Clamp(Speed / 560.f, .6f, 1.8f) : 1.f;
         EnemyAnimationTime += Dt * Rate;

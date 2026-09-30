@@ -40,7 +40,26 @@ Strong shadows that hunt Hellgirl through the maze, one at a time. The behaviour
 - **Speed boost:** doubles its walking speed (3.8 → 7.6 m/s) for 6 s, then 5 s before it can boost again. It boosts whenever it chases her from further off than 5 m or out of sight.
 - **Execute:** once per life, when it reaches her. It charges for 0.5 s, then lunges through her for 40 damage and knocks her down. A dodge avoids it; a perfect dodge parries it (her counter). It glows violet while charging.
 - **After the execute:** slow slices and claws, 1.2 s each, for medium damage (15 and 13).
-- **Model:** until the Deprived's own model is rigged, a stand-in is used: Hellgirl's body in black with a violet rim, her sword clips and a black blade. Fill the `Deprived` model slot in `Config/DefaultGame.ini` to replace it.
+- **Model:** the user's Meshy model (`Meshy Models\Enemies\Deprived enemy model`), rigged onto Hellgirl's own skeleton, so it plays her sword clips (idle, run, slash for the slice, backslash for the claw, charged strike for the execute, hit, death). It holds a black blade for now (a scythe later) and has a violet rim of light (`M_Deprived`). Its model slot is `Deprived` in `Config/DefaultGame.ini`; if emptied, a stand-in (Hellgirl's body in black) returns.
+
+### Rebuilding the Deprived model
+
+Close the editor, then:
+
+```
+powershell -ExecutionPolicy Bypass -File Tools\Enemies\deprived.ps1
+```
+
+1. `rig_deprived.py` (Blender) does the rigging:
+   - It reduces the model to 60k triangles and fits it onto Hellgirl's Rags body. Each arm is fitted on its own, because the model's two arms hang differently.
+   - The skin takes her body's weights. Hair follows the skin it grows from, fading into the head and spine.
+   - The few faces where Meshy fused hair to the arms are cut, so the hair doesn't stretch into sheets when the arms swing.
+   - Renders go to `Animation Testing\Enemies\Deprived\Preview`:
+     - `fit`: the model over her body;
+     - `skin`: red for skin, grey for hair;
+     - `rest` and `posed`: a test pose.
+2. The textures are copied at 2048.
+3. `import_deprived.py` (Unreal) imports `/Game/Enemies/Deprived` on `/Game/Hellgirl/Outfits/Rags/Rags_Skeleton` with its material and physics asset. Her skeleton is left untouched.
 
 The check is `-HellgirlDeprivedCheck` (Deprived in `Tests/run-checks.ps1`), run in a real hunt. It covers:
 - the rise rule;

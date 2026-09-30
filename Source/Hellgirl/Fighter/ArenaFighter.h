@@ -205,9 +205,11 @@ private:
     float DeprivedBoostClock = 0.f, DeprivedBoostCooldown = 0.f;
     bool bDeprivedExecuteUsed = false;
     int32 DeprivedSwing = 0;
-    // Until the Deprived's own model is in its model slot: Hellgirl's body as a black shadow with a violet rim, her sword
-    // clips and a black blade.
+    // If the Deprived's model slot is emptied: Hellgirl's body as a black shadow with a violet rim, her sword clips and a
+    // black blade.
     void ApplyDeprivedStandIn();
+    // The Deprived's black blade in its right hand (its model has no weapon of its own).
+    void ArmDeprived();
     void StartRatRoll(const FVector& Direction);
     // The frog's slam landed: its splash hits and pushes the other enemies caught in it.
     void FrogSlamSplash();
