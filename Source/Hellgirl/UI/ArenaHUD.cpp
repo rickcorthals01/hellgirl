@@ -92,7 +92,10 @@ void AArenaHUD::DrawHUD()
     if (!GM->Prompt.IsEmpty()) Say(GM->Prompt, Ember, 28.f, 74.f);
 
     // ---- Top right: a small minimap, souls underneath. ----
+    // (None in the Frozen Maze: finding the way is the point.)
     const float MapSize = 150.f, MapX = W - MapSize - 24.f, MapY = 20.f;
+    if (!GM->bFrozenMaze)
+    {
     DrawRect(FLinearColor(0.f, 0.f, 0.f, .55f), MapX - 3.f, MapY - 3.f, MapSize + 6.f, MapSize + 6.f);
     DrawRect(FLinearColor(.03f, .03f, .035f, .6f), MapX, MapY, MapSize, MapSize);
     auto OnMap = [&](float X, float Y)
@@ -121,6 +124,7 @@ void AArenaHUD::DrawHUD()
     const FVector2D PlayerDot = OnMap(static_cast<float>(Player->GetActorLocation().X), static_cast<float>(Player->GetActorLocation().Y));
     DrawRect(FLinearColor::Black, PlayerDot.X - 4.f, PlayerDot.Y - 4.f, 8.f, 8.f);
     DrawRect(Teal, PlayerDot.X - 3.f, PlayerDot.Y - 3.f, 6.f, 6.f);
+    }
     if (Wallet)
     {
         // The level's Souls (to spend), what the level has earned so far, and flashes for pickups, stocking and losses.

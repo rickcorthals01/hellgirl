@@ -128,6 +128,28 @@ public:
     // Where a blue portal can stand near Hellgirl, clear of the zombie arms.
     FVector SwampPortalSpot(const FVector& Near) const;
     UPROPERTY() TObjectPtr<class ACameraActor> SwampCamera;
+    // World IV's Frozen Maze (URL option Maze=1?Spawn=N, N = 0..3 the spawn room, random per run): one big icy maze, see
+    // Levels/FrozenMaze.cpp. Map only for now: the Deprived will rise from its lairs later.
+    bool bFrozenMaze = false;
+    int32 MazeSpawn = 0;
+    void StartFrozenMaze();
+    void TravelToFrozenMaze(int32 Spawn);
+    void BuildFrozenMaze();
+    void BuildFrozenMazeScenery();
+    // Returns true once Hellgirl steps into the vortex (and travels on, except in the check).
+    bool TickFrozenMaze(float Dt);
+    void RunFrozenMazeCheck(float Dt);
+    // Icicle traps (State: 0 hanging, 1 shaking loose, 2 falling, 3 shattered, 4 growing back) and frozen remains.
+    struct FMazeTrap { FVector Where = FVector::ZeroVector; TWeakObjectPtr<AStaticMeshActor> Icicle, Shadow; TWeakObjectPtr<class UMaterialInstanceDynamic> ShadowMaterial; int32 State = 0; float Clock = 0.f; };
+    struct FMazeRemains { FVector Where = FVector::ZeroVector; TWeakObjectPtr<AStaticMeshActor> Actor; TWeakObjectPtr<class APointLight> Glint; bool bSmashed = false; };
+    TArray<FMazeTrap> MazeTraps;
+    TArray<FMazeRemains> MazeRemains;
+    int32 MazeTrapHits = 0, MazeRemainsSmashed = 0;
+    float MazeClock = 0.f;
+    void TickMazeTraps(float Dt, class AArenaFighter* Hero);
+    void TickMazeRemains(class AArenaFighter* Hero);
+    UPROPERTY() TObjectPtr<AStaticMeshActor> MazeVortexCard;
+    UPROPERTY() TObjectPtr<class APointLight> MazeVortexLight;
     // World I Stages 2 and 3 and the endless mode follow the scripts in Levels/GoblinWaves.cpp:
     // waves, conversations and soul portals in order, then the exit portal.
     bool bEndless = false;

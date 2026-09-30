@@ -54,7 +54,7 @@ public:
         AddWorld(1,TEXT("WORLD I"),TEXT("GOBLIN RUINS"),TEXT("Goblins · Goblin Queen"),TEXT("The ruined castle where Hellgirl woke. Goblin raiders, their army, and the Goblin Queen on her throne."));
         AddWorld(2,TEXT("WORLD II"),TEXT("THE SWAMP"),TEXT("Rats & Frogs · Rat Queen & Frog King"),TEXT("The swamp of souls: glowing water, drowned hands, and the queens of rats and frogs."));
         AddWorld(3,TEXT("WORLD III"),TEXT("SUCCUBUS COURT"),TEXT("Succubi · Succubus Queen"),TEXT("The succubi's training halls. The court can be walked; its fight comes later."));
-        AddWorld(4,TEXT("WORLD IV"),TEXT("THE LOWER CIRCLES"),TEXT("Ghosts · Ghost King"),TEXT("A graveyard under the full moon. Its rooms can be walked; the ghosts come later."));
+        AddWorld(4,TEXT("WORLD IV"),TEXT("THE LOWER CIRCLES"),TEXT("Ghosts · Deprived · Ghost King"),TEXT("A graveyard under the full moon, and below it the Deprived's frozen maze. Both can be walked; their enemies come later."));
         AddWorld(5,TEXT("WORLD V"),TEXT("IMP TORTURE ARENA"),TEXT("Imps · Imp Commander"),TEXT("The imps' arena of lava and chains, and their commander."));
 
         // World I: the Goblin campaign and its endless mode.
@@ -74,7 +74,9 @@ public:
         AddStage(3,ComingLater,TEXT("II"),TEXT("SUCCUBUS QUEEN"),TEXT("Coming later"),false);
         // World IV: the ghosts' graveyard can be walked (random rooms); the ghosts come later.
         AddStage(4,GraveyardPreview,TEXT("I"),TEXT("THE GRAVEYARD"),TEXT("Map preview"),true);
-        AddStage(4,ComingLater,TEXT("II"),TEXT("LOWER CIRCLES"),TEXT("Coming later"),false);
+        // The Deprived's frozen maze can be walked too (a random spawn room each run); the Deprived come later.
+        AddStage(4,MazePreview,TEXT("II"),TEXT("THE FROZEN MAZE"),TEXT("Map preview"),true);
+        AddStage(4,ComingLater,TEXT("III"),TEXT("LOWER CIRCLES"),TEXT("Coming later"),false);
         // World V: the Imp arena (campaign level 4).
         AddStage(5,4,TEXT("I"),TEXT("TORTURE ARENA"),TEXT("Imp Commander"),Unlocked>=4);
         AddStage(5,ComingLater,TEXT("II"),TEXT("NEXT STAGE"),TEXT("Coming later"),false);
@@ -213,6 +215,7 @@ private:
         if (Level==CourtPreview) { Owner->ResumeGame(); if (GM) GM->TravelToSuccubusCourt(); }
         else if (Level==ForestRun) { Owner->ResumeGame(); if (GM) GM->StartForestRun(); }
         else if (Level==GraveyardPreview) { Owner->ResumeGame(); if (GM) GM->StartGraveyard(); }
+        else if (Level==MazePreview) { Owner->ResumeGame(); if (GM) GM->StartFrozenMaze(); }
         else if (Level>=SwampStageOne && Level<=SwampStageThree) { Owner->ResumeGame(); if (GM) GM->StartSwampStage(Level-SwampStageOne+1); }
         else if (Level==Endless) { Owner->ResumeGame(); if (GM) GM->StartEndless(); }
         else if (Level>=1 && Level<=Unlocked && Level<=4) { Owner->ResumeGame(); if (GM) GM->TravelToCampaign(Level); }
@@ -231,6 +234,7 @@ private:
     static constexpr int32 Endless=102;       // endless goblin waves in the Stage 2 arena
     static constexpr int32 GraveyardPreview=103; // World IV's graveyard, a map preview (random rooms)
     static constexpr int32 SwampStageOne=105, SwampStageTwo=106, SwampStageThree=107; // World II's swamp stages
+    static constexpr int32 MazePreview=108;   // World IV's frozen maze, a map preview
     static constexpr int32 ComingLater=-1;    // a stage still to be designed
     TSharedPtr<SButton> BackButton;
 };
