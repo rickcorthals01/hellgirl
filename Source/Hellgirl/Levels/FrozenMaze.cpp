@@ -9,6 +9,8 @@
 #include "Rules/FrozenMazeRules.h"
 #include "Fighter/ArenaFighter.h"
 #include "Progress/CoinPickup.h"
+#include "Rules/EnemyTuning.h"
+#include "Enemies/EnemyMovesetState.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "Camera/PlayerCameraManager.h"
@@ -149,6 +151,8 @@ void AArenaGameMode::BuildFrozenMaze()
         Remains.Glint = MazeArt::Light(World, FVector(P.X + Out.X * 220.f, P.Y + Out.Y * 220.f, 260.f), FLinearColor(.6f, .82f, 1.f), 1600.f, 700.f, false);
         MazeRemains.Add(Remains);
     }
+    // The first Deprived rises a few seconds after she arrives (Enemies/DeprivedCombat.cpp).
+    MazeDeprivedClock = EnemyTuning::DeprivedFirstRise;
     TotalSites = 0;
     UE_LOG(LogTemp, Display, TEXT("FROZEN MAZE BUILD: spawn room %s, %d traps, %d remains"), SpawnRoom(MazeSpawn).Name, MazeTraps.Num(), MazeRemains.Num());
 }
@@ -262,8 +266,10 @@ bool AArenaGameMode::TickFrozenMaze(float Dt)
     if (MazeVortexLight) MazeVortexLight->PointLightComponent->SetIntensity(60000.f * (1.f + .12f * FMath::Sin(MazeClock * 2.3f) + .05f * FMath::Sin(MazeClock * 7.1f)));
     auto* Hero = Cast<AArenaFighter>(UGameplayStatics::GetPlayerPawn(this, 0));
     TickMazeTraps(Dt, Hero);
+    // The Deprived hunt her (not in the maze's own check, which tests the map alone).
+    if (!FParse::Param(FCommandLine::Get(), TEXT("HellgirlMazeCheck"))) TickMazeDeprived(Dt, Hero);
     if (!Hero || !Hero->IsAlive()) return false;
-    Objective = TEXT("THE FROZEN MAZE / Map preview · find the vortex");
+    Objective = TEXT("THE FROZEN MAZE / Find the vortex · the Deprived are hunting you");
     Prompt.Empty();
     PromptAction = 0;
     TickMazeRemains(Hero);

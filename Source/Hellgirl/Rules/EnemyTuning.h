@@ -73,4 +73,21 @@ constexpr float RatQueenJumpSeconds = 1.5f, RatQueenJumpDamageScale = 1.3f, RatQ
 constexpr float RatQueenRollCooldown = 2.f, RatQueenRollChance = .7f;
 constexpr float RatQueenSummonSeconds = 1.6f;
 constexpr int32 RatQueenGuardRats = 4;                 // each of her two rat waves, before the global wave scaling
+
+// World IV, the Deprived (2026-09-30): a strong shadow that hunts Hellgirl through the maze, one at a time, with twice an
+// ordinary enemy's health. Its speed boost doubles its walking speed for 6 s, then needs 5 s before it can boost again
+// (it boosts whenever it is chasing her from further off). Once per life it runs at her and charges an execute: 0.5 s to
+// the hit, heavy damage, a lunge through her; a dodge avoids it and a perfect dodge parries (counters) it. After that it
+// slices and claws: slow swings for medium damage.
+constexpr int32 DeprivedDifficulty = 3;                 // ordinary health and damage at this difficulty (59 and 15)
+constexpr float DeprivedHealthScale = 2.f, DeprivedSpeed = 380.f;
+constexpr float DeprivedBoostScale = 2.f, DeprivedBoostSeconds = 6.f, DeprivedBoostCooldown = 5.f, DeprivedBoostFrom = 500.f;
+constexpr float DeprivedExecuteCharge = .5f, DeprivedExecuteSeconds = .9f, DeprivedExecuteDamage = 40.f;
+constexpr float DeprivedExecuteReach = 280.f, DeprivedExecuteLunge = 220.f;
+constexpr float DeprivedSwingSeconds = 1.2f, DeprivedSwingRecovery = .8f, DeprivedSwingReach = 220.f;
+constexpr float DeprivedSliceDamageScale = 1.f, DeprivedClawDamageScale = .85f;
+// In the maze: the first rises this long after she arrives; each next one this long after the last falls, from the
+// nearest lair she cannot see that is at least DeprivedMinSteps squares' walk (40 m) from her.
+constexpr float DeprivedFirstRise = 6.f, DeprivedRiseDelay = 10.f;
+constexpr int32 DeprivedMinSteps = 5;
 }

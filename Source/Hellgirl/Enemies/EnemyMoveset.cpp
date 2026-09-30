@@ -16,7 +16,7 @@ bool UsesCastleMoves(const AArenaFighter* Fighter)
         || Fighter->EnemyType == EHellgirlEnemyType::ImpCommander
         || Fighter->EnemyType == EHellgirlEnemyType::Goblins || Fighter->EnemyType == EHellgirlEnemyType::GoblinQueen
         || Fighter->EnemyType == EHellgirlEnemyType::Rats || Fighter->EnemyType == EHellgirlEnemyType::Frogs || Fighter->EnemyType == EHellgirlEnemyType::FrogKing
-        || Fighter->EnemyType == EHellgirlEnemyType::RatQueen);
+        || Fighter->EnemyType == EHellgirlEnemyType::RatQueen || Fighter->EnemyType == EHellgirlEnemyType::Deprived);
 }
 
 bool FindEnemyFloor(const AArenaFighter* Fighter, const FVector& Position, FHitResult& Floor)
@@ -145,6 +145,15 @@ void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
     case EEnemyMove::RatQueenJumpSlam:
         Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::RatQueenJumpSeconds,.65f,AttackDamage*EnemyTuning::RatQueenJumpDamageScale,EnemyTuning::RatQueenJumpRadius,380.f,0.f,0};
         Recovery=.7f; Label=TEXT("RAT QUEEN / JUMP SLAM"); break;
+    case EEnemyMove::DeprivedExecute:
+        // The hit lands DeprivedExecuteCharge seconds in: that is the time she has to dodge (or parry with a perfect dodge).
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::DeprivedExecuteSeconds,EnemyTuning::DeprivedExecuteCharge/EnemyTuning::DeprivedExecuteSeconds,
+            EnemyTuning::DeprivedExecuteDamage,EnemyTuning::DeprivedExecuteReach,650.f,.9f,0};
+        Recovery=.9f; Label=TEXT("DEPRIVED / EXECUTE"); break;
+    case EEnemyMove::DeprivedSlice: case EEnemyMove::DeprivedClaw:
+        Spec = {FistCombat::Move::EnemyClaw,EnemyTuning::DeprivedSwingSeconds,.6f,
+            AttackDamage*(Move==EEnemyMove::DeprivedSlice ? EnemyTuning::DeprivedSliceDamageScale : EnemyTuning::DeprivedClawDamageScale),EnemyTuning::DeprivedSwingReach,160.f,0.f,0};
+        Recovery=EnemyTuning::DeprivedSwingRecovery; Label=Move==EEnemyMove::DeprivedSlice ? TEXT("DEPRIVED / SLICE") : TEXT("DEPRIVED / CLAW"); break;
     case EEnemyMove::QueenMelee:
         Spec = {FistCombat::Move::EnemyClaw,1.6f,.6f,20.f,250.f,200.f,0.f,0}; Recovery=.7f; Label=TEXT("QUEEN / SHADOW ATTACK"); break;
     case EEnemyMove::QueenClaw:
@@ -177,6 +186,7 @@ void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
     const bool RatLunge = Move == EEnemyMove::RatBite || Move == EEnemyMove::RatPunch || Move == EEnemyMove::RatPunch2
         || Move == EEnemyMove::RatQueenSlash || Move == EEnemyMove::RatQueenSlash2;
     const bool QueenJump = Move == EEnemyMove::RatQueenJumpSlam;
+    const bool Execute = Move == EEnemyMove::DeprivedExecute;
     const bool FrogAir = Move == EEnemyMove::FrogAirPunch || Move == EEnemyMove::FrogSlam;
     if (FrogAir) Endpoint = Player->GetActorLocation(); // the slam dives onto where she stands
     else if (Move == EEnemyMove::RatQueenHeavy)
@@ -190,11 +200,12 @@ void AArenaFighter::BeginEnemyMove(EEnemyMove Move, AArenaFighter* Player)
         if (!FindEnemyFloor(this, Endpoint, Floor)) return;
         Endpoint.Z = Floor.ImpactPoint.Z + GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 6.f;
     }
-    else if (Move == EEnemyMove::ImpPounce || Move == EEnemyMove::CommanderRush || Move == EEnemyMove::FlyingDive || Move == EEnemyMove::CommanderJumpSlam || RatLunge || QueenJump)
+    else if (Move == EEnemyMove::ImpPounce || Move == EEnemyMove::CommanderRush || Move == EEnemyMove::FlyingDive || Move == EEnemyMove::CommanderJumpSlam || RatLunge || QueenJump || Execute)
     {
         const bool QueenSlash = Move == EEnemyMove::RatQueenSlash || Move == EEnemyMove::RatQueenSlash2;
-        const float StopDistance = Move == EEnemyMove::CommanderJumpSlam || QueenJump ? 0.f : Move == EEnemyMove::CommanderRush ? 175.f : QueenSlash ? 120.f : RatLunge ? 105.f : (Move == EEnemyMove::FlyingDive ? 130.f : 125.f);
-        const float MaximumTravel = Move == EEnemyMove::CommanderJumpSlam || QueenJump ? 1000.f : Move == EEnemyMove::CommanderRush ? 650.f : QueenSlash ? 180.f : RatLunge ? 140.f : (Move == EEnemyMove::FlyingDive ? 550.f : 360.f);
+        const float StopDistance = Move == EEnemyMove::CommanderJumpSlam || QueenJump ? 0.f : Move == EEnemyMove::CommanderRush ? 175.f : QueenSlash ? 120.f : RatLunge || Execute ? 105.f : (Move == EEnemyMove::FlyingDive ? 130.f : 125.f);
+        const float MaximumTravel = Move == EEnemyMove::CommanderJumpSlam || QueenJump ? 1000.f : Move == EEnemyMove::CommanderRush ? 650.f : QueenSlash ? 180.f : RatLunge ? 140.f
+            : Execute ? EnemyTuning::DeprivedExecuteLunge : (Move == EEnemyMove::FlyingDive ? 550.f : 360.f);
         const float Travel = FMath::Clamp(static_cast<float>(Delta.Size2D()) - StopDistance, 0.f, MaximumTravel);
         if (!IsEnemyGroundAheadSafe(Facing, Travel + 35.f)) return;
         Endpoint += Facing * Travel;
@@ -254,6 +265,13 @@ void AArenaFighter::UpdateEnemyMoveMotion(float Dt)
     FrogSlamClock = FMath::Max(0.f, FrogSlamClock - Dt);
     RatQueenJumpClock = FMath::Max(0.f, RatQueenJumpClock - Dt);
     RatQueenHeavyClock = FMath::Max(0.f, RatQueenHeavyClock - Dt);
+    // The Deprived's speed boost runs out, then cools down.
+    if (DeprivedBoostClock > 0.f)
+    {
+        DeprivedBoostClock -= Dt;
+        if (DeprivedBoostClock <= 0.f) { DeprivedBoostClock = 0.f; DeprivedBoostCooldown = EnemyTuning::DeprivedBoostCooldown; }
+    }
+    else DeprivedBoostCooldown = FMath::Max(0.f, DeprivedBoostCooldown - Dt);
     EnemyDecisionClock = FMath::Max(0.f, EnemyDecisionClock - Dt);
     if (EnemyMove == EEnemyMove::None) return;
     if (!IsAlive() || bCombatLaunched || KnockdownClock > 0.f || HitClock > 0.f || AttackClock <= 0.f)
@@ -301,6 +319,8 @@ void AArenaFighter::UpdateEnemyMoveMotion(float Dt)
     case EEnemyMove::RatBite: case EEnemyMove::RatPunch: case EEnemyMove::RatPunch2: StartFraction = .25f; EndFraction = .55f; break;
     case EEnemyMove::RatQueenSlash: case EEnemyMove::RatQueenSlash2: StartFraction = .2f; EndFraction = .55f; break;
     case EEnemyMove::RatQueenHeavy: StartFraction = .3f; EndFraction = .74f; break;
+    case EEnemyMove::DeprivedExecute: StartFraction = .45f; EndFraction = .62f; break; // the lunge carries the hit
+    case EEnemyMove::DeprivedSlice: case EEnemyMove::DeprivedClaw: return;
     case EEnemyMove::RatRoll: StartFraction = 0.f; EndFraction = .8f; break;
     default: return;
     }

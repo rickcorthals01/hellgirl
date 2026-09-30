@@ -149,6 +149,18 @@ public:
     void TickMazeRemains(class AArenaFighter* Hero);
     UPROPERTY() TObjectPtr<AStaticMeshActor> MazeVortexCard;
     UPROPERTY() TObjectPtr<class APointLight> MazeVortexLight;
+    // The Deprived in the maze: one hunts her at a time. When it falls the next rises a while later from the nearest lair
+    // she cannot see, at least 40 m away (Rules/EnemyTuning.h). The maze steers it: the walk to her from every square.
+    TWeakObjectPtr<class AArenaFighter> MazeDeprived;
+    float MazeDeprivedClock = 0.f, MazeHuntClock = 0.f;
+    bool bMazeDeprivedDown = false;
+    int32 MazeDeprivedRisen = 0, MazeDeprivedLair = -1;
+    TArray<int32> MazeHuntSteps;
+    void TickMazeDeprived(float Dt, class AArenaFighter* Hero);
+    // The lair the next Deprived rises from (-1 if none is out of her sight and far enough), and raising it there.
+    int32 PickDeprivedLair(const FVector& Hero) const;
+    class AArenaFighter* RaiseDeprived(int32 Lair);
+    void RunDeprivedCheck(float Dt);
     // The Frozen Maze's boss room (URL option MazeBoss=1): a wide open ice cavern with the vortex's charred imprint, see
     // Levels/MazeBossRoom.cpp. Room only for now: the boss and the stages that lead here come later.
     bool bMazeBoss = false;

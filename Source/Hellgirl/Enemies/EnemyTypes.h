@@ -16,7 +16,10 @@ enum class EHellgirlEnemyType : uint8
     Rats, Frogs, FrogKing,
     // World II's boss: right, left and a charged dashing heavy slash, a jump slam, a double dodge roll; at half health
     // she calls two waves of rats (Enemies/SwampCombat.cpp).
-    RatQueen
+    RatQueen,
+    // World IV's maze: a strong shadow that hunts Hellgirl one at a time, with a speed boost, one execute per life, then
+    // slow slices and claws (Enemies/DeprivedCombat.cpp).
+    Deprived
 };
 
 USTRUCT(BlueprintType)
@@ -65,6 +68,8 @@ public:
     UPROPERTY(Config, EditAnywhere, Category="Level 02") FEnemyModelSlot Frogs;
     UPROPERTY(Config, EditAnywhere, Category="Level 02") FEnemyModelSlot FrogKing;
     UPROPERTY(Config, EditAnywhere, Category="Level 02") FEnemyModelSlot RatQueen;
+    // Empty until the Deprived's own model arrives: a shadow of Hellgirl stands in (AArenaFighter::ApplyDeprivedStandIn).
+    UPROPERTY(Config, EditAnywhere, Category="World IV") FEnemyModelSlot Deprived;
     const FEnemyModelSlot& ForType(EHellgirlEnemyType Type) const
     {
         switch (Type)
@@ -82,6 +87,7 @@ public:
         case EHellgirlEnemyType::Frogs: return Frogs;
         case EHellgirlEnemyType::FrogKing: return FrogKing;
         case EHellgirlEnemyType::RatQueen: return RatQueen;
+        case EHellgirlEnemyType::Deprived: return Deprived;
         default: return Imps;
         }
     }

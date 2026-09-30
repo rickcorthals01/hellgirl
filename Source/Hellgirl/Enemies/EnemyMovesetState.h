@@ -13,5 +13,7 @@ enum class EEnemyMove : unsigned char
     RatBite, RatPunch, RatPunch2, RatRoll, FrogPunch, FrogAirPunch, FrogSlam,
     // The Rat Queen: right slash, left slash, a charged heavy slash that dashes her far forward, a jump slam, and the
     // pose she strikes calling her rats (no hit).
-    RatQueenSlash, RatQueenSlash2, RatQueenHeavy, RatQueenJumpSlam, RatQueenSummon
+    RatQueenSlash, RatQueenSlash2, RatQueenHeavy, RatQueenJumpSlam, RatQueenSummon,
+    // The Deprived: the execute (once per life, charged, lunging), then slow slices and claws.
+    DeprivedExecute, DeprivedSlice, DeprivedClaw
 };

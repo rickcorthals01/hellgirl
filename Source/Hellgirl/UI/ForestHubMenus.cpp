@@ -74,8 +74,8 @@ public:
         AddStage(3,ComingLater,TEXT("II"),TEXT("SUCCUBUS QUEEN"),TEXT("Coming later"),false);
         // World IV: the ghosts' graveyard can be walked (random rooms); the ghosts come later.
         AddStage(4,GraveyardPreview,TEXT("I"),TEXT("THE GRAVEYARD"),TEXT("Map preview"),true);
-        // The Deprived's frozen maze can be walked too (a random spawn room each run); the Deprived come later.
-        AddStage(4,MazePreview,TEXT("II"),TEXT("THE FROZEN MAZE"),TEXT("Map preview"),true);
+        // The Deprived's frozen maze (a random spawn room each run), where they hunt her one at a time.
+        AddStage(4,MazePreview,TEXT("II"),TEXT("THE FROZEN MAZE"),TEXT("The Deprived hunt you"),true);
         AddStage(4,ComingLater,TEXT("III"),TEXT("LOWER CIRCLES"),TEXT("Coming later"),false);
         // World V: the Imp arena (campaign level 4).
         AddStage(5,4,TEXT("I"),TEXT("TORTURE ARENA"),TEXT("Imp Commander"),Unlocked>=4);

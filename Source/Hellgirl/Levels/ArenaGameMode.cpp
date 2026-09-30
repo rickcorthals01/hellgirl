@@ -394,7 +394,7 @@ void AArenaGameMode::Tick(float Dt)
     if (bForestRun) { RunForestRunCheck(); TickForestRun(Dt); return; }
     if (bGraveyard) { RunGraveyardCheck(Dt); TickGraveyard(Dt); return; }
     if (bSwamp) { RunSwampCheck(Dt); RunSwampStageCheck(Dt); RunRatQueenCheck(Dt); TickSwamp(Dt); return; }
-    if (bFrozenMaze) { RunFrozenMazeCheck(Dt); TickFrozenMaze(Dt); return; }
+    if (bFrozenMaze) { RunFrozenMazeCheck(Dt); RunDeprivedCheck(Dt); TickFrozenMaze(Dt); return; }
     if (bMazeBoss) { RunMazeBossCheck(Dt); TickMazeBoss(Dt); return; }
     RunGoblinStageCheck();
     if (!bLegacyMap && CampaignLevel==1) { TickGoblinPrelude(Dt); return; }

@@ -101,6 +101,15 @@ public:
     void UpdateRatQueenTactics(float Dt, AArenaFighter* Player);
     // The Rat Queen calls her rats: a pose with no hit (the stage spawns them).
     void StartRatQueenSummon();
+    // World IV (Enemies/DeprivedCombat.cpp): the Deprived hunts Hellgirl. Where it cannot see her it heads for
+    // HuntWaypoint, the next step of the way to her (the maze sets it every moment).
+    void UpdateDeprivedTactics(float Dt, AArenaFighter* Player);
+    FVector HuntWaypoint = FVector::ZeroVector;
+    bool bHasHuntWaypoint = false;
+    // Checks only: the Deprived's speed boost (seconds left, then the cooldown) and whether its execute is spent.
+    float GetDeprivedBoost() const { return DeprivedBoostClock; }
+    float GetDeprivedBoostCooldown() const { return DeprivedBoostCooldown; }
+    bool IsDeprivedExecuteUsed() const { return bDeprivedExecuteUsed; }
     bool IsFrog() const { return EnemyType == EHellgirlEnemyType::Frogs || EnemyType == EHellgirlEnemyType::FrogKing; }
     // True while this fighter is winding up an attack that has not landed yet (rats roll away from it).
     bool IsWindingUpAttack() const { return AttackClock > 0.f && !bHitResolved; }
@@ -130,7 +139,11 @@ public:
     // have the pivot at the grip's centre and the blade along +Z). Set by ApplySwordLook.
     // The hand bone's +Y runs back up the forearm; the blade leaves the fist along the bone's -Z (forward and a little
     // down when her arm hangs). -HellgirlMapShot -MapShotSword -BladeRot=P,Y,R -BladeOff=X,Y,Z tries others.
-    UPROPERTY(EditAnywhere, Category="Combat|Sword") FVector BladeGripOffset = FVector(0.f, -8.f, 0.f);
+    UPROPERTY(EditAnywhere, Category="Combat|Sword") FVector BladeGripOffset = FVector(-4.8f, -6.7f, 5.9f);
+    // Two-handed hold: the blade points along this direction in the hand bone's space (from the left palm through the right palm
+    // in the Great Sword idle), and the grip centre is halfway between the palms. It turns the blade from the old one-handed
+    // direction (-Z) before BladeGripRotation's roll is applied.
+    UPROPERTY(EditAnywhere, Category="Combat|Sword") FVector BladeAim = FVector(.56f, -.22f, -.80f);
     UPROPERTY(EditAnywhere, Category="Combat|Sword") FRotator BladeGripRotation = FRotator(0.f, 0.f, 180.f);
     UPROPERTY(EditAnywhere, Category="Combat|Sword") float BladeScale = .7f;
     void ApplySwordLook();
@@ -188,6 +201,13 @@ private:
     bool bRatQueenSecondRoll = false;
     FVector RatQueenRollDir = FVector::ZeroVector;
     float RatQueenJumpClock = 3.f, RatQueenHeavyClock = 0.f;
+    // The Deprived: its speed boost (seconds left, then the cooldown), whether its one execute is spent, the next swing.
+    float DeprivedBoostClock = 0.f, DeprivedBoostCooldown = 0.f;
+    bool bDeprivedExecuteUsed = false;
+    int32 DeprivedSwing = 0;
+    // Until the Deprived's own model is in its model slot: Hellgirl's body as a black shadow with a violet rim, her sword
+    // clips and a black blade.
+    void ApplyDeprivedStandIn();
     void StartRatRoll(const FVector& Direction);
     // The frog's slam landed: its splash hits and pushes the other enemies caught in it.
     void FrogSlamSplash();
@@ -248,6 +268,7 @@ private:
     // Per-outfit combat clips from Tools/Animations (see CombatClipNames); missing clips use the neutral pose.
     UPROPERTY() TMap<FName, TObjectPtr<UAnimSequence>> CombatAnimations;
     UAnimSequence* FindAttackAnimation(FistCombat::Move Move) const;
+    UAnimSequence* StanceClip(const TCHAR* Name, UAnimSequence* Fist = nullptr) const;
     // Maps attack progress to clip time so the clip's contact frame lands on the attack's damage moment.
     float AttackClipPosition(float Progress, const UAnimSequence* Clip) const;
     float PlayerHitAnimationTime = 100.f;
@@ -256,6 +277,15 @@ private:
     float DodgeAnimationTime = 100.f;
     static constexpr float DodgeAnimationDuration = .55f;
     float PlayerDeathAnimationTime = 0.f;
+    // Sword extras: the draw when the sword is selected, the ultimate's cast, which flinch and death clip this hit / death uses,
+    // and the idle fidget that plays after she has stood still for a while.
+    float DrawAnimationTime = 100.f;
+    float CastAnimationTime = 100.f;
+    int32 HitVariant = 0;
+    int32 DeathVariant = -1;
+    float IdleStillTime = 0.f;
+    float FidgetTime = 0.f;
+    int32 FidgetVariant = 0;
     float PlayerKnockdownDuration = 1.f;
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyIdleAnimation;
     UPROPERTY() TObjectPtr<UAnimSequence> EnemyMoveAnimation;

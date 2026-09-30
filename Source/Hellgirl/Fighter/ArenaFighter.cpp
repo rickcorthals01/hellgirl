@@ -45,7 +45,11 @@ const TCHAR* const CombatClipNames[] = {
     TEXT("AirPunch"), TEXT("AirLeftPunch"), TEXT("AirKick"), TEXT("AirCrashKick"), TEXT("AirSlam"),
     TEXT("Dodge"), TEXT("Hit"), TEXT("Knockdown"), TEXT("Death"), TEXT("WakeUp"), TEXT("Block"),
     TEXT("SwordSlash"), TEXT("SwordBackslash"), TEXT("SwordThrust"), TEXT("SwordSpin"),
-    TEXT("SwordIdle"), TEXT("SwordWalk"), TEXT("SwordRun"), TEXT("SwordHit"), TEXT("SwordCharge"), TEXT("SwordDeath")};
+    TEXT("SwordIdle"), TEXT("SwordWalk"), TEXT("SwordRun"), TEXT("SwordHit"), TEXT("SwordCharge"), TEXT("SwordDeath"),
+    TEXT("SwordJump"), TEXT("SwordDraw"), TEXT("SwordSpellCast"), TEXT("SwordDeath2"),
+    TEXT("SwordImpact2"), TEXT("SwordImpact3"), TEXT("SwordImpact4"), TEXT("SwordImpact5"),
+    TEXT("SwordIdle2"), TEXT("SwordIdle3"), TEXT("SwordIdle4"), TEXT("SwordIdle5"),
+    TEXT("SwordKick1"), TEXT("SwordKick2"), TEXT("SwordSlash4"), TEXT("SwordSlash5"), TEXT("SwordSlash2"), TEXT("SwordSlide"), TEXT("SwordJumpAttack"), TEXT("SwordChargedStrike")};
 
 const TCHAR* AttackClipName(FistCombat::Move Type)
 {
@@ -70,6 +74,26 @@ const TCHAR* AttackClipName(FistCombat::Move Type)
     case Move::SwordBackslash: return TEXT("SwordBackslash");
     case Move::SwordThrust: return TEXT("SwordThrust");
     case Move::SwordSpin: return TEXT("SwordSpin");
+    default: return nullptr;
+    }
+}
+
+// Great Sword clips that stand in for the fist moves while the sword is drawn (the light chain has its own moves already).
+const TCHAR* SwordAttackClipName(FistCombat::Move Type)
+{
+    using FistCombat::Move;
+    switch (Type)
+    {
+    case Move::RightHeavyKick: case Move::TurningKick: return TEXT("SwordKick1");
+    case Move::LeftHeavyKick: case Move::FollowKick: return TEXT("SwordKick2");
+    case Move::LegSweep: return TEXT("SwordSlash5");
+    case Move::Headbutt: case Move::DodgeUppercut: return TEXT("SwordSlide");
+    case Move::DodgeSlam: case Move::AirSlam: return TEXT("SwordJumpAttack");
+    case Move::ChargedStrike: case Move::Tackle: case Move::ShoulderThrow: return TEXT("SwordChargedStrike");
+    case Move::AirPunch: return TEXT("SwordSlash");
+    case Move::AirLeftPunch: return TEXT("SwordBackslash");
+    case Move::AirKick: return TEXT("SwordThrust");
+    case Move::AirCrashKick: return TEXT("SwordSlash4");
     default: return nullptr;
     }
 }
@@ -289,7 +313,7 @@ void AArenaFighter::ApplySwordLook()
     Sword->EmptyOverrideMaterials();
     Sword->SetRelativeScale3D(FVector(BladeScale));
     Sword->SetRelativeLocation(BladeGripOffset);
-    Sword->SetRelativeRotation(BladeGripRotation);
+    Sword->SetRelativeRotation(FQuat::FindBetweenNormals(FVector(0.f, 0.f, -1.f), BladeAim.GetSafeNormal()) * BladeGripRotation.Quaternion());
 }
 
 void AArenaFighter::MakeEnemy(int32 Wave, bool Flying)
@@ -358,6 +382,8 @@ void AArenaFighter::SetEnemyType(EHellgirlEnemyType Type)
     if (Type == EHellgirlEnemyType::Frogs) { WalkSpeed=380.f; AttackDamage=10.f; }
     if (Type == EHellgirlEnemyType::FrogKing) { WalkSpeed=420.f; AttackDamage=16.f; }
     if (Type == EHellgirlEnemyType::RatQueen) { WalkSpeed=EnemyTuning::RatQueenSpeed; AttackDamage=EnemyTuning::RatQueenDamage; }
+    // Twice the health MakeEnemy gave it as an ordinary enemy.
+    if (Type == EHellgirlEnemyType::Deprived) { WalkSpeed=EnemyTuning::DeprivedSpeed; MaxHealth*=EnemyTuning::DeprivedHealthScale; Health=MaxHealth; }
     // The mini succubus only flies, whatever the spawn site asked for.
     if (Type == EHellgirlEnemyType::MiniSuccubus) { bFlyingEnemy = true; GetCharacterMovement()->SetMovementMode(MOVE_Flying); }
     const FString Name = StaticEnum<EHellgirlEnemyType>()->GetNameStringByValue(static_cast<int64>(Type));
@@ -370,6 +396,7 @@ void AArenaFighter::SetEnemyType(EHellgirlEnemyType Type)
     EnemyNameLabel->SetText(FText::FromString(Name));
     // The name floating above enemies is no longer shown (2026-09-26).
     const FEnemyModelSlot& Model = GetDefault<UHellgirlEnemyModels>()->ForType(Type);
+    if (Type == EHellgirlEnemyType::Deprived && Model.Mesh.IsNull()) { ApplyDeprivedStandIn(); return; }
     if (USkeletalMesh* EnemyMesh = Model.Mesh.LoadSynchronous())
     {
         GetMesh()->SetSkeletalMesh(EnemyMesh);
@@ -525,7 +552,10 @@ void AArenaFighter::StartAttack(bool Heavy)
     if (bEnemy)
         RequestedAttack = {FistCombat::Move::EnemyClaw, 1.25f, .6f, AttackDamage, AttackRange, 200.f, 0.f, 0};
     else if (!Airborne && Heavy && PendingCharge > 0.f)
+    {
         RequestedAttack = FistCombat::Charged(PendingCharge);
+        if (SelectedWeapon == 1) RequestedAttack.Duration = .95f; // the whole overhead slash, not just the chop
+    }
     else
         RequestedAttack = FistCombat::Select(Heavy, Airborne ? AirCombo : (ComboClock > 0.f && bLastComboHeavy == Heavy ? Combo : 0), Airborne, PostDodgeClock > 0.f, SelectedWeapon == 1);
     PendingCharge = 0.f;
@@ -864,6 +894,7 @@ void AArenaFighter::ReceiveHit(float Damage, const FVector& Direction, float Kno
     GroundDashClock = 0.f;
     ResetPlayerMomentum();
     PlayerHitAnimationTime = 0.f;
+    HitVariant = FMath::RandRange(0, 4);
     EnemyHitAnimationTime = 0.f;
     CancelCharge();
     bGroundImpactPending = false;
@@ -1059,7 +1090,8 @@ void AArenaFighter::Tick(float Dt)
     UpdatePose(Dt);
     const bool Guarding = IsBlocking();
     const bool Sprinting = !bEnemy && bSprintHeld && !bWalkHeld && !Guarding && AttackClock <= 0.f && !bHeavyHeld && GetCharacterMovement()->IsMovingOnGround();
-    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * GetSpeedMultiplier() * Upgrades.Speed * Shop.Speed * ((!bEnemy && bWalkHeld) ? .4f : (Sprinting ? 1.5f : 1.f)) * ((AttackClock > 0.f || bHeavyHeld || Guarding) ? .3f : 1.f);
+    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * GetSpeedMultiplier() * Upgrades.Speed * Shop.Speed * ((!bEnemy && bWalkHeld) ? .4f : (Sprinting ? 1.5f : 1.f)) * ((AttackClock > 0.f || bHeavyHeld || Guarding) ? .3f : 1.f)
+        * (DeprivedBoostClock > 0.f ? EnemyTuning::DeprivedBoostScale : 1.f);
     UpdatePlayerMomentum(Dt);
     GetCharacterMovement()->bOrientRotationToMovement = AttackClock <= 0.f && DodgeClock <= 0.f && !bHeavyHeld && !Guarding;
     if (Guarding && Controller)
@@ -1093,6 +1125,7 @@ void AArenaFighter::Tick(float Dt)
             else if (EnemyType == EHellgirlEnemyType::Rats) UpdateRatTactics(Dt,Player);
             else if (IsFrog()) UpdateFrogTactics(Dt,Player);
             else if (EnemyType == EHellgirlEnemyType::RatQueen) UpdateRatQueenTactics(Dt,Player);
+            else if (EnemyType == EHellgirlEnemyType::Deprived) UpdateDeprivedTactics(Dt,Player);
             else if (EnemyType == EHellgirlEnemyType::Imps || EnemyType == EHellgirlEnemyType::FlyingImps || EnemyType == EHellgirlEnemyType::MiniSuccubus) UpdateImpTactics(Dt,Player);
             else
             {
@@ -1148,6 +1181,8 @@ void AArenaFighter::UpdateEnemyAnimation(float Dt)
         case EEnemyMove::RatQueenHeavy: Own = EnemyHeavyAttackAnimation.Get(); break;
         case EEnemyMove::RatQueenJumpSlam: Own = EnemyAirAttackAnimation.Get(); break;
         case EEnemyMove::RatQueenSummon: Own = EnemyQuickAttackAnimation.Get(); break;
+        case EEnemyMove::DeprivedExecute: Own = EnemyHeavyAttackAnimation.Get(); break;
+        case EEnemyMove::DeprivedClaw: Own = EnemyAttack2Animation.Get(); break;
         default: break;
         }
         return Own ? Own : EnemyAttackAnimation.Get();
@@ -1176,7 +1211,9 @@ void AArenaFighter::UpdateEnemyAnimation(float Dt)
     else if (Hopping) EnemyAnimationTime = FMath::Clamp(EnemyAirTime / 1.4f, 0.f, .999f) * Length;
     else
     {
-        const float Rate = Moving && EnemyType == EHellgirlEnemyType::Imps ? FMath::Clamp(Speed / 224.f, .4f, 1.8f) : 1.f;
+        // (The Deprived's stand-in runs on Hellgirl's run clip, made for her 5.6 m/s; faster while it is boosted.)
+        const float Rate = Moving && EnemyType == EHellgirlEnemyType::Imps ? FMath::Clamp(Speed / 224.f, .4f, 1.8f)
+            : Moving && EnemyType == EHellgirlEnemyType::Deprived ? FMath::Clamp(Speed / 560.f, .6f, 1.8f) : 1.f;
         EnemyAnimationTime += Dt * Rate;
         EnemyAnimationTime = Dead ? FMath::Min(EnemyAnimationTime, Length) : FMath::Fmod(EnemyAnimationTime, Length);
     }
@@ -1185,8 +1222,25 @@ void AArenaFighter::UpdateEnemyAnimation(float Dt)
 
 UAnimSequence* AArenaFighter::FindAttackAnimation(FistCombat::Move Type) const
 {
+    if (SelectedWeapon == 1)
+        if (const TCHAR* SwordName = SwordAttackClipName(Type))
+        {
+            UAnimSequence* Clip = CombatAnimations.FindRef(FName(SwordName)).Get();
+            if (Clip && Clip != NeutralIdleAnimation) return Clip;
+        }
     const TCHAR* Name = AttackClipName(Type);
     return Name ? CombatAnimations.FindRef(FName(Name)).Get() : nullptr;
+}
+
+// The Sword* version of a stance clip while the sword is drawn (when the outfit has it), else the fist version.
+UAnimSequence* AArenaFighter::StanceClip(const TCHAR* Name, UAnimSequence* Fist) const
+{
+    if (SelectedWeapon == 1)
+    {
+        UAnimSequence* Stance = CombatAnimations.FindRef(FName(*(FString(TEXT("Sword")) + Name))).Get();
+        if (Stance && Stance != NeutralIdleAnimation) return Stance;
+    }
+    return Fist ? Fist : CombatAnimations.FindRef(FName(Name)).Get();
 }
 
 float AArenaFighter::AttackClipPosition(float Progress, const UAnimSequence* Clip) const
@@ -1210,6 +1264,11 @@ void AArenaFighter::UpdatePose(float Dt)
         const bool IsStrike = AttackClock > 0.f && Strike;
         PlayerHitAnimationTime += Dt;
         DodgeAnimationTime += Dt;
+        DrawAnimationTime += Dt;
+        CastAnimationTime += Dt;
+        // Standing-still time only counts while the standing branch below runs.
+        const float StillBefore = IdleStillTime, FidgetBefore = FidgetTime;
+        IdleStillTime = FidgetTime = 0.f;
         const float Speed = GetVelocity().Size2D();
         const bool Moving = Speed > 10.f && GetCharacterMovement()->IsMovingOnGround() && DodgeClock <= 0.f && KnockdownClock <= 0.f && IsAlive();
         // Standing uses the Mixamo idle when the outfit has one (it falls back to the neutral pose).
@@ -1230,7 +1289,10 @@ void AArenaFighter::UpdatePose(float Dt)
         bAnimationWasAirborne = Airborne;
         if (!IsAlive())
         {
+            if (DeathVariant < 0) DeathVariant = FMath::RandRange(0, 1);
             Clip = StanceClip(TEXT("Death"));
+            if (SelectedWeapon == 1 && DeathVariant == 1)
+                if (UAnimSequence* Second = CombatAnimations.FindRef(TEXT("SwordDeath2")).Get(); Second && Second != NeutralIdleAnimation) Clip = Second;
             PlayerDeathAnimationTime += Dt;
             if (Clip) Position = FMath::Min(PlayerDeathAnimationTime, Clip->GetPlayLength());
         }
@@ -1266,19 +1328,39 @@ void AArenaFighter::UpdatePose(float Dt)
         {
             // The whole flinch (recoil and back) is fitted into the .3 s hit window.
             Clip = StanceClip(TEXT("Hit"));
+            // The sword stance has five different flinches.
+            if (SelectedWeapon == 1 && HitVariant > 0)
+                if (UAnimSequence* Flinch = CombatAnimations.FindRef(*FString::Printf(TEXT("SwordImpact%d"), HitVariant + 1)).Get(); Flinch && Flinch != NeutralIdleAnimation) Clip = Flinch;
             if (Clip) Position = PlayerHitAnimationTime / .3f * Clip->GetPlayLength();
+        }
+        else if (SelectedWeapon == 1 && CastAnimationTime < 1.1f && CombatAnimations.FindRef(TEXT("SwordSpellCast")) != NeutralIdleAnimation)
+        {
+            // The ultimate begins with a spell cast (1.1 s at its own pace).
+            Clip = CombatAnimations.FindRef(TEXT("SwordSpellCast")).Get();
+            if (Clip) Position = FMath::Min(CastAnimationTime, Clip->GetPlayLength());
+        }
+        else if (SelectedWeapon == 1 && DrawAnimationTime < .6f && CombatAnimations.FindRef(TEXT("SwordDraw")) != NeutralIdleAnimation)
+        {
+            // Drawing the sword from her back, fitted into 0.6 s.
+            Clip = CombatAnimations.FindRef(TEXT("SwordDraw")).Get();
+            if (Clip) Position = DrawAnimationTime / .6f * Clip->GetPlayLength();
         }
         else if (bHeavyHeld || IsBlocking())
         {
             Clip = bHeavyHeld ? StanceClip(TEXT("Charge")) : CombatAnimations.FindRef(TEXT("Block")).Get();
-            if (Clip) Position = FMath::Fmod(GetWorld()->GetTimeSeconds(), Clip->GetPlayLength());
+            // The sword raises overhead in half a second and holds there until release; the fist guard loops.
+            if (Clip) Position = bHeavyHeld && Clip == CombatAnimations.FindRef(TEXT("SwordCharge")) ? FMath::Min(ChargeClock / .5f, 1.f) * Clip->GetPlayLength()
+                : FMath::Fmod(GetWorld()->GetTimeSeconds(), Clip->GetPlayLength());
         }
         else if (JumpAnimation && IsAlive() && KnockdownClock <= 0.f && (Airborne || LandingAnimationTime < .25f))
         {
-            Clip = JumpAnimation.Get();
+            Clip = StanceClip(TEXT("Jump"), JumpAnimation);
             // Times in the Mixamo "Jump" clip: takeoff .27 s, apex .53 s, legs tucked on the way down .70 s,
-            // touchdown .93 s. Hold the aerial section for any jump height; land only on actual floor contact.
-            Position = Airborne ? (GetVelocity().Z > 0.f ? FMath::Min(.53f, .27f + AirAnimationTime) : .70f) : .93f + LandingAnimationTime;
+            // touchdown .93 s (the Great Sword jump: .10, .33, .50, .63). Hold the aerial section for any jump height;
+            // land only on actual floor contact.
+            const bool SwordJump = Clip != JumpAnimation;
+            const float Takeoff = SwordJump ? .10f : .27f, Apex = SwordJump ? .33f : .53f, Descent = SwordJump ? .50f : .70f, Touchdown = SwordJump ? .63f : .93f;
+            Position = Airborne ? (GetVelocity().Z > 0.f ? FMath::Min(Apex, Takeoff + AirAnimationTime) : Descent) : Touchdown + LandingAnimationTime;
         }
         else
         {
@@ -1286,11 +1368,26 @@ void AArenaFighter::UpdatePose(float Dt)
             UAnimSequence* RunClip = StanceClip(TEXT("Run"), RunAnimation);
             const bool Running = Moving && Speed > (ActiveAnimation == RunClip ? 260.f : 300.f);
             if (Moving) Clip = Running ? RunClip : WalkClip;
-            const float CycleRate = Moving ? FMath::Clamp(Speed / (Running ? 560.f : 224.f), .35f, 1.7f) : 1.f;
+            // The speed at which each clip's stride matches the floor (the two-handed stance strides shorter).
+            const bool SwordStride = Running ? RunClip != RunAnimation : WalkClip != WalkAnimation;
+            const float StrideSpeed = Running ? (SwordStride ? 390.f : 560.f) : (SwordStride ? 150.f : 224.f);
+            const float CycleRate = Moving ? FMath::Clamp(Speed / StrideSpeed, .35f, 1.7f) : 1.f;
             if (Clip)
             {
                 LocomotionPhase = FMath::Fmod(LocomotionPhase + Dt * CycleRate / FMath::Max(Clip->GetPlayLength(), .01f), 1.f);
                 Position = LocomotionPhase * Clip->GetPlayLength();
+            }
+            // After a while standing still with the sword drawn, she plays one of the other idles, then goes back to the first.
+            if (!Moving && SelectedWeapon == 1)
+            {
+                IdleStillTime = StillBefore + Dt;
+                UAnimSequence* Fidget = IdleStillTime > 7.f ? CombatAnimations.FindRef(*FString::Printf(TEXT("SwordIdle%d"), FidgetVariant % 4 + 2)).Get() : nullptr;
+                if (Fidget && Fidget != NeutralIdleAnimation)
+                {
+                    FidgetTime = FidgetBefore + Dt;
+                    if (FidgetTime >= Fidget->GetPlayLength()) { IdleStillTime = FidgetTime = 0.f; ++FidgetVariant; }
+                    else { Clip = Fidget; Position = FidgetTime; }
+                }
             }
         }
         if (Clip)

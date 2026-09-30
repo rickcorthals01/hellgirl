@@ -27,7 +27,32 @@ The approved design is in `Developer idea folder lol\Maze design plan.png`.
 | **The Deprived's lairs D1–D16** | Dead ends, none near the spawn rooms | Pools of black shadow ringed by dark shards and old bones, with a violet glow. The Deprived will rise from them one at a time (see below) |
 | **The vortex** | Over the frozen lake in the vortex room | A turning purple spiral; the lake's cracks glow purple around it |
 
-Planned rule for the Deprived (not built yet): only one hunts her at a time. When it dies, the next rises about 10 s later from the nearest lair she can't see, at least about 40 m walk away.
+## The Deprived
+
+Strong shadows that hunt Hellgirl through the maze, one at a time. The behaviour is in `Enemies/DeprivedCombat.cpp`, the numbers in `Rules/EnemyTuning.h`, and the maze's side in `Levels/MazeHunt.cpp`.
+
+- **Rising:**
+  - The first rises 6 s after she arrives.
+  - When one falls, its Souls drop and the next rises 10 s later.
+  - Each rises from the nearest lair she can't see that is at least 5 squares' walk (40 m) from her.
+- **Hunting:** it always knows where she is. In sight it comes straight at her; out of sight it follows the maze. A few times a second the maze works out the walk to her from every square, and the Deprived heads for the next square along it.
+- **Health:** twice an ordinary enemy's (118).
+- **Speed boost:** doubles its walking speed (3.8 → 7.6 m/s) for 6 s, then 5 s before it can boost again. It boosts whenever it chases her from further off than 5 m or out of sight.
+- **Execute:** once per life, when it reaches her. It charges for 0.5 s, then lunges through her for 40 damage and knocks her down. A dodge avoids it; a perfect dodge parries it (her counter). It glows violet while charging.
+- **After the execute:** slow slices and claws, 1.2 s each, for medium damage (15 and 13).
+- **Model:** until the Deprived's own model is rigged, a stand-in is used: Hellgirl's body in black with a violet rim, her sword clips and a black blade. Fill the `Deprived` model slot in `Config/DefaultGame.ini` to replace it.
+
+The check is `-HellgirlDeprivedCheck` (Deprived in `Tests/run-checks.ps1`), run in a real hunt. It covers:
+- the rise rule;
+- twice the health;
+- the hunt through the maze;
+- the boost's length, speed and cooldown;
+- the 0.5 s charge and the parry;
+- slice and claw after the execute;
+- the next rise 10 s after one falls;
+- the execute's 40 damage.
+
+`-HellgirlDeprivedPreview` (needs a GPU) photographs one up close.
 
 ## The boss room (room only)
 

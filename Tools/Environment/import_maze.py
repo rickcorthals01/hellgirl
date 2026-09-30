@@ -92,6 +92,7 @@ def finish(material):
 # --- Ice (the kit) --------------------------------------------------------------------------------------------------
 m = fresh("M_MazeIce")
 m.set_editor_property("used_with_instanced_static_meshes", True)
+m.set_editor_property("used_with_skeletal_mesh", True)  # MI_DeprivedShadow dresses the Deprived's stand-in body
 m.set_editor_property("two_sided", True)
 vcol = node(m, u.MaterialExpressionVertexColor, -1000, -300)
 look = wire(m, custom(m, -600, -300, """
@@ -120,6 +121,13 @@ for name, glow_amount, rim_amount, rough in (("MI_MazeCrystal", 2.2, 1.0, .1), (
     lib.set_material_instance_scalar_parameter_value(mi, "Variation", 0.0)
     lib.set_material_instance_vector_parameter_value(mi, "RimTint", u.LinearColor(1, 1, 1, 1))
     u.EditorAssetLibrary.save_loaded_asset(mi, False)
+# The Deprived's stand-in (until its own model): all black, with a violet rim of light at its edges.
+shade_mi = instance("MI_DeprivedShadow", ice)
+for param, value in (("BaseGlow", 0.0), ("Rim", 1.6), ("RimPower", 2.5), ("Roughness", .35), ("Variation", 0.0)):
+    lib.set_material_instance_scalar_parameter_value(shade_mi, param, value)
+lib.set_material_instance_vector_parameter_value(shade_mi, "Tint", u.LinearColor(.012, .01, .016, 1))
+lib.set_material_instance_vector_parameter_value(shade_mi, "RimTint", u.LinearColor(40, 12, 70, 1))  # (x the near-black tint)
+u.EditorAssetLibrary.save_loaded_asset(shade_mi, False)
 
 # --- Clear ice shell ------------------------------------------------------------------------------------------------
 s = fresh("M_MazeIceShell")
