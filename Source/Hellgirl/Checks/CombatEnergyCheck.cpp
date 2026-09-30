@@ -132,10 +132,11 @@ void AArenaFighter::RunEnergyCheck()
 
     Reset(0.f);
     HeavyAttack(); ReleaseHeavyAttack();
-    if (!Check(CurrentAttack.Type == FistCombat::Move::HeavyPunch && AttackClock > 0.f && Energy == 0.f,
+    // (The heavy tap is her right heavy kick; the heavy punch was retired.)
+    if (!Check(CurrentAttack.Type == FistCombat::Move::RightHeavyKick && AttackClock > 0.f && Energy == 0.f,
         TEXT("An uncharged heavy tap remains free at zero energy"))) return;
     ResolveAttack();
-    if (!Check(Energy == 18.f, TEXT("A damaging heavy swing grants 18 energy once"))) return;
+    if (!Check(Energy == HellgirlEnergy::HeavyHitGain, TEXT("A damaging heavy swing grants its heavy gain once"))) return;
 
     Reset(0.f, true);
     Attack(); ResolveAttack();
@@ -154,11 +155,13 @@ void AArenaFighter::RunEnergyCheck()
     if (!Check(Energy == MaxEnergy && Energy == 100.f, TEXT("Successful hits cap energy at 100"))) return;
     UE_LOG(LogTemp, Display, TEXT("ENERGY CHECK gains passed: free ground/heavy/air attacks, actual hits only, one gain per swing, capacity cap"));
 
-    Reset(39.f);
+    // Costs come from Rules/CombatEnergyRules.h, so retuning them does not break this check.
+    constexpr float Charge = HellgirlEnergy::ChargeCost, Slam = HellgirlEnergy::SlamCost;
+    Reset(Charge - 1.f);
     Movement->Velocity = FVector(200.f,0.f,0.f);
     const FVector BeforeRejectedCharge = Movement->Velocity;
     HeavyAttack(); ChargeClock = .4f; ReleaseHeavyAttack();
-    if (!Check(Energy == 39.f && AttackClock == 0.f && GroundDashClock == 0.f
+    if (!Check(Energy == Charge - 1.f && AttackClock == 0.f && GroundDashClock == 0.f
         && Movement->Velocity.Equals(BeforeRejectedCharge) && Movement->PendingLaunchVelocity.IsNearlyZero(),
         TEXT("An unaffordable charged release spends nothing and cannot dash or become a free heavy"))) return;
 
@@ -168,17 +171,17 @@ void AArenaFighter::RunEnergyCheck()
     if (!Check(bHeavyHeld && ChargeClock >= .2f && Energy == 100.f && AttackClock == 0.f,
         TEXT("Holding a charge does not spend energy"))) return;
     ReleaseHeavyAttack();
-    if (!Check(CurrentAttack.Type == FistCombat::Move::ChargedStrike && AttackClock > 0.f && Energy == 60.f,
-        TEXT("An accepted charged attack pays exactly 40 on release"))) return;
+    if (!Check(CurrentAttack.Type == FistCombat::Move::ChargedStrike && AttackClock > 0.f && Energy == 100.f - Charge,
+        TEXT("An accepted charged attack pays exactly its cost on release"))) return;
     ResolveAttack();
-    if (!Check(First->Health < 10000.f && Energy == 60.f, TEXT("Charged area damage never refunds energy through hit gain"))) return;
+    if (!Check(First->Health < 10000.f && Energy == 100.f - Charge, TEXT("Charged area damage never refunds energy through hit gain"))) return;
     Dodge();
-    if (!Check(AttackClock == 0.f && GroundDashClock == 0.f && Energy == 60.f,
+    if (!Check(AttackClock == 0.f && GroundDashClock == 0.f && Energy == 100.f - Charge,
         TEXT("Dodge cancellation does not refund a paid charge"))) return;
 
-    Reset(40.f); Targets(false);
+    Reset(Charge); Targets(false);
     HeavyAttack(); ChargeClock = .4f; ReleaseHeavyAttack(); ResolveAttack();
-    if (!Check(Energy == 0.f && Energy >= 0.f, TEXT("A paid charge miss still costs 40 and cannot make energy negative"))) return;
+    if (!Check(Energy == 0.f && Energy >= 0.f, TEXT("A paid charge miss still costs its full price and cannot make energy negative"))) return;
     Reset(73.f);
     HeavyAttack(); ChargeClock = .4f; PrepareForPause();
     if (!Check(Energy == 73.f && !bHeavyHeld && PendingCharge == 0.f && AttackClock == 0.f,
@@ -190,24 +193,24 @@ void AArenaFighter::RunEnergyCheck()
     QueueAttack(true);
     if (!Check(BufferClock > 0.f && Energy == 80.f, TEXT("Buffering a charged attack does not pay its cost yet"))) return;
     Tick(.11f);
-    if (!Check(CurrentAttack.Type == FistCombat::Move::ChargedStrike && AttackClock > 0.f && Energy == 40.f,
+    if (!Check(CurrentAttack.Type == FistCombat::Move::ChargedStrike && AttackClock > 0.f && Energy == 80.f - Charge,
         TEXT("A buffered charge pays exactly once when it begins"))) return;
     UE_LOG(LogTemp, Display, TEXT("ENERGY CHECK charge passed: rejected release, hold, accepted payment, miss/cancel, buffer timing"));
 
-    Reset(34.f, true);
+    Reset(Slam - 1.f, true);
     Movement->Velocity = FVector(150.f,0.f,50.f);
     const FVector BeforeRejectedSlam = Movement->Velocity;
     HeavyAttack();
-    if (!Check(Energy == 34.f && AttackClock == 0.f && !bGroundImpactPending && !bAirFinisherUsed
+    if (!Check(Energy == Slam - 1.f && AttackClock == 0.f && !bGroundImpactPending && !bAirFinisherUsed
         && Movement->Velocity.Equals(BeforeRejectedSlam) && Movement->PendingLaunchVelocity.IsNearlyZero(),
         TEXT("An unaffordable explicit air slam does not spend, dive, or use the finisher"))) return;
-    Reset(35.f, true); HeavyAttack();
+    Reset(Slam, true); HeavyAttack();
     if (!Check(CurrentAttack.Type == FistCombat::Move::AirSlam && bGroundImpactPending && Energy == 0.f,
-        TEXT("An affordable air slam pays exactly 35 when it begins"))) return;
+        TEXT("An affordable air slam pays exactly its cost when it begins"))) return;
     Movement->SetMovementMode(MOVE_Walking);
     Landed(FHitResult());
     if (!Check(First->Health < 10000.f && Energy == 0.f, TEXT("A slam landing deals damage without generating energy"))) return;
-    Reset(35.f, true); HeavyAttack(); Dodge();
+    Reset(Slam, true); HeavyAttack(); Dodge();
     if (!Check(Energy == 0.f && !bGroundImpactPending && AttackClock == 0.f,
         TEXT("Dodging out of a paid slam cancels its impact without a refund"))) return;
 
@@ -217,7 +220,7 @@ void AArenaFighter::RunEnergyCheck()
         TEXT("The fourth normal air input falls back to a free basic kick at zero energy"))) return;
     ResolveAttack();
     if (!Check(Energy == 12.f, TEXT("Fallback aerial kick can rebuild energy"))) return;
-    Reset(35.f, true); AirCombo = 3; Attack();
+    Reset(Slam, true); AirCombo = 3; Attack();
     if (!Check(CurrentAttack.Type == FistCombat::Move::AirCrashKick && bGroundImpactPending && Energy == 0.f,
         TEXT("The fourth normal air input uses and pays for the crash kick when affordable"))) return;
     Movement->SetMovementMode(MOVE_Walking); Landed(FHitResult());

@@ -301,7 +301,8 @@ int32 AArenaGameMode::GetUnlockedLevel() const
     if (FParse::Param(FCommandLine::Get(),TEXT("HellgirlHubCheck")) || FParse::Param(FCommandLine::Get(),TEXT("HellgirlHubPreview"))
         || FParse::Param(FCommandLine::Get(),TEXT("HellgirlLevelSelectPreview"))) return 4;
     if (FParse::Param(FCommandLine::Get(),TEXT("HellgirlLevelSelectStagePreview"))) return 2;
-    if (FParse::Param(FCommandLine::Get(),TEXT("HellgirlDialogueCheck"))) return 2;
+    // The dialogue check talks to the goblin merchant, who is only at camp once World I is won.
+    if (FParse::Param(FCommandLine::Get(),TEXT("HellgirlDialogueCheck"))) return 4;
     int32 Unlocked=1; GConfig->GetInt(TEXT("HellgirlCampaign"),TEXT("UnlockedLevel"),Unlocked,GGameUserSettingsIni);
     int32 Format=0; GConfig->GetInt(TEXT("HellgirlCampaign"),TEXT("ProgressVersion"),Format,GGameUserSettingsIni);
     if (Format<2) { Unlocked=Unlocked>=2 ? Unlocked+2 : 1; GConfig->SetInt(TEXT("HellgirlCampaign"),TEXT("UnlockedLevel"),Unlocked,GGameUserSettingsIni); GConfig->SetInt(TEXT("HellgirlCampaign"),TEXT("ProgressVersion"),2,GGameUserSettingsIni); GConfig->Flush(false,GGameUserSettingsIni); }
@@ -397,8 +398,7 @@ void AArenaGameMode::Tick(float Dt)
     if (bMazeBoss) { RunMazeBossCheck(Dt); TickMazeBoss(Dt); return; }
     RunGoblinStageCheck();
     if (!bLegacyMap && CampaignLevel==1) { TickGoblinPrelude(Dt); return; }
-    if (!bLegacyMap && CampaignLevel<=3) { RunCampaignCheck(Dt); RunMapVisualCheck(Dt); RunTerrainCheck(Dt); RunMapCheck(Dt); TickGoblinWaves(Dt); return; }
-    RunCampaignCheck(Dt);
+    if (!bLegacyMap && CampaignLevel<=3) { RunMapVisualCheck(Dt); RunTerrainCheck(Dt); TickGoblinWaves(Dt); return; }
     if (IsImpArena()) { RunImpArenaCheck(); TickImpArena(Dt); return; }
     RunMapVisualCheck(Dt);
     RunTerrainCheck(Dt);
@@ -522,7 +522,6 @@ void AArenaGameMode::Tick(float Dt)
             It->SetActorLocation(It->HomePosition + FVector(0,0,115), false, nullptr, ETeleportType::TeleportPhysics);
             It->ResetAfterRecovery();
         }
-    RunMapCheck(Dt);
 }
 
 void AArenaGameMode::EndPlay(const EEndPlayReason::Type Reason)

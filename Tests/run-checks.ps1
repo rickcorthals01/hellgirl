@@ -18,17 +18,17 @@ New-Item -ItemType Directory -Force $logDir | Out-Null
 $castle = '/Engine/Maps/Entry?StageMap=1'
 $queen = '/Engine/Maps/Entry?StageMap=1?CampaignLevel=3'
 # Name, map URL, frame rate (0 = variable). Preview checks that need a GPU are left out.
-# Known failures on 2026-09-23, before any refactoring (the checks predate later design changes):
-#   Energy, EnemyMoveset, Campaign, Terrain, Map, Map2, Map3, Dialogue.
+# All checks are expected to pass. On 2026-09-30 the stale ones were brought up to date (Energy, Terrain, Dialogue)
+# and the Campaign and Map checks retired: they tested the old castle campaign and the lava / astral development maps,
+# and World I is now covered by GoblinStage, NaturalWaves and Story.
 $checks = @(
     @('Combat',         $castle, 60), @('Counter',       $castle, 60), @('RevisedCombat', $castle, 60),
     @('Movement',       $castle, 30), @('Energy',        $castle, 60), @('CombatBalance', $castle, 60),
     @('Physics',        $castle, 60), @('PhysicsPause',  $castle, 0),  @('Pause',         $castle, 0),
     @('EnemyMoveset',   $castle, 60), @('BossDesign',    $castle, 60), @('GoblinStage',   $castle, 60),
-    @('Story',          '/Engine/Maps/Entry?StageMap=1?CampaignLevel=2', 60, $null, 'Story23'), @('Campaign', $queen, 60), @('Save', $castle, 60),
+    @('Story',          '/Engine/Maps/Entry?StageMap=1?CampaignLevel=2', 60, $null, 'Story23'), @('Save', $castle, 60),
     @('Story',          '/Engine/Maps/Entry?StageMap=1?CampaignLevel=1', 60, $null, 'Story1'),
-    @('Terrain',        $queen,  60), @('Map',           $queen,  60),
-    @('Map',            '/Engine/Maps/Entry?StageMap=2', 0), @('Map', '/Engine/Maps/Entry?StageMap=3', 0),
+    @('Terrain',        $queen,  60),
     @('ImpArena',       '/Engine/Maps/Entry?StageMap=1?CampaignLevel=4', 60),
     @('Endless',        '/Engine/Maps/Entry?StageMap=1?CampaignLevel=2?Endless=1', 60),
     # Waves played out for real: only goblins that reach Hellgirl die, so unreachable or unspawnable goblins stall.

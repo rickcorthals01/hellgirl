@@ -236,7 +236,10 @@ void AHellgirlPlayerController::RunDialogueCheck()
         {
             if (!PC->GetPawn() || PC->GetWorld()->GetTimeSeconds()<1.f) return true;
             PC->GetPawn()->SetActorLocation(FVector(-100,440,110)); PC->SetControlRotation(FRotator(-12,90,0));
-            PC->InteractWithHub();
+            // The merchant's first talk (03.5), which is followed by his shop. (Talking to him in a check run opens the
+            // shop straight away, so the conversation is started here as the first visit would.)
+            if (!PC->ShowConversation(TEXT("C_MeetGoblin"))) { Fail(TEXT("The merchant's conversation is missing")); return false; }
+            PC->DialogueNextHubMenu=2;  // after the box opens, as InteractWithHub does (opening it clears this)
             if (!PC->IsDialogueOpen() || !PC->FrameTexture || !PC->IsPaused() || !PC->bShowMouseCursor) { Fail(TEXT("Merchant dialogue, frame, pause or cursor")); return false; }
             State->WorldTime=PC->GetWorld()->GetTimeSeconds(); State->Started=FPlatformTime::Seconds(); State->Phase=1;
         }
@@ -248,7 +251,8 @@ void AHellgirlPlayerController::RunDialogueCheck()
         }
         if (State->Phase==2 && Age>2.5)
         {
-            PC->ContinueDialogue();
+            // Page through the whole conversation; after its last page the shop opens.
+            for (int32 Page=0; Page<40 && PC->IsDialogueOpen(); ++Page) PC->ContinueDialogue();
             if (PC->IsDialogueOpen() || !PC->IsPauseMenuOpen()) { Fail(TEXT("Continue did not open shop")); return false; }
             PC->ResumeGame();
             PC->ShowDialogue(FText::FromString(TEXT("Hellgirl")),FText::FromString(TEXT("A quiet moment.")));

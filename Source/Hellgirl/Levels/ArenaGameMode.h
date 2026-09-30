@@ -46,7 +46,6 @@ public:
     void RunForestHubCheck(float Dt);
     void TravelToCampaign(int32 Level);
     int32 GetUnlockedLevel() const;
-    void RunCampaignCheck(float Dt);
     void TickGoblinPrelude(float Dt);
     void RunGoblinStageCheck();
     void BuildImpArena();
@@ -223,7 +222,6 @@ private:
     void RockPlatform(FVector Center, FVector Size, FLinearColor Color);
     void RunMapVisualCheck(float Dt);
     void RunTerrainCheck(float Dt);
-    void RunMapCheck(float Dt);
     AStaticMeshActor* Prop(FVector Position, FVector Scale, FLinearColor Color, bool Sphere = false);
     void Platform(FVector Center, FVector Size, FLinearColor Color);
     void Bridge(FVector From, FVector To, bool Gaps);

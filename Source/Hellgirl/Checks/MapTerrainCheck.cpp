@@ -3,6 +3,7 @@
 #include "Levels/CastleTerrainLayout.h"
 #include "Enemies/EnemySpawnPoint.h"
 #include "Components/CapsuleComponent.h"
+#include "Engine/StaticMeshActor.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -27,6 +28,10 @@ void AArenaGameMode::RunTerrainCheck(float Dt)
     FCollisionObjectQueryParams Types;
     Types.AddObjectTypesToQuery(ECC_WorldStatic); Types.AddObjectTypesToQuery(ECC_WorldDynamic);
     FCollisionQueryParams Query(SCENE_QUERY_STAT(TerrainCheck),true,Player);
+    // The section gates are closed on purpose until she goes through that section's soul portal (Levels/GoblinWaves.cpp);
+    // this check is about the terrain and the dressing, so it looks past them.
+    for (const TObjectPtr<AStaticMeshActor>& Gate : SectionGates) Query.AddIgnoredActor(Gate.Get());
+    for (const TObjectPtr<AStaticMeshActor>& Barrier : SectionBarriers) Query.AddIgnoredActor(Barrier.Get());
     auto FloorAt=[&](float X,float Y,FHitResult& Hit)
     {
         return GetWorld()->LineTraceSingleByObjectType(Hit,FVector(X,Y,1600),FVector(X,Y,-600),Types,Query)
@@ -45,7 +50,11 @@ void AArenaGameMode::RunTerrainCheck(float Dt)
             {
                 FHitResult Obstacle;
                 if (GetWorld()->SweepSingleByObjectType(Obstacle,Previous,Center,FQuat::Identity,Types,FCollisionShape::MakeCapsule(38,88),Query))
-                { Fail(TEXT("A gateway or path decoration blocks the player capsule")); return; }
+                {
+                    const FString Why=FString::Printf(TEXT("A gateway or path decoration blocks the player capsule: %s at %s"),
+                        Obstacle.GetActor()?*Obstacle.GetActor()->GetName():TEXT("?"),*Obstacle.ImpactPoint.ToString());
+                    Fail(*Why); return;
+                }
             }
             Previous=Center; HasPrevious=true;
         }
@@ -77,14 +86,15 @@ void AArenaGameMode::RunTerrainCheck(float Dt)
     {
         const FVector P=Player->GetActorLocation();
         if (P.Z<70.f || P.Z>650.f) { Fail(TEXT("Walking left the terrain")); Phase=2; return; }
-        if (P.X>=-1500.f)
+        // (Up to the first section gate, which stays shut until its portal.)
+        if (P.X>=-3650.f)
         {
             Phase=2;
-            UE_LOG(LogTemp,Display,TEXT("TERRAIN CHECK PASSED: walked from entrance through ruined gate, floor geometry and all encounter spawns clear"));
+            UE_LOG(LogTemp,Display,TEXT("TERRAIN CHECK PASSED: walked the approach to the first gate, route clear past the gates, floor geometry and all encounter spawns clear"));
             FPlatformMisc::RequestExitWithStatus(false,0); return;
         }
-        if (Elapsed>14.f) { Fail(TEXT("Player cannot walk through the approach and gate")); Phase=2; return; }
-        const float AheadX=FMath::Min(static_cast<float>(P.X)+220.f,-1400.f);
+        if (Elapsed>14.f) { Fail(TEXT("Player cannot walk the approach to the gate")); Phase=2; return; }
+        const float AheadX=FMath::Min(static_cast<float>(P.X)+220.f,-3550.f);
         Player->AddMovementInput((FVector(AheadX,CastleTerrain::PathCenterY(AheadX),P.Z)-P).GetSafeNormal2D());
     }
 #endif
