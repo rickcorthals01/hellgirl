@@ -7,6 +7,8 @@
 #   M_MazeFall       falling water for the waterfalls and curtains: streaks pouring down, soft edges, foam at the foot.
 #   M_MazeVortex     the vortex: glowing purple spiral arms turning round a bright core (additive).
 #   MI_MazePool      the waterfalls' pools: the swamp's water, icy blue.
+#   M_MazeImprint    the boss room's charred imprint of the vortex (burnt spiral, smouldering at the heart).
+#   M_MazeBolt       the boss room's purple lightning.
 #   Kit              the meshes from maze_kit.py in /Game/Environment/Maze/Kit. The walls have no collision of their own
 #                    (the level puts simple blockers along them); spires and frozen remains collide with their triangles.
 # Needs the graveyard and swamp art first (T_GraveNoise, M_SwampWater).
@@ -271,6 +273,60 @@ return col * Glow;
     Core=vector(v, "Core", -800, 380, (1.0, .85, 1.0, 1)), Glow=scalar(v, "Glow", -800, 450, 2.5))
 lib.connect_material_property(swirl, "", u.MaterialProperty.MP_EMISSIVE_COLOR)
 finish(v)
+
+# --- The boss room: the vortex's charred imprint and the purple lightning -------------------------------------------
+# The imprint lies on the ice (a flat plane, UVs 0..1): unlit and see-through, so the black blends the ice beneath it into
+# char; three burnt spiral arms, ash grey on their crests, smouldering red, orange and yellow toward the heart.
+im = fresh("M_MazeImprint")
+im.set_editor_property("blend_mode", u.BlendMode.BLEND_TRANSLUCENT)
+im.set_editor_property("shading_model", u.MaterialShadingModel.MSM_UNLIT)
+iuv = node(im, u.MaterialExpressionTextureCoordinate, -1400, 0)
+itime = node(im, u.MaterialExpressionTime, -1400, 100)
+inoise_uv = wire(im, custom(im, -1100, -250, "return UV * 2.5 + Time * float2(0.004, 0.003);", ["UV", "Time"], F2), UV=iuv, Time=itime)
+inoise = node(im, u.MaterialExpressionTextureSample, -800, -250, texture=noise_tex, sampler_type=MASKS)
+lib.connect_material_expressions(inoise_uv, "", inoise, "UVs")
+shape = wire(im, custom(im, -500, 0, """
+float2 c = (UV - 0.5) * 2.0;
+float r = length(c);
+float a = atan2(c.y, c.x);
+float spiral = 0.5 + 0.5 * sin(a * 3.0 + log(r + 0.03) * 5.0);
+float arm = smoothstep(0.35, 0.9, spiral);
+float edge = 1.0 - smoothstep(0.7, 1.0, r + (N - 0.5) * 0.3);
+float charred = saturate(edge * (0.55 + 0.45 * arm));
+float heat = saturate(1.0 - r * 2.2) * arm + saturate(1.0 - r * 6.0);
+float seam = smoothstep(0.4, 0.5, spiral) * (1.0 - smoothstep(0.5, 0.6, spiral)) * edge * saturate(1.1 - r);
+return float3(charred, heat, seam);
+""", ["UV", "N"], F3), UV=iuv, N=(inoise, "R"))
+iglow = wire(im, custom(im, -200, -150, """
+float flick = 0.7 + 0.3 * sin(Time * 3.1 + N * 12.0) * sin(Time * 1.7 + N * 5.0);
+float3 embers = lerp(Ember.rgb, Heart.rgb, saturate(S.y * 1.5 - 0.5)) * S.y * flick * (0.4 + N);
+embers += Seam.rgb * S.z * flick * 0.6;
+float ash = 0.035 * S.x * saturate(N * 1.5);
+return (embers + ash) * Glow;
+""", ["S", "N", "Time", "Ember", "Heart", "Seam", "Glow"], F3), S=shape, N=(inoise, "R"), Time=itime,
+    Ember=vector(im, "Ember", -500, 200, (1.0, .32, .05, 1)), Heart=vector(im, "Heart", -500, 270, (1.0, .85, .3, 1)),
+    Seam=vector(im, "Seam", -500, 340, (.9, .12, .04, 1)), Glow=scalar(im, "Glow", -500, 410, 2.5))
+lib.connect_material_property(iglow, "", u.MaterialProperty.MP_EMISSIVE_COLOR)
+iop = wire(im, custom(im, -200, 100, "return saturate(S.x * 0.93 + S.y);", ["S"], F1), S=shape)
+lib.connect_material_property(iop, "", u.MaterialProperty.MP_OPACITY)
+finish(im)
+
+# Lightning: ribbons drawn by the level along each bolt's jagged path (UV.y runs across the ribbon), a white-hot core
+# in a violet glow; Glow is animated for the flash.
+bo = fresh("M_MazeBolt")
+bo.set_editor_property("blend_mode", u.BlendMode.BLEND_ADDITIVE)
+bo.set_editor_property("shading_model", u.MaterialShadingModel.MSM_UNLIT)
+bo.set_editor_property("two_sided", True)
+buv = node(bo, u.MaterialExpressionTextureCoordinate, -900, 0)
+bolt = wire(bo, custom(bo, -500, 0, """
+float d = abs(UV.y * 2.0 - 1.0);
+float core = pow(saturate(1.0 - d), 6.0);
+float halo = pow(saturate(1.0 - d), 1.5);
+return (Core.rgb * core * 2.0 + Color.rgb * halo * 0.6) * Glow;
+""", ["UV", "Core", "Color", "Glow"], F3), UV=buv, Core=vector(bo, "Core", -900, 150, (.95, .8, 1.0, 1)),
+    Color=vector(bo, "Color", -900, 220, (.55, .15, 1.0, 1)), Glow=scalar(bo, "Glow", -900, 290, 4.0))
+lib.connect_material_property(bolt, "", u.MaterialProperty.MP_EMISSIVE_COLOR)
+finish(bo)
 
 # --- Pools ----------------------------------------------------------------------------------------------------------
 pool = instance("MI_MazePool", water)

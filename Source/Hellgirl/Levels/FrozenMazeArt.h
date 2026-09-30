@@ -20,6 +20,8 @@ UMaterialInterface* Material(const TCHAR* Name);
 APointLight* Light(UWorld* World, FVector Where, FLinearColor Color, float Intensity, float Radius, bool Shadows);
 // A flat rectangle at height Z (facing up or down) with world-space UVs (world units / TileSize).
 AActor* Sheet(UWorld* World, FVector2D Min, FVector2D Max, float Z, bool FaceUp, UMaterialInterface* Material, float TileSize);
+// The cave's light, fog and grading (as in the maze).
+void Cave(UWorld* World, float FogDensity);
 // A curtain of falling water from Top down to the floor along From-To, bowing out toward Out by Bulge at the foot.
 UMaterialInstanceDynamic* Waterfall(UWorld* World, FVector2D From, FVector2D To, FVector2D Out, float Top, float Bulge, float Glow, float Opacity, float Speed);
 }

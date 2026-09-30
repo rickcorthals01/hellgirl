@@ -143,7 +143,7 @@ bool WallLine(int32 I, int32 J, int32 Direction)
 
 // Deep underground: a faint cold light filtering down through the ice roof (the only thing that casts long shadows),
 // thick blue-black fog that swallows the corridors a few turns ahead, and cold grading.
-void Cave(UWorld* World)
+void Cave(UWorld* World, float FogDensity)
 {
     auto* Roof = World->SpawnActor<ADirectionalLight>(FVector(0, 0, 3000), FRotator(-66.f, 35.f, 0.f));
     auto* RoofLight = CastChecked<UDirectionalLightComponent>(Roof->GetLightComponent());
@@ -159,7 +159,7 @@ void Cave(UWorld* World)
     Sky->GetLightComponent()->SetRealTimeCaptureEnabled(false);
     auto* Fog = World->SpawnActor<AExponentialHeightFog>();
     auto* FogComponent = Fog->GetComponent();
-    FogComponent->SetFogDensity(.028f);
+    FogComponent->SetFogDensity(FogDensity);
     FogComponent->SetFogHeightFalloff(.05f);
     FogComponent->SetFogInscatteringColor(FLinearColor(.018f, .04f, .075f));
     FogComponent->SetStartDistance(300.f);
@@ -402,5 +402,10 @@ void AArenaGameMode::BuildFrozenMazeScenery()
     GraveArt::MistSheet(World, 20.f, MistExtent, 1700.f, .5f, 1.f, FLinearColor(.12f, .18f, .27f));
     GraveArt::MistSheet(World, 75.f, MistExtent, 1300.f, .32f, 1.4f, FLinearColor(.12f, .18f, .27f));
     GraveArt::MistSheet(World, 170.f, MistExtent, 2100.f, .16f, .8f, FLinearColor(.1f, .15f, .23f));
-    MazeScenery::Cave(World);
+    MazeScenery::Cave(World, .028f);
+}
+
+void MazeArt::Cave(UWorld* World, float FogDensity)
+{
+    MazeScenery::Cave(World, FogDensity);
 }

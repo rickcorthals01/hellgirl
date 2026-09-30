@@ -11,6 +11,7 @@
 #include "Levels/CastleTerrainLayout.h"
 #include "Levels/WavePortal.h"
 #include "Rules/FrozenMazeRules.h"
+#include "Rules/MazeBossRules.h"
 #include "Progress/CampaignProgress.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/DirectionalLight.h"
@@ -51,16 +52,18 @@ void AArenaGameMode::BeginPlay()
     bGraveyard = !bSuccubusCourt && !bForestRun && UGameplayStatics::GetIntOption(OptionsString,TEXT("Graveyard"),0)==1;
     bSwamp = !bSuccubusCourt && !bForestRun && !bGraveyard && UGameplayStatics::GetIntOption(OptionsString,TEXT("Swamp"),0)==1;
     bFrozenMaze = !bSuccubusCourt && !bForestRun && !bGraveyard && !bSwamp && UGameplayStatics::GetIntOption(OptionsString,TEXT("Maze"),0)==1;
-    bForestHub = !bSuccubusCourt && !bForestRun && !bGraveyard && !bSwamp && !bFrozenMaze && (UGameplayStatics::GetIntOption(OptionsString,TEXT("ForestHub"),0)==1
+    bMazeBoss = !bSuccubusCourt && !bForestRun && !bGraveyard && !bSwamp && !bFrozenMaze && UGameplayStatics::GetIntOption(OptionsString,TEXT("MazeBoss"),0)==1;
+    bForestHub = !bSuccubusCourt && !bForestRun && !bGraveyard && !bSwamp && !bFrozenMaze && !bMazeBoss && (UGameplayStatics::GetIntOption(OptionsString,TEXT("ForestHub"),0)==1
         || (GetUnlockedLevel()>=2 && !UGameplayStatics::HasOption(OptionsString,TEXT("StageMap")) && !UGameplayStatics::HasOption(OptionsString,TEXT("CampaignLevel"))));
-    bEndless = !bForestHub && !bLegacyMap && !bSuccubusCourt && !bForestRun && !bGraveyard && !bSwamp && !bFrozenMaze && CampaignLevel==2 && UGameplayStatics::GetIntOption(OptionsString,TEXT("Endless"),0)==1;
-    bStoryEnabled=!bForestHub && !bLegacyMap && !bSuccubusCourt && !bForestRun && !bGraveyard && !bSwamp && !bFrozenMaze && !bEndless && CampaignLevel<=3
+    bEndless = !bForestHub && !bLegacyMap && !bSuccubusCourt && !bForestRun && !bGraveyard && !bSwamp && !bFrozenMaze && !bMazeBoss && CampaignLevel==2 && UGameplayStatics::GetIntOption(OptionsString,TEXT("Endless"),0)==1;
+    bStoryEnabled=!bForestHub && !bLegacyMap && !bSuccubusCourt && !bForestRun && !bGraveyard && !bSwamp && !bFrozenMaze && !bMazeBoss && !bEndless && CampaignLevel<=3
         && (!FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl")) || FParse::Param(FCommandLine::Get(),TEXT("HellgirlStoryCheck")));
     // Souls picked up in a level count toward it (Rules/SoulRewards.h); at camp pickups are Soul Coins.
     if (auto* Wallet=Cast<UHellgirlWallet>(GetGameInstance())) Wallet->bInLevel=!bForestHub;
     if (bForestHub) BuildForestHub(); else BuildArena();
     LastSafePosition = bForestHub ? FVector(-550.f,0.f,110.f) : bSuccubusCourt ? FVector(-2600.f,0.f,115.f) : bForestRun ? FVector(-2150.f,0.f,115.f) : bGraveyard ? FVector(-4900.f,0.f,115.f) : bSwamp ? SwampStartPosition
         : bFrozenMaze ? FVector(FrozenMaze::SpawnPoint(MazeSpawn), 115.f)
+        : bMazeBoss ? FVector(MazeBoss::Start, 115.f)
         : ((CampaignLevel==2 && !bLegacyMap) || IsImpArena() ? FVector(0.f,0.f,115.f) : FVector(-5000.f,0.f,115.f));
     // In the maze she arrives facing her spawn room's door; everywhere else facing east.
     const float StartYaw = bFrozenMaze ? FrozenMaze::SpawnYaw(MazeSpawn) : 0.f;
@@ -73,7 +76,7 @@ void AArenaGameMode::BeginPlay()
     }
     const bool ExplicitDestination=UGameplayStatics::HasOption(OptionsString,TEXT("StageMap"))
         || UGameplayStatics::HasOption(OptionsString,TEXT("CampaignLevel")) || UGameplayStatics::HasOption(OptionsString,TEXT("ForestHub"))
-        || bSuccubusCourt || bForestRun || bGraveyard || bSwamp || bFrozenMaze;
+        || bSuccubusCourt || bForestRun || bGraveyard || bSwamp || bFrozenMaze || bMazeBoss;
     bShowStartupMenu=!ExplicitDestination && (!FString(FCommandLine::Get()).Contains(TEXT("-Hellgirl")) || FParse::Param(FCommandLine::Get(),TEXT("HellgirlMainMenuCheck")));
 }
 AStaticMeshActor* AArenaGameMode::Prop(FVector Position, FVector Scale, FLinearColor Color, bool Sphere)
@@ -145,6 +148,7 @@ void AArenaGameMode::BuildArena()
     if (bGraveyard) { BuildGraveyard(); return; }
     if (bSwamp) { BuildSwamp(); return; }
     if (bFrozenMaze) { BuildFrozenMaze(); return; }
+    if (bMazeBoss) { BuildMazeBoss(); return; }
     if (IsImpArena()) BuildImpArena();
     else if (MapNumber == 1)
     {
@@ -286,6 +290,7 @@ void AArenaGameMode::RestartMap()
     // A Stage II run ends at camp (like the forest run); other swamp rooms restart where they are.
     if (bSwamp) { if (SwampStage == 2) TravelToHub(); else TravelToSwampRoom(SwampSeed, SwampRoomNumber); return; }
     if (bFrozenMaze) { TravelToFrozenMaze(MazeSpawn); return; }
+    if (bMazeBoss) { TravelToMazeBoss(); return; }
     // An endless run is over once Hellgirl falls (or restarts): back to camp.
     if (bEndless) { TravelToHub(); return; }
     if (bForestHub) { TravelToHub(); return; } if (bSuccubusCourt) { TravelToSuccubusCourt(); return; } if (bLegacyMap) Travel(MapNumber); else TravelToCampaign(CampaignLevel); }
@@ -389,6 +394,7 @@ void AArenaGameMode::Tick(float Dt)
     if (bGraveyard) { RunGraveyardCheck(Dt); TickGraveyard(Dt); return; }
     if (bSwamp) { RunSwampCheck(Dt); RunSwampStageCheck(Dt); RunRatQueenCheck(Dt); TickSwamp(Dt); return; }
     if (bFrozenMaze) { RunFrozenMazeCheck(Dt); TickFrozenMaze(Dt); return; }
+    if (bMazeBoss) { RunMazeBossCheck(Dt); TickMazeBoss(Dt); return; }
     RunGoblinStageCheck();
     if (!bLegacyMap && CampaignLevel==1) { TickGoblinPrelude(Dt); return; }
     if (!bLegacyMap && CampaignLevel<=3) { RunCampaignCheck(Dt); RunMapVisualCheck(Dt); RunTerrainCheck(Dt); RunMapCheck(Dt); TickGoblinWaves(Dt); return; }

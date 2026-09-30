@@ -150,6 +150,20 @@ public:
     void TickMazeRemains(class AArenaFighter* Hero);
     UPROPERTY() TObjectPtr<AStaticMeshActor> MazeVortexCard;
     UPROPERTY() TObjectPtr<class APointLight> MazeVortexLight;
+    // The Frozen Maze's boss room (URL option MazeBoss=1): a wide open ice cavern with the vortex's charred imprint, see
+    // Levels/MazeBossRoom.cpp. Room only for now: the boss and the stages that lead here come later.
+    bool bMazeBoss = false;
+    void TravelToMazeBoss();
+    void BuildMazeBoss();
+    void TickMazeBoss(float Dt);
+    void RunMazeBossCheck(float Dt);
+    // Its lightning: each bolt is a ribbon along a jagged path between two points; it strikes (a new path), flashes and
+    // fades, then waits a few seconds (Wait counts from its last strike).
+    struct FMazeBolt { FVector From = FVector::ZeroVector, To = FVector::ZeroVector; float Width = 30.f; TWeakObjectPtr<class UProceduralMeshComponent> Mesh;
+        TWeakObjectPtr<class UMaterialInstanceDynamic> Glow; TWeakObjectPtr<class APointLight> Light; float Clock = 0.f, Wait = 0.f; int32 Strikes = 0; };
+    TArray<FMazeBolt> MazeBolts;
+    void StrikeMazeBolt(FMazeBolt& Bolt);
+    UPROPERTY() TObjectPtr<class APointLight> MazeEmberLight;
     // World I Stages 2 and 3 and the endless mode follow the scripts in Levels/GoblinWaves.cpp:
     // waves, conversations and soul portals in order, then the exit portal.
     bool bEndless = false;

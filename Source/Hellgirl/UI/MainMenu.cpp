@@ -93,6 +93,7 @@ public:
         for (int32 Room=0; Room<4; ++Room)
             Rooms->AddSlot().Padding(4,0)[Button(FString::Printf(TEXT("MAZE S%d"),Room+1),14,Travel([Room](AArenaGameMode* GM) { GM->TravelToFrozenMaze(Room); }))];
         Dev->AddSlot().AutoHeight().HAlign(HAlign_Center).Padding(38,6)[Rooms];
+        Dev->AddSlot().AutoHeight().Padding(38,6)[Button(TEXT("MAZE BOSS ROOM"),18,Travel([](AArenaGameMode* GM) { GM->TravelToMazeBoss(); }))];
         Dev->AddSlot().AutoHeight().Padding(38,6)[Button(TEXT("THE GRAVEYARD"),18,Travel([](AArenaGameMode* GM) { GM->StartGraveyard(); }))];
         Dev->AddSlot().AutoHeight().Padding(38,6)[Button(TEXT("THE SWAMP (map preview)"),18,Travel([](AArenaGameMode* GM) { GM->StartSwamp(); }))];
         Dev->AddSlot().AutoHeight().Padding(38,6)[Button(TEXT("SUCCUBUS COURT"),18,Travel([](AArenaGameMode* GM) { GM->TravelToSuccubusCourt(); }))];
