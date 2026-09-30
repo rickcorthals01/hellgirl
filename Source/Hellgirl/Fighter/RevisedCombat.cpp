@@ -16,6 +16,7 @@ void AArenaFighter::SelectWeapon(int32 Weapon)
     WeaponMenuClock = 3.f;
     if (Weapon > 1) { MoveLabel = TEXT("WEAPON NOT AVAILABLE YET"); MoveLabelClock = 2.f; return; }
     if (AttackClock > 0.f || DodgeClock > 0.f || bGroundImpactPending || bHeavyHeld) return;
+    if (Weapon == 1 && SelectedWeapon != 1) DrawAnimationTime = 0.f;
     SelectedWeapon = Weapon;
     Combo = AirCombo = 0; ComboClock = BufferClock = 0.f;
     Sword->SetVisibility(Weapon == 1);
@@ -35,6 +36,7 @@ void AArenaFighter::Special()
     NoteEnergySpent(Energy);
     Energy = 0.f; ActiveUltimate = SelectedOutfit;
     UltimateClock = ActiveUltimate == 0 ? 8.f : ActiveUltimate == 1 ? 6.f : 6.f;
+    CastAnimationTime = 0.f;
     UltimatePulseClock = 0.f;
     MoveLabel = ActiveUltimate == 0 ? TEXT("CAVEMAN STRENGTH") : ActiveUltimate == 1 ? TEXT("PUNISHMENT") : TEXT("QUEEN'S CLAWS");
     MoveLabelClock = 3.f;

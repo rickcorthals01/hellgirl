@@ -114,7 +114,8 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
         CameraArm->bEnableCameraLag = false;
         if (auto* PC = Cast<APlayerController>(GetController())) PC->SetControlRotation(FRotator(-4.f, 90.f, 0.f));
         const bool Airborne = GetCharacterMovement()->IsFalling();
-        if (JumpShot < 0) { Jump(); JumpShot = 0; JumpClock = 0.f; bWasAirborne = false; return; }
+        // -JumpSword jumps with the sword drawn.
+        if (JumpShot < 0) { if (FParse::Param(FCommandLine::Get(), TEXT("JumpSword"))) { SelectWeapon(1); DrawAnimationTime = 100.f; } Jump(); JumpShot = 0; JumpClock = 0.f; bWasAirborne = false; return; }
         JumpClock += Dt;
         const float VerticalSpeed = GetVelocity().Z;
         const bool Take = (JumpShot == 0 && Airborne && JumpClock > .12f) || (JumpShot == 1 && Airborne && VerticalSpeed < 80.f && VerticalSpeed > -80.f)
@@ -146,7 +147,11 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
         {TEXT("AirKick"), false, 2, true, false, false}, {TEXT("AirCrashKick"), false, 3, true, false, false},
         {TEXT("AirSlam"), true, 0, true, false, false}, {TEXT("Knockdown"), false, 0, false, false, false, 4}, {TEXT("Hit"), false, 0, false, false, false, 5},
         {TEXT("SwordSlash"), false, 0, false, false, true}, {TEXT("SwordBackslash"), false, 1, false, false, true},
-        {TEXT("SwordThrust"), false, 2, false, false, true}, {TEXT("SwordSpin"), false, 3, false, false, true}};
+        {TEXT("SwordThrust"), false, 2, false, false, true}, {TEXT("SwordSpin"), false, 3, false, false, true},
+        {TEXT("SwordKick1"), true, 0, false, false, true}, {TEXT("SwordKick2"), true, 1, false, false, true}, {TEXT("SwordSlash5"), true, 3, false, false, true},
+        {TEXT("SwordSlide"), false, 0, false, true, true}, {TEXT("SwordJumpAttack"), true, 0, false, true, true}, {TEXT("SwordCharge"), true, 0, false, false, true, 2}, {TEXT("SwordChargedStrike"), true, 0, false, false, true, 1},
+        {TEXT("SwordAirSlash"), false, 0, true, false, true}, {TEXT("SwordAirSlash4"), false, 3, true, false, true}, {TEXT("SwordAirSlam"), true, 0, true, false, true},
+        {TEXT("SwordHitFlinch"), false, 0, false, false, true, 5}};
     static int32 Shot = -1;
     static float ShotClock = 0.f;
     const int32 Total = UE_ARRAY_COUNT(Moves) * 3;
@@ -182,6 +187,7 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
         : Shot % 3 == 0 ? .15f : Shot % 3 == 1 ? CurrentAttack.ContactFraction : .85f;
     // Charging has no attack clock: the pose code plays the Charge loop while heavy is held.
     bHeavyHeld = Move.Special == 2;
+    ChargeClock = Move.Special == 2 ? (Shot % 3 == 0 ? .1f : Shot % 3 == 1 ? .3f : 1.f) : 0.f;
     // UpdateAttackTiming subtracts this frame's time after this runs; bHitResolved skips the damage sweep.
     AttackClock = Move.Special >= 2 ? 0.f : CurrentAttack.Duration * (1.f - Progress) + Dt;
     // A typical knockdown lasts .9 s; the pose code maps its clip over that time.
@@ -200,10 +206,10 @@ void AArenaFighter::RunAttackAnimationPreview(float Dt)
     if (++ShotFrames >= 6 && ShotClock >= .35f)
     {
         ShotFrames = 0;
-        const UAnimSequence* Expected = Move.Special == 2 ? CombatAnimations.FindRef(TEXT("Charge")).Get()
+        const UAnimSequence* Expected = Move.Special == 2 ? StanceClip(TEXT("Charge"))
             : Move.Special == 3 ? CombatAnimations.FindRef(TEXT("Dodge")).Get()
             : Move.Special == 4 ? CombatAnimations.FindRef(TEXT("Knockdown")).Get()
-            : Move.Special == 5 ? CombatAnimations.FindRef(TEXT("Hit")).Get() : FindAttackAnimation(CurrentAttack.Type);
+            : Move.Special == 5 ? StanceClip(TEXT("Hit")) : FindAttackAnimation(CurrentAttack.Type);
         UE_LOG(LogTemp, Display, TEXT("ATTACK PREVIEW %s_%d: expected %s at %.3fs, mesh plays %s at %.3fs"), Move.Clip, Shot % 3,
             // The charging loop runs on world time, so only its clip is compared.
             Expected ? *Expected->GetName() : TEXT("none"), Move.Special == 2 ? GetMesh()->GetPosition()

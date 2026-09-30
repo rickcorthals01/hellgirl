@@ -7,6 +7,8 @@
 #include "UI/HellgirlPlayerController.h"
 #include "Enemies/EnemySpawnPoint.h"
 #include "Particles/ParticleSystem.h"
+#include "Animation/AnimSequence.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/World.h"
@@ -153,6 +155,58 @@ void AArenaGameMode::RunMapShot(float Dt)
         else if (PortalShot >= 3 && Clock > 5.5f) FPlatformMisc::RequestExitWithStatus(false, 0);
         return;
     }
+    // -MapShotClips=A,B,C: each named clip (Rags outfit, sword drawn) plays at four points, seen from the side:
+    // Screenshots/MapShot/Clips/<Clip>_<0..3>.png. -ShotDist / -ShotZ move the camera.
+    FString ClipList;
+    if (FParse::Value(FCommandLine::Get(), TEXT("MapShotClips="), ClipList, false))
+    {
+        static TArray<FString> Names;
+        static int32 ClipIndex = 0, Step = 0, Phase = 0;
+        static float NextAt = 0.f;
+        static TWeakObjectPtr<ACameraActor> Side;
+        auto* Hero = Cast<AArenaFighter>(PC->GetPawn());
+        if (!Hero || Clock < 2.f) return;
+        if (!Side.IsValid())
+        {
+            ClipList.ParseIntoArray(Names, TEXT(","));
+            Hero->SetActorTickEnabled(false);
+            Hero->SelectWeapon(1);
+            Side = GetWorld()->SpawnActor<ACameraActor>();
+            Side->GetCameraComponent()->SetFieldOfView(50.f);
+            PC->SetViewTarget(Side.Get());
+            NextAt = Clock + .3f;
+        }
+        float ShotDist = 380.f, ShotZ = 10.f;
+        FParse::Value(FCommandLine::Get(), TEXT("ShotDist="), ShotDist);
+        FParse::Value(FCommandLine::Get(), TEXT("ShotZ="), ShotZ);
+        const FVector At = Hero->GetActorLocation();
+        const FVector Dir = Hero->GetActorRightVector();
+        Side->SetActorLocationAndRotation(At + Dir * ShotDist + FVector(0, 0, ShotZ), (-Dir).Rotation());
+        if (ClipIndex >= Names.Num()) { if (Clock > NextAt) FPlatformMisc::RequestExitWithStatus(false, 0); return; }
+        if (Clock < NextAt) return;
+        const FString Path = FString::Printf(TEXT("/Game/Hellgirl/Outfits/Rags/Animations/%s.%s"), *Names[ClipIndex], *Names[ClipIndex]);
+        UAnimSequence* Clip = LoadObject<UAnimSequence>(nullptr, *Path);
+        if (!Clip) { UE_LOG(LogTemp, Display, TEXT("CLIPSHEET missing %s"), *Names[ClipIndex]); ++ClipIndex; return; }
+        USkeletalMeshComponent* Mesh = Hero->GetMesh();
+        if (Phase == 0)
+        {
+            int32 Steps = 4; FParse::Value(FCommandLine::Get(), TEXT("ClipSteps="), Steps); Steps = FMath::Clamp(Steps, 2, 24);
+            const float Fixed[] = {.08f, .35f, .62f, .9f};
+            const float Fraction = Steps == 4 ? Fixed[Step] : Step / float(Steps - 1) * .98f;
+            Mesh->SetAnimation(Clip);
+            Mesh->Stop();
+            Mesh->SetPosition(Clip->GetPlayLength() * Fraction, false);
+            Phase = 1; NextAt = Clock + .25f;
+        }
+        else
+        {
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / FString::Printf(TEXT("Screenshots/MapShot/Clips/%s_%d.png"), *Names[ClipIndex], Step), false, false);
+            Phase = 0; NextAt = Clock + .25f;
+            int32 Steps = 4; FParse::Value(FCommandLine::Get(), TEXT("ClipSteps="), Steps);
+            if (++Step >= FMath::Clamp(Steps, 2, 24)) { Step = 0; ++ClipIndex; }
+        }
+        return;
+    }
     // -MapShotSword: Hellgirl draws her sword (-MapShotInfernal: the shop's Infernal Sword) and is seen close up from the
     // front and the side, then mid-slash: Sword_0..2.png.
     if (FParse::Param(FCommandLine::Get(), TEXT("MapShotSword")))
@@ -169,6 +223,11 @@ void AArenaGameMode::RunMapShot(float Dt)
             {
                 TArray<FString> V; Grip.ParseIntoArray(V, TEXT(","));
                 if (V.Num() == 3) Hero->BladeGripRotation = FRotator(FCString::Atof(*V[0]), FCString::Atof(*V[1]), FCString::Atof(*V[2]));
+            }
+            if (FParse::Value(FCommandLine::Get(), TEXT("BladeAim="), Grip, false))
+            {
+                TArray<FString> V; Grip.ParseIntoArray(V, TEXT(","));
+                if (V.Num() == 3) Hero->BladeAim = FVector(FCString::Atof(*V[0]), FCString::Atof(*V[1]), FCString::Atof(*V[2]));
             }
             if (FParse::Value(FCommandLine::Get(), TEXT("BladeOff="), Grip, false))
             {
@@ -192,7 +251,11 @@ void AArenaGameMode::RunMapShot(float Dt)
         // Front, side, then front again mid-slash.
         const FVector At = Hero->GetActorLocation() + FVector(0, 0, 20);
         const FVector Dir = SwordShot == 1 ? Hero->GetActorRightVector() : Hero->GetActorForwardVector();
-        Close->SetActorLocationAndRotation(At + Dir * 330.f + FVector(0, 0, 30), (-Dir).Rotation() + FRotator(-5.f, 0.f, 0.f));
+        // -ShotDist=cm / -ShotZ=cm bring the camera closer (to the hands, say).
+        float ShotDist = 330.f, ShotZ = 30.f;
+        FParse::Value(FCommandLine::Get(), TEXT("ShotDist="), ShotDist);
+        FParse::Value(FCommandLine::Get(), TEXT("ShotZ="), ShotZ);
+        Close->SetActorLocationAndRotation(At + Dir * ShotDist + FVector(0, 0, ShotZ), (-Dir).Rotation() + FRotator(-5.f, 0.f, 0.f));
         const float Times[] = {3.f, 3.6f, 4.6f};
         if (SwordShot == 2 && Clock > 4.2f && Clock < 4.3f) Hero->Attack();
         if (SwordShot < 3 && Clock > Times[SwordShot])
