@@ -92,9 +92,9 @@ void AArenaHUD::DrawHUD()
     if (!GM->Prompt.IsEmpty()) Say(GM->Prompt, Ember, 28.f, 74.f);
 
     // ---- Top right: a small minimap, souls underneath. ----
-    // (None in the Frozen Maze: finding the way is the point.)
+    // (None in the Frozen Maze, where finding the way is the point, nor in its boss room.)
     const float MapSize = 150.f, MapX = W - MapSize - 24.f, MapY = 20.f;
-    if (!GM->bFrozenMaze)
+    if (!GM->bFrozenMaze && !GM->bMazeBoss)
     {
     DrawRect(FLinearColor(0.f, 0.f, 0.f, .55f), MapX - 3.f, MapY - 3.f, MapSize + 6.f, MapSize + 6.f);
     DrawRect(FLinearColor(.03f, .03f, .035f, .6f), MapX, MapY, MapSize, MapSize);

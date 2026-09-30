@@ -41,9 +41,15 @@
                         "then": [{ "file": "Kip Up.fbx", "trim": [10, 62], "step": 2 }] },
     "Death":          { "file": "Death.fbx" },
     "WakeUp":         { "file": "Getting Up.fbx", "trim": [1, 75], "slide": 0.3 },
-    "SwordSlash":     { "file": "Great Sword Pack/great sword slash.fbx", "strike": "RightHand" },
-    "SwordBackslash": { "file": "Great Sword Pack/great sword slash (3).fbx", "strike": "RightHand" },
-    "SwordThrust":    { "file": "SwordThrust.fbx", "strike": "RightHand" },
-    "SwordSpin":      { "file": "Great Sword Pack/great sword high spin attack.fbx", "strike": "RightHand" }
+    "SwordSlash":     { "file": "GreatSword on Rags/Great Sword Pack/great sword slash.fbx", "strike": "RightHand" },
+    "SwordBackslash": { "file": "GreatSword on Rags/Great Sword Pack/great sword slash (3).fbx", "strike": "RightHand" },
+    "SwordThrust":    { "file": "GreatSword on Rags/Great Sword Pack/great sword attack.fbx", "strike": "RightHand" },
+    "SwordSpin":      { "file": "GreatSword on Rags/Great Sword Pack/great sword high spin attack.fbx", "strike": "RightHand" },
+    "SwordIdle":      { "file": "GreatSword on Rags/Great Sword Pack/great sword idle.fbx" },
+    "SwordWalk":      { "file": "GreatSword on Rags/Great Sword Pack/great sword walk.fbx" },
+    "SwordRun":       { "file": "GreatSword on Rags/Great Sword Pack/great sword run.fbx" },
+    "SwordHit":       { "file": "GreatSword on Rags/Great Sword Pack/great sword impact.fbx" },
+    "SwordCharge":    { "file": "GreatSword on Rags/Great Sword Pack/great sword blocking (2).fbx" },
+    "SwordDeath":     { "file": "GreatSword on Rags/Great Sword Pack/two handed sword death.fbx" }
   }
 }

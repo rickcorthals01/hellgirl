@@ -70,8 +70,8 @@ void AArenaGameMode::BuildMazeBoss()
         Floor->SetVectorParameterValue(TEXT("VortexPosition"), FLinearColor(0.f, 0.f, 0.f));
         Floor->SetScalarParameterValue(TEXT("LakeRadius"), 0.f);
         Floor->SetVectorParameterValue(TEXT("VortexColor"), FLinearColor(1.f, .3f, .05f));
-        Floor->SetScalarParameterValue(TEXT("VortexGlow"), 1.2f);
-        Floor->SetScalarParameterValue(TEXT("VortexReach"), 2300.f);
+        Floor->SetScalarParameterValue(TEXT("VortexGlow"), .5f);
+        Floor->SetScalarParameterValue(TEXT("VortexReach"), 1700.f);
         MazeArt::Sheet(World, FVector2D(-HalfX * 1.4f, -HalfY * 1.5f), FVector2D(HalfX * 1.4f, HalfY * 1.5f), 0.f, true, Floor, 400.f);
     }
     // The vortex's charred imprint, and the embers' glow.
@@ -162,10 +162,10 @@ void AArenaGameMode::BuildMazeBoss()
         Crystal(S.P + ToCentre * 330.f * S.Scale / 3.f, ToCentre, 1.6f, false);
     }
     // Glow crystals all round the foot of the wall, facing into the room.
-    for (int32 K = 0; K < 14; ++K)
+    for (int32 K = 0; K < 9; ++K)
     {
-        const float T = 2.f * PI * (K + .3f) / 14.f;
-        Crystal(Edge(T, .955f), (-Edge(T)).GetSafeNormal(), 1.8f, true);
+        const float T = 2.f * PI * (K + .3f) / 9.f;
+        Crystal(Edge(T, .955f), (-Edge(T)).GetSafeNormal(), K % 3 ? 1.5f : 2.3f, true);
     }
     for (auto* Batch : {Walls[0], Walls[1], Walls[2], Pillars, Blockers, Rubble, RoofIcicles, StalagmiteMeshes, StalactiteMeshes, Crystals}) Batch->BuildTreeIfOutdated(true, true);
 
@@ -358,7 +358,7 @@ void AArenaGameMode::RunMazeBossCheck(float Dt)
         const FVector2D M3 = Stalagmites[2].P, R1 = Bodies[0];
         const FView Views[] = {
             {FVector(Start.X - 600.f, Start.Y, 350.f), FVector(0.f, 0.f, 300.f)},
-            {FVector(-4200.f, 2600.f, 2800.f), FVector(800.f, -600.f, 600.f)},
+            {FVector(-3200.f, 1800.f, 2600.f), FVector(1200.f, -800.f, 500.f)},
             {FVector(0.f, 1600.f, 900.f), FVector(0.f, 0.f, 0.f)},
             {FVector(M3.X - 1700.f, M3.Y + 1500.f, 700.f), FVector(M3.X, M3.Y, 2000.f)},
             {FVector(0.f, 0.f, 600.f), FVector(0.f, -HalfY, 1500.f)},
@@ -418,7 +418,10 @@ void AArenaGameMode::RunMazeBossCheck(float Dt)
         for (const float R : {.3f, .6f, .9f})
         {
             const FVector2D P = Edge(T, R);
-            if (!Trace(FVector(P.X, P.Y, 500.f), FVector(P.X, P.Y, -300.f), Hit) || FMath::Abs(Hit.ImpactPoint.Z) > 5.f)
+            bool Covered = false;  // (under a stalagmite or a frozen body the trace stops on it)
+            for (const FSpire& S : Stalagmites) Covered |= FVector2D::Distance(P, S.P) < 350.f * S.Scale;
+            for (const FVector2D& B : Bodies) Covered |= FVector2D::Distance(P, B) < 200.f;
+            if (!Covered && !Trace(FVector(P.X, P.Y, 500.f), FVector(P.X, P.Y, -300.f), Hit) || FMath::Abs(Hit.ImpactPoint.Z) > 5.f)
                 Fail(FString::Printf(TEXT("no level floor at %.0f, %.0f"), P.X, P.Y));
         }
         const FVector2D Far = Edge(T, 1.5f);

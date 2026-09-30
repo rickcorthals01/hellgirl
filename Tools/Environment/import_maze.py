@@ -290,24 +290,25 @@ float2 c = (UV - 0.5) * 2.0;
 float r = length(c);
 float a = atan2(c.y, c.x);
 float spiral = 0.5 + 0.5 * sin(a * 3.0 + log(r + 0.03) * 5.0);
-float arm = smoothstep(0.35, 0.9, spiral);
-float edge = 1.0 - smoothstep(0.7, 1.0, r + (N - 0.5) * 0.3);
-float charred = saturate(edge * (0.55 + 0.45 * arm));
-float heat = saturate(1.0 - r * 2.2) * arm + saturate(1.0 - r * 6.0);
-float seam = smoothstep(0.4, 0.5, spiral) * (1.0 - smoothstep(0.5, 0.6, spiral)) * edge * saturate(1.1 - r);
+float arm = smoothstep(0.3, 0.8, spiral);
+float edge = 1.0 - smoothstep(0.65, 1.0, r + (N - 0.5) * 0.35);
+float charred = saturate(edge * (0.8 + 0.2 * arm));
+float heat = pow(saturate(1.0 - r * 3.0), 1.5) * arm + saturate(1.0 - r * 9.0);
+float seam = smoothstep(0.42, 0.5, spiral) * (1.0 - smoothstep(0.5, 0.58, spiral)) * edge * saturate(1.0 - r * 1.3);
 return float3(charred, heat, seam);
 """, ["UV", "N"], F3), UV=iuv, N=(inoise, "R"))
 iglow = wire(im, custom(im, -200, -150, """
 float flick = 0.7 + 0.3 * sin(Time * 3.1 + N * 12.0) * sin(Time * 1.7 + N * 5.0);
-float3 embers = lerp(Ember.rgb, Heart.rgb, saturate(S.y * 1.5 - 0.5)) * S.y * flick * (0.4 + N);
-embers += Seam.rgb * S.z * flick * 0.6;
-float ash = 0.035 * S.x * saturate(N * 1.5);
-return (embers + ash) * Glow;
+float3 embers = lerp(Ember.rgb, Heart.rgb, saturate(S.y * 1.5 - 0.5)) * S.y * flick * (0.3 + N);
+embers += Seam.rgb * S.z * flick * 0.35;
+// Grey ash along the seams between the burnt (black) arms.
+float ash = 0.02 * S.z * saturate(N * 1.6);
+return embers * Glow + ash;
 """, ["S", "N", "Time", "Ember", "Heart", "Seam", "Glow"], F3), S=shape, N=(inoise, "R"), Time=itime,
-    Ember=vector(im, "Ember", -500, 200, (1.0, .32, .05, 1)), Heart=vector(im, "Heart", -500, 270, (1.0, .85, .3, 1)),
-    Seam=vector(im, "Seam", -500, 340, (.9, .12, .04, 1)), Glow=scalar(im, "Glow", -500, 410, 2.5))
+    Ember=vector(im, "Ember", -500, 200, (1.0, .28, .04, 1)), Heart=vector(im, "Heart", -500, 270, (1.0, .8, .28, 1)),
+    Seam=vector(im, "Seam", -500, 340, (.9, .1, .03, 1)), Glow=scalar(im, "Glow", -500, 410, 1.4))
 lib.connect_material_property(iglow, "", u.MaterialProperty.MP_EMISSIVE_COLOR)
-iop = wire(im, custom(im, -200, 100, "return saturate(S.x * 0.93 + S.y);", ["S"], F1), S=shape)
+iop = wire(im, custom(im, -200, 100, "return saturate(S.x * 0.96 + S.y);", ["S"], F1), S=shape)
 lib.connect_material_property(iop, "", u.MaterialProperty.MP_OPACITY)
 finish(im)
 

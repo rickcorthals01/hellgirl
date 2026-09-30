@@ -38,12 +38,14 @@
 namespace
 {
 // Clip names produced by Tools/Animations (clips.json). Idle is the standing loop; Block is kept for the retired block pose.
+// The Sword* stance clips (idle, walk, run, hit, charge, death) replace their fist versions while the sword is drawn.
 const TCHAR* const CombatClipNames[] = {
     TEXT("Idle"), TEXT("Jump"), TEXT("RightPunch"), TEXT("LeftPunch"), TEXT("DoubleJab"), TEXT("RightKick"), TEXT("LeftKick"), TEXT("LegSweep"),
     TEXT("Headbutt"), TEXT("DodgeSlam"), TEXT("Charge"), TEXT("ChargedStrike"),
     TEXT("AirPunch"), TEXT("AirLeftPunch"), TEXT("AirKick"), TEXT("AirCrashKick"), TEXT("AirSlam"),
     TEXT("Dodge"), TEXT("Hit"), TEXT("Knockdown"), TEXT("Death"), TEXT("WakeUp"), TEXT("Block"),
-    TEXT("SwordSlash"), TEXT("SwordBackslash"), TEXT("SwordThrust"), TEXT("SwordSpin")};
+    TEXT("SwordSlash"), TEXT("SwordBackslash"), TEXT("SwordThrust"), TEXT("SwordSpin"),
+    TEXT("SwordIdle"), TEXT("SwordWalk"), TEXT("SwordRun"), TEXT("SwordHit"), TEXT("SwordCharge"), TEXT("SwordDeath")};
 
 const TCHAR* AttackClipName(FistCombat::Move Type)
 {
@@ -1211,7 +1213,7 @@ void AArenaFighter::UpdatePose(float Dt)
         const float Speed = GetVelocity().Size2D();
         const bool Moving = Speed > 10.f && GetCharacterMovement()->IsMovingOnGround() && DodgeClock <= 0.f && KnockdownClock <= 0.f && IsAlive();
         // Standing uses the Mixamo idle when the outfit has one (it falls back to the neutral pose).
-        UAnimSequence* Clip = CombatAnimations.FindRef(TEXT("Idle")).Get();
+        UAnimSequence* Clip = StanceClip(TEXT("Idle"));
         if (!Clip) Clip = NeutralIdleAnimation.Get();
         float Position = 0.f;
         const bool Airborne = GetCharacterMovement()->IsFalling();
@@ -1228,7 +1230,7 @@ void AArenaFighter::UpdatePose(float Dt)
         bAnimationWasAirborne = Airborne;
         if (!IsAlive())
         {
-            Clip = CombatAnimations.FindRef(TEXT("Death"));
+            Clip = StanceClip(TEXT("Death"));
             PlayerDeathAnimationTime += Dt;
             if (Clip) Position = FMath::Min(PlayerDeathAnimationTime, Clip->GetPlayLength());
         }
@@ -1263,12 +1265,12 @@ void AArenaFighter::UpdatePose(float Dt)
         else if (PlayerHitAnimationTime < .3f)
         {
             // The whole flinch (recoil and back) is fitted into the .3 s hit window.
-            Clip = CombatAnimations.FindRef(TEXT("Hit"));
+            Clip = StanceClip(TEXT("Hit"));
             if (Clip) Position = PlayerHitAnimationTime / .3f * Clip->GetPlayLength();
         }
         else if (bHeavyHeld || IsBlocking())
         {
-            Clip = CombatAnimations.FindRef(bHeavyHeld ? TEXT("Charge") : TEXT("Block"));
+            Clip = bHeavyHeld ? StanceClip(TEXT("Charge")) : CombatAnimations.FindRef(TEXT("Block")).Get();
             if (Clip) Position = FMath::Fmod(GetWorld()->GetTimeSeconds(), Clip->GetPlayLength());
         }
         else if (JumpAnimation && IsAlive() && KnockdownClock <= 0.f && (Airborne || LandingAnimationTime < .25f))
@@ -1280,8 +1282,10 @@ void AArenaFighter::UpdatePose(float Dt)
         }
         else
         {
-            const bool Running = Moving && Speed > (ActiveAnimation == RunAnimation ? 260.f : 300.f);
-            if (Moving) Clip = Running ? RunAnimation.Get() : WalkAnimation.Get();
+            UAnimSequence* WalkClip = StanceClip(TEXT("Walk"), WalkAnimation);
+            UAnimSequence* RunClip = StanceClip(TEXT("Run"), RunAnimation);
+            const bool Running = Moving && Speed > (ActiveAnimation == RunClip ? 260.f : 300.f);
+            if (Moving) Clip = Running ? RunClip : WalkClip;
             const float CycleRate = Moving ? FMath::Clamp(Speed / (Running ? 560.f : 224.f), .35f, 1.7f) : 1.f;
             if (Clip)
             {

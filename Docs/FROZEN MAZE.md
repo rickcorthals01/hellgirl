@@ -29,6 +29,33 @@ The approved design is in `Developer idea folder lol\Maze design plan.png`.
 
 Planned rule for the Deprived (not built yet): only one hunts her at a time. When it dies, the next rises about 10 s later from the nearest lair she can't see, at least about 40 m walk away.
 
+## The boss room (room only)
+
+The cavern beyond the vortex, built from the user's sketch (plan: `Developer idea folder lol\Boss room design plan.png`, drawn by `Tools/Maze/boss_plan.ps1`). Open it from the main menu: **DEV → MAZE BOSS ROOM**, or `/Engine/Maps/Entry?MazeBoss=1`. No boss yet, and the stages that lead here are not built.
+
+The planned flow:
+- Stage 1: the maze, with the vortex leading to camp.
+- Stage 2: waves of enemies in the vortex room.
+- Stage 3: this room.
+
+**The room:**
+- **Size:** a wide open oval, 100 × 70 m, with the roof 45 m up. It is walled all round with ice rising almost to the roof.
+- **The imprint:** in the middle, the vortex's charred imprint (34 × 20 m, `M_MazeImprint`). It is a burnt black spiral with grey ash along its seams and embers smouldering at its heart. The ice cracks around it glow faintly like embers.
+- **Stalagmites M1–M4:** huge ice spires, 19–25 m tall, placed as in the sketch. Each stands under a stalactite hanging from the roof, and they block like pillars.
+- **Frozen bodies R1–R6:** they smash for Souls like the maze's frozen remains.
+- **Purple lightning:** 22 bolts (`M_MazeBolt`), each of which strikes, flickers out, and strikes again 1–5 s later along a new jagged path, with a violet flash of light:
+  - 12 crawl along the walls;
+  - 6 arc across the roof between the stalactites and out over the imprint;
+  - 4 jump between each stalactite and the stalagmite below it.
+- **Light:** nine glow crystals round the wall and one at each stalagmite. The fog is thinner than in the maze, so the far side shows.
+- **Start and boss:** she starts west of the imprint, facing it. The boss's place, east of the imprint, is kept clear. There is no minimap.
+
+**Where it lives:**
+- Rules: `Rules/MazeBossRules.h`.
+- Build and lightning: `Levels/MazeBossRoom.cpp`.
+- Check: `-HellgirlMazeBossCheck` (MazeBoss in `Tests/run-checks.ps1`). It covers the start, the floor, the closed wall, the blocking stalagmites, the clear imprint and boss place, smashing a frozen body, and every bolt striking and fading.
+- Screenshots: `-HellgirlMazeBossPreview` saves them to `Saved/Screenshots/MazeBoss`.
+
 ## Look
 
 - **Ice:** glossy, with a cold rim of light on its edges (`M_MazeIce`).
