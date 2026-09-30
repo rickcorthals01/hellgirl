@@ -1,5 +1,6 @@
 #include "UI/HellgirlPlayerController.h"
 #include "Fighter/ArenaFighter.h"
+#include "Levels/ArenaGameMode.h"
 #include "Progress/HellgirlWallet.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/Texture2D.h"
@@ -65,13 +66,50 @@ public:
             if (I==0) PlayButton=Button;
         }
         Items->AddSlot().AutoHeight().Padding(20,12)[SNew(STextBlock).Text_Lambda([this]() { return FText::FromString(Status); }).AutoWrapText(true).Justification(ETextJustify::Center).ColorAndOpacity(Ivory)];
+        // Development builds: a DEV page that jumps straight to any map, the previews included.
+        auto Dev=SNew(SVerticalBox);
+#if !UE_BUILD_SHIPPING
+        auto Button=[this,Ivory](const FString& Label,float Size,TFunction<void()> Action) -> TSharedRef<SWidget>
+        {
+            return SNew(SButton).HAlign(HAlign_Center).ContentPadding(FMargin(14,9)).ButtonColorAndOpacity(FLinearColor(.08f,.055f,.065f,1.f))
+                .OnClicked_Lambda([Action]() { Action(); return FReply::Handled(); })
+                [SNew(STextBlock).Text(FText::FromString(Label)).Font(FCoreStyle::GetDefaultFontStyle("Regular",Size)).ColorAndOpacity(Ivory)];
+        };
+        // Leaves the menu and runs Go on the game mode (which opens the map).
+        auto Travel=[this](TFunction<void(AArenaGameMode*)> Go)
+        {
+            return [this,Go]()
+            {
+                if (!Owner.IsValid()) return;
+                auto* GM=Cast<AArenaGameMode>(UGameplayStatics::GetGameMode(Owner.Get()));
+                Owner->PlayFromMainMenu();
+                if (GM) Go(GM);
+            };
+        };
+        Items->AddSlot().AutoHeight().Padding(38,8)[Button(TEXT("DEV"),18,[this]() { bDevOpen=true; })];
+        Dev->AddSlot().AutoHeight().Padding(0,0,0,24)[SNew(STextBlock).Text(FText::FromString(TEXT("DEV  ·  MAPS"))).Font(FCoreStyle::GetDefaultFontStyle("Regular",30)).ColorAndOpacity(Ivory).Justification(ETextJustify::Center)];
+        Dev->AddSlot().AutoHeight().Padding(38,6)[Button(TEXT("THE FROZEN MAZE (random room)"),18,Travel([](AArenaGameMode* GM) { GM->StartFrozenMaze(); }))];
+        auto Rooms=SNew(SHorizontalBox);
+        for (int32 Room=0; Room<4; ++Room)
+            Rooms->AddSlot().Padding(4,0)[Button(FString::Printf(TEXT("MAZE S%d"),Room+1),14,Travel([Room](AArenaGameMode* GM) { GM->TravelToFrozenMaze(Room); }))];
+        Dev->AddSlot().AutoHeight().HAlign(HAlign_Center).Padding(38,6)[Rooms];
+        Dev->AddSlot().AutoHeight().Padding(38,6)[Button(TEXT("THE GRAVEYARD"),18,Travel([](AArenaGameMode* GM) { GM->StartGraveyard(); }))];
+        Dev->AddSlot().AutoHeight().Padding(38,6)[Button(TEXT("THE SWAMP (map preview)"),18,Travel([](AArenaGameMode* GM) { GM->StartSwamp(); }))];
+        Dev->AddSlot().AutoHeight().Padding(38,6)[Button(TEXT("SUCCUBUS COURT"),18,Travel([](AArenaGameMode* GM) { GM->TravelToSuccubusCourt(); }))];
+        Dev->AddSlot().AutoHeight().Padding(38,6)[Button(TEXT("FOREST CAMP"),18,Travel([](AArenaGameMode* GM) { GM->TravelToHub(); }))];
+        Dev->AddSlot().AutoHeight().Padding(38,18,38,6)[Button(TEXT("BACK"),18,[this]() { bDevOpen=false; })];
+#endif
         ChildSlot[SNew(SOverlay)
             + SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor::Black)]
             + SOverlay::Slot().Padding(18)[SNew(SImage).Image(&Frame).ColorAndOpacity(FLinearColor(.85f,.78f,.68f,.8f)).Visibility(EVisibility::HitTestInvisible)]
             + SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(70)
-              [SNew(SScaleBox).Stretch(EStretch::ScaleToFit).StretchDirection(EStretchDirection::DownOnly)[SNew(SBox).WidthOverride(480)[Items]]]];
+              [SNew(SScaleBox).Stretch(EStretch::ScaleToFit).StretchDirection(EStretchDirection::DownOnly)[SNew(SBox).WidthOverride(480)
+                  [SNew(SOverlay)
+                      + SOverlay::Slot()[SNew(SBox).Visibility_Lambda([this]() { return bDevOpen?EVisibility::Collapsed:EVisibility::Visible; })[Items]]
+                      + SOverlay::Slot()[SNew(SBox).Visibility_Lambda([this]() { return bDevOpen?EVisibility::Visible:EVisibility::Collapsed; })[Dev]]]]]];
     }
 private:
+    bool bDevOpen=false;
     TWeakObjectPtr<AHellgirlPlayerController> Owner;
     FSlateBrush Frame;
     bool bConfirmNew=false;
